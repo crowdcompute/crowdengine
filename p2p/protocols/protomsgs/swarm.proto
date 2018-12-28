@@ -1,0 +1,29 @@
+syntax = "proto3";
+ 
+package protomsgs;
+import "node/protocols/protomsgs/common.proto";
+
+// a protocol define a set of reuqest and responses
+message JoinRequest {
+    MessageData messageData = 1;
+
+    // method specific data
+    MessageType message = 2;
+    
+    string joinToken = 3;
+    string joinMasterAddr = 4;
+}
+
+message JoinResponse {
+    MessageData messageData = 1;
+
+    // response specific data
+    MessageType message = 2;
+}
+
+enum MessageType {
+	JoinReq                 = 0;
+	JoinResOK               = 1;
+	JoinReqToken            = 2;
+	JoinRes                 = 3;
+}

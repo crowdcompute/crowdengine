@@ -1,0 +1,35 @@
+syntax = "proto3";
+ 
+package protomsgs;
+import "node/protocols/protomsgs/common.proto";
+
+//// Discovery protocol
+
+message DiscoveryMsgData {
+    MessageData messageData = 1;
+    string initNodeID = 2;     // The node that initialized the Discovery
+    uint32 Expiry = 3;
+    uint32 TTL = 4;
+    string InitHash = 5;
+}
+
+
+// a protocol define a set of reuqest and responses
+message DiscoveryRequest {
+    DiscoveryMsgData discoveryMsgData = 1;
+
+    // method specific data
+    DiscoveryMessage message = 2;
+}
+
+message DiscoveryResponse {
+    DiscoveryMsgData discoveryMsgData = 1;
+
+    // response specific data
+    DiscoveryMessage message = 2;
+}
+
+enum DiscoveryMessage {
+	DiscoveryReq                 = 0;
+	DiscoveryRes                 = 1;
+}
