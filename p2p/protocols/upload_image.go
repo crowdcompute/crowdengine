@@ -19,6 +19,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
 	host "github.com/libp2p/go-libp2p-host"
 	inet "github.com/libp2p/go-libp2p-net"
 	peer "github.com/libp2p/go-libp2p-peer"
@@ -140,10 +141,13 @@ func loadImage(filename string) (string, error) {
 		imageNameTag := response[2 : len(response)-5]
 		fmt.Println(imageNameTag)
 
+		fargs := filters.NewArgs()
+		fargs.Add("reference", imageNameTag)
+
 		options := types.ImageListOptions{
-			// [MIGRATION-ERROR]
-			// Filters: filters.NewArgs(filters.KeyValuePair{Key: "reference", Value: imageNameTag}),
+			Filters: fargs,
 		}
+
 		res, err := manager.GetInstance().ListImages(options)
 		if err != nil {
 			fmt.Println("error: ", err)
