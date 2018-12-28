@@ -3,6 +3,7 @@ set -e
 
 # Variables
 VMNAME=$1
+ARTIFACT=$2
 
 # colors and helpers
 bold() { echo -e "\e[1m$@\e[0m" ; }
@@ -101,7 +102,7 @@ provision_vm() {
     
     # vm is not started yet 
     # copy the files to the vm
-    sudo virt-copy-in -d ${VMNAME} /home/younix/Desktop/deploy/install.sh /home/ubuntu/
+    sudo virt-copy-in -d ${VMNAME} ${ARTIFACT} /home/ubuntu/
     # sudo virt-customize -d ${VMNAME} --copy-in "install.sh:/home/ubuntu/"
 
     sleep 1
