@@ -1,0 +1,16 @@
+syntax = "proto3";
+ 
+package protomsgs;
+import "node/protocols/protomsgs/common.proto";
+
+//// Discovery protocol
+
+message UploadImageMsgData {
+    MessageData messageData = 1;
+}
+
+
+message UploadImageResponse {
+    UploadImageMsgData uploadImageMsgData = 1;
+    string imageID = 2;     // The node that initialized the Discovery
+}

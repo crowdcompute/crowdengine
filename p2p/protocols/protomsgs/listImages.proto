@@ -1,0 +1,21 @@
+syntax = "proto3";
+ 
+package protomsgs;
+import "node/protocols/protomsgs/common.proto";
+
+//// task protocol
+
+message ListImagesMsgData {
+    MessageData messageData = 1;
+}
+
+// a protocol define a set of reuqest and responses
+message ListImagesRequest {
+    ListImagesMsgData ListImagesMsgData = 1;
+    string pubKey = 2; // The image that needs to be executed
+}
+
+message ListImagesResponse {
+    ListImagesMsgData ListImagesMsgData = 1;
+    string listResult = 2;  // Result of execution   
+}

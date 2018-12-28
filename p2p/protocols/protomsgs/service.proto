@@ -1,0 +1,11 @@
+syntax = "proto3";
+ 
+package protomsgs;
+ 
+ 
+message Service {
+    //
+    string id = 1;
+    //
+    string image = 2;
+}
