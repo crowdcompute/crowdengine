@@ -102,7 +102,9 @@ provision_vm() {
     
     # vm is not started yet 
     # copy the files to the vm
-    sudo virt-copy-in -d ${VMNAME} ${ARTIFACT} /home/ubuntu/
+    # sudo virt-copy-in -d ${VMNAME} ${ARTIFACT} /home/ubuntu/
+    sudo virt-copy-in -a "${VMDIR}/${VMNAME}/${DISK}" ${ARTIFACT} /home/ubuntu/
+    
     # sudo virt-customize -d ${VMNAME} --copy-in "install.sh:/home/ubuntu/"
 
     sleep 1
