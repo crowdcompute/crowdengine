@@ -2,7 +2,11 @@ package common
 
 import "time"
 
-const FileChunk = 1 * (1 << 20) // 1 MB
+// FileChunk is the size of a chunk when uploading a file
+const FileChunk = 1 * (1 << 20)
+
+// ImagesDest is the destination folder for storing images
 const ImagesDest = "./uploads/"
-const LvlDBPath = "./lvldb/"
-const TenDays time.Duration = 24 * time.Hour * 10 // 10 days // TESTING: 5 * time.Second
+
+// TenDays represents 10 days in time
+const TenDays time.Duration = 24 * time.Hour * 10

@@ -48,10 +48,6 @@ func (m *DockerManager) boot() bool {
 	return true
 }
 
-//************************************************************************//
-//**************************** IMAGES ************************************//
-//************************************************************************//
-
 // BuildImageFromDockerfile builds an image from a Dockerfile
 func (m *DockerManager) BuildImageFromDockerfile() bool {
 	return false
@@ -112,10 +108,6 @@ func (m *DockerManager) RemoveImage(imageID string, options types.ImageRemoveOpt
 	}
 	return r, nil
 }
-
-//************************************************************************//
-//**************************** CONTAINERS ********************************//
-//************************************************************************//
 
 // ListContainers list all the container
 // Shows all running containers by docker daemon

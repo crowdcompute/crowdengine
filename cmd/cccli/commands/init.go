@@ -13,6 +13,7 @@ import (
 )
 
 var (
+	// InitCommand initializes and starts a node
 	InitCommand = cli.Command{
 		Action:    initNode,
 		Name:      "init",
@@ -38,8 +39,7 @@ func initNode(ctx *cli.Context) error {
 	ip := ctx.String("ip")
 	rpcFlag := ctx.Bool("rpc") // BoolTFlag returns false if no flag was set
 
-	// Getting bootnodes from a txt file will be changed
-	bootnodes := getBootnodes(bootnodesFile)
+	bootnodes := getBootnodesFromFile(bootnodesFile)
 
 	// Creating a new Node.
 	// Takes port and ip command line arguments as parameters
@@ -54,7 +54,8 @@ func initNode(ctx *cli.Context) error {
 	return nil
 }
 
-func getBootnodes(bootnodesFile string) []string {
+// getBootnodesFromFile returns a slice of bootnodes given the file bootnodesFile
+func getBootnodesFromFile(bootnodesFile string) []string {
 	bootnodes := make([]string, 0)
 	if bootnodesFile != "" {
 		file, err := os.Open(bootnodesFile)

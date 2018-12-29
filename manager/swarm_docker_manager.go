@@ -45,6 +45,7 @@ func (m *DockerManager) SwarmInspect() (swarm.Swarm, error) {
 	return swrm, nil
 }
 
+// SwarmInfo returns info about the swarm
 func (m *DockerManager) SwarmInfo() (swarm.Info, error) {
 	info, err := m.client.Info(context.Background())
 	if err != nil {
@@ -53,6 +54,7 @@ func (m *DockerManager) SwarmInfo() (swarm.Info, error) {
 	return info.Swarm, nil
 }
 
+// ServiceCreate creates a docker swarm service
 func (m *DockerManager) ServiceCreate(service swarm.ServiceSpec, options types.ServiceCreateOptions) (types.ServiceCreateResponse, error) {
 	resp, err := m.client.ServiceCreate(context.Background(), service, options)
 	if err != nil {

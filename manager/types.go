@@ -14,7 +14,7 @@ type Container struct {
 	Name string
 }
 
-// Manager represents the container manager
+// DockerManager represents the container manager
 type DockerManager struct {
 	client     *client.Client
 	Images     []Image

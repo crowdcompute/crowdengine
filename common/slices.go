@@ -2,6 +2,8 @@ package common
 
 import "reflect"
 
+// SliceExists takes an interface as a slice and an interface as an item and
+// returns true if the item exists in the slice and false otherwise
 func SliceExists(slice interface{}, item interface{}) bool {
 	s := reflect.ValueOf(slice)
 
@@ -14,6 +16,5 @@ func SliceExists(slice interface{}, item interface{}) bool {
 			return true
 		}
 	}
-
 	return false
 }

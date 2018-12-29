@@ -24,7 +24,7 @@ import (
 const imageListRequest = "/image/ListImgReq/0.0.1"
 const imageListResponse = "/image/ListImgResp/0.0.1"
 
-// UploadImageProtocol type
+// ListImagesProtocol type
 type ListImagesProtocol struct {
 	p2pHost  host.Host // local host
 	stream   inet.Stream

@@ -7,14 +7,13 @@ import (
 )
 
 var (
+	// WorkerRootCommand runs a new task to a node
 	WorkerRootCommand = cli.Command{
 		Action:    workerManagement,
 		Name:      "worker",
 		Usage:     "Worker management",
 		ArgsUsage: "<>",
 		// Flags: []cli.Flag{
-		// 	utils.DataDirFlag,
-		// 	utils.LightModeFlag,
 		// },
 		Category: "CC CLI",
 		Description: `
@@ -26,8 +25,6 @@ var (
 		Usage:     "Worker management",
 		ArgsUsage: "<>",
 		// Flags: []cli.Flag{
-		// 	utils.DataDirFlag,
-		// 	utils.LightModeFlag,
 		// },
 		Description: `
 		Worker status`,
@@ -38,8 +35,6 @@ var (
 		Usage:     "Worker tasks",
 		ArgsUsage: "<>",
 		// Flags: []cli.Flag{
-		// 	utils.DataDirFlag,
-		// 	utils.LightModeFlag,
 		// },
 		Description: `
 		Worker tasks`,
@@ -50,8 +45,6 @@ var (
 		Usage:     "Worker devices",
 		ArgsUsage: "<>",
 		// Flags: []cli.Flag{
-		// 	utils.DataDirFlag,
-		// 	utils.LightModeFlag,
 		// },
 		Description: `
 		Worker devices`,
@@ -70,32 +63,20 @@ func init() {
 // blocking mode, waiting for it to be shut down.
 func workerManagement(ctx *cli.Context) error {
 	fmt.Println("To be implemented...")
-	// node := makeFullNode(ctx)
-	// startNode(ctx, node)
-	// node.Wait()
 	return nil
 }
 
 func workerStatus(ctx *cli.Context) error {
 	fmt.Println("To be implemented...")
-	// node := makeFullNode(ctx)
-	// startNode(ctx, node)
-	// node.Wait()
 	return nil
 }
 
 func workerTasks(ctx *cli.Context) error {
 	fmt.Println("To be implemented...")
-	// node := makeFullNode(ctx)
-	// startNode(ctx, node)
-	// node.Wait()
 	return nil
 }
 
 func workerDevices(ctx *cli.Context) error {
 	fmt.Println("To be implemented...")
-	// node := makeFullNode(ctx)
-	// startNode(ctx, node)
-	// node.Wait()
 	return nil
 }

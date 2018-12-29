@@ -7,16 +7,13 @@ import (
 )
 
 var (
+	// VersionCommand prints the version of the program
 	VersionCommand = cli.Command{
 		Action:    version,
 		Name:      "version",
 		Usage:     "Version",
 		ArgsUsage: "<>",
-		// Flags: []cli.Flag{
-		// 	utils.DataDirFlag,
-		// 	utils.LightModeFlag,
-		// },
-		Category: "CC CLI",
+		Category:  "CC CLI",
 		Description: `
 		Version`,
 	}

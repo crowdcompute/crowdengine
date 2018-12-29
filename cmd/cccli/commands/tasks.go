@@ -7,13 +7,12 @@ import (
 )
 
 var (
+	// TaskRootCommand runs a new task to a node
 	TaskRootCommand = cli.Command{
 		Name:      "task",
 		Usage:     "Task management",
 		ArgsUsage: "<>",
 		// Flags: []cli.Flag{
-		// 	utils.DataDirFlag,
-		// 	utils.LightModeFlag,
 		// },
 		Category: "CC CLI",
 		Description: `
@@ -25,8 +24,6 @@ var (
 		Usage:     "list [addr]",
 		ArgsUsage: "<>",
 		// Flags: []cli.Flag{
-		// 	utils.DataDirFlag,
-		// 	utils.LightModeFlag,
 		// },
 		Description: `
 		Show active tasks`,
@@ -37,8 +34,6 @@ var (
 		Usage:     "start <task.yaml>",
 		ArgsUsage: "<>",
 		// Flags: []cli.Flag{
-		// 	utils.DataDirFlag,
-		// 	utils.LightModeFlag,
 		// },
 		Description: `
 		Start task`,
@@ -49,8 +44,6 @@ var (
 		Usage:     "status <addr> <task_id>",
 		ArgsUsage: "<>",
 		// Flags: []cli.Flag{
-		// 	utils.DataDirFlag,
-		// 	utils.LightModeFlag,
 		// },
 		Description: `
 		Show the task's status`,
@@ -61,8 +54,6 @@ var (
 		Usage:     "logs <addr> <task_id>",
 		ArgsUsage: "<>",
 		// Flags: []cli.Flag{
-		// 	utils.DataDirFlag,
-		// 	utils.LightModeFlag,
 		// },
 		Description: `
 		Show the task's logs`,
@@ -73,8 +64,6 @@ var (
 		Usage:     "stop <addr> <task_id>",
 		ArgsUsage: "<>",
 		// Flags: []cli.Flag{
-		// 	utils.DataDirFlag,
-		// 	utils.LightModeFlag,
 		// },
 		Description: `
 		Stop a task`,
@@ -93,40 +82,25 @@ func init() {
 
 func taskList(ctx *cli.Context) error {
 	fmt.Println("To be implemented...")
-	// node := makeFullNode(ctx)
-	// startNode(ctx, node)
-	// node.Wait()
 	return nil
 }
 
 func taskStart(ctx *cli.Context) error {
 	fmt.Println("To be implemented...")
-	// node := makeFullNode(ctx)
-	// startNode(ctx, node)
-	// node.Wait()
 	return nil
 }
 
 func taskStatus(ctx *cli.Context) error {
 	fmt.Println("To be implemented...")
-	// node := makeFullNode(ctx)
-	// startNode(ctx, node)
-	// node.Wait()
 	return nil
 }
 
 func taskLogs(ctx *cli.Context) error {
 	fmt.Println("To be implemented...")
-	// node := makeFullNode(ctx)
-	// startNode(ctx, node)
-	// node.Wait()
 	return nil
 }
 
 func taskStop(ctx *cli.Context) error {
 	fmt.Println("To be implemented...")
-	// node := makeFullNode(ctx)
-	// startNode(ctx, node)
-	// node.Wait()
 	return nil
 }

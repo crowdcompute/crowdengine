@@ -59,6 +59,7 @@ func (p *TaskProtocol) Notify() {
 	}
 }
 
+// RunImage runs an image with imageID to the hostID
 func (p *TaskProtocol) RunImage(hostID peer.ID, imageID string) bool {
 	log.Printf("%s: Asking running image. Sending request to: %s....", p.p2pHost.ID(), hostID)
 	// create message data

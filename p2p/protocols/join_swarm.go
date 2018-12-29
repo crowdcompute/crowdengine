@@ -48,7 +48,7 @@ func NewJoinSwarmProtocol(p2pHost host.Host, managerIP string) *JoinSwarmProtoco
 	return p
 }
 
-// Sends a join swarm message to this nodes' bootnodes
+// SendJoinToNeighbours sends a join swarm message to this nodes' bootnodes
 func (p *JoinSwarmProtocol) SendJoinToNeighbours(taskReplicas int) {
 	fmt.Println("Sending Join to my Bootnodes")
 	neighbours := p.p2pHost.Peerstore().Peers()
@@ -69,8 +69,8 @@ func (p *JoinSwarmProtocol) SendJoinToNeighbours(taskReplicas int) {
 	log.Print("SWARM READY!")
 }
 
+// Join sends a join Request to a specific <hostID>
 // This is the initiation of a Join communication.
-// Sends a join Request to a specific <hostID>
 func (p *JoinSwarmProtocol) Join(hostID peer.ID) bool {
 	log.Printf("%s: Sending join swarm request to: %s....", p.p2pHost.ID(), hostID)
 

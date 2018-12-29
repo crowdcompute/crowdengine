@@ -42,11 +42,12 @@ func containerRunning(containerID string) bool {
 	return false
 }
 
+// PruneImages checks if there are any images to be removed based on a time interval
 // Running for ever, or until node dies
 func PruneImages(quit <-chan struct{}) {
 	fmt.Println("start prunning images")
 	// TODO: Time has to be a const somewhere
-	ticker := time.NewTicker(time.Second * 3)
+	ticker := time.NewTicker(time.Second * 10)
 	defer ticker.Stop()
 
 	for {
@@ -61,9 +62,10 @@ func PruneImages(quit <-chan struct{}) {
 	}
 }
 
+// RemoveImages removes all images
 func RemoveImages() {
 	summaries, err := manager.GetInstance().ListImages(types.ImageListOptions{All: true})
-	common.CheckErr(err, "[ListImages] Failed to List images")
+	common.CheckErr(err, "[RemoveImages] Failed to List images")
 	now := time.Now().Unix()
 	for _, img := range summaries {
 		image := database.ImageLvlDB{}
@@ -74,7 +76,7 @@ func RemoveImages() {
 		if !ok {
 			continue
 		}
-		// If the image was found
+		// If the image was found into the DB
 		if err == nil {
 			if time.Unix(image.CreatedTime, 0).Add(common.TenDays).Unix() <= now {
 				fmt.Println("Removing image: ", img.ID)
