@@ -32,12 +32,13 @@ type Host struct {
 	*protocols.ListImagesProtocol
 }
 
+// NewHost creates a new Host
 func NewHost(port int, IP string, bootnodes []string) *Host {
 	s := &Host{IP: IP}
 	s.makeRandomHost(port, IP)
 
 	if len(bootnodes) > 0 {
-		s.connectWithNodes(bootnodes)
+		s.ConnectWithNodes(bootnodes)
 	}
 	fmt.Print("Here is my p2p ID: ")
 	fmt.Printf("/ip4/%s/tcp/%d/ipfs/%s\n", IP, port, s.P2PHost.ID().Pretty())
@@ -90,8 +91,8 @@ func (h *Host) makeRandomHost(port int, IP string) {
 	common.CheckErr(err, "[makeRandomHost] Couldn't bootstrap the host.")
 }
 
-// Establishing a libp2p connection to this nodes' bootnodes
-func (h *Host) connectWithNodes(nodes []string) {
+// ConnectWithNodes establishes a libp2p connection to this nodes' bootnodes
+func (h *Host) ConnectWithNodes(nodes []string) {
 	fmt.Println("Connecting to my Bootnodes: ")
 	for _, nodeAddr := range nodes {
 		h.addAddrToPeerstore(nodeAddr)

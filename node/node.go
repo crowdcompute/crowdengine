@@ -103,6 +103,12 @@ func (n *Node) apis() []rpc.API {
 			Service:   NewServiceAPI(n.host),
 			Public:    true,
 		},
+		{
+			Namespace: "bootnodes",
+			Version:   "1.0",
+			Service:   NewBootnodesAPI(n.host),
+			Public:    true,
+		},
 	}
 }
 
@@ -111,7 +117,7 @@ var (
 	addrWS   = flag.String("addrWS", "localhost:8081", "web socket service address")
 )
 
-// Starts serving HTTP requests
+// StartHTTP starts serving HTTP requests
 func (n *Node) StartHTTP() {
 	server := rpc.NewServer()
 	for _, api := range n.apis() {
