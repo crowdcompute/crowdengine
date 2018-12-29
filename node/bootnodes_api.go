@@ -11,6 +11,7 @@ type BootnodesAPI struct {
 	host *p2p.Host
 }
 
+// NewBootnodesAPI creates a new bootnode API
 func NewBootnodesAPI(h *p2p.Host) *BootnodesAPI {
 	return &BootnodesAPI{host: h}
 }
