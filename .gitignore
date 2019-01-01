@@ -2,6 +2,9 @@
 uploads/
 build/bin/
 
+#leveldb database
+gocc_data/
+
 # travis
 profile.tmp
 profile.cov

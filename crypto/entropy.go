@@ -14,33 +14,20 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package crypto
 
 import (
-	"context"
-
-	"github.com/crowdcompute/crowdengine/p2p"
-	peer "github.com/libp2p/go-libp2p-peer"
+	"crypto/rand"
+	"errors"
+	"io"
 )
 
-type BootnodesAPI struct {
-	host *p2p.Host
-}
-
-// NewBootnodesAPI creates a new bootnode API
-func NewBootnodesAPI(h *p2p.Host) *BootnodesAPI {
-	return &BootnodesAPI{host: h}
-}
-
-// SetBootnodes connects the current node with the given nodes
-func (api *BootnodesAPI) SetBootnodes(ctx context.Context, nodes []string) {
-	api.host.ConnectWithNodes(nodes)
-}
-
-// GetBootnodes gets the current nodes connected to the current node
-func (api *BootnodesAPI) GetBootnodes(ctx context.Context) (peers []string) {
-	for _, v := range []peer.ID(api.host.P2PHost.Peerstore().PeersWithAddrs()) {
-		peers = append(peers, v.Pretty())
+// RandomEntropy returns a slice of n bytes fron rand.Reader
+func RandomEntropy(length int) ([]byte, error) {
+	buf := make([]byte, length)
+	n, err := io.ReadFull(rand.Reader, buf)
+	if err != nil || n != length {
+		return nil, errors.New("Unable to read random bytes of length")
 	}
-	return
+	return buf, nil
 }

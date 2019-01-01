@@ -14,33 +14,47 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
 
-package node
+package main
 
 import (
-	"context"
+	"fmt"
+	"os"
+	"sort"
 
-	"github.com/crowdcompute/crowdengine/p2p"
-	peer "github.com/libp2p/go-libp2p-peer"
+	"github.com/crowdcompute/crowdengine/cmd"
+	"github.com/crowdcompute/crowdengine/cmd/gocc/commands"
+	"github.com/urfave/cli"
 )
 
-type BootnodesAPI struct {
-	host *p2p.Host
-}
+var (
+	// GitCommit is used to reference the commit used for the build
+	GitCommit string
 
-// NewBootnodesAPI creates a new bootnode API
-func NewBootnodesAPI(h *p2p.Host) *BootnodesAPI {
-	return &BootnodesAPI{host: h}
-}
+	// Version is passed using the make file
+	Version string
 
-// SetBootnodes connects the current node with the given nodes
-func (api *BootnodesAPI) SetBootnodes(ctx context.Context, nodes []string) {
-	api.host.ConnectWithNodes(nodes)
-}
+	// App is an instance of a cli app
+	App = cmd.NewApp(GitCommit)
+)
 
-// GetBootnodes gets the current nodes connected to the current node
-func (api *BootnodesAPI) GetBootnodes(ctx context.Context) (peers []string) {
-	for _, v := range []peer.ID(api.host.P2PHost.Peerstore().PeersWithAddrs()) {
-		peers = append(peers, v.Pretty())
+func init() {
+	// App.HideVersion = true
+	App.Version = Version
+	App.Commands = []cli.Command{
+		commands.AccountCommand,
+		commands.InitCommand,
 	}
-	return
+	sort.Sort(cli.CommandsByName(App.Commands))
+	App.After = func(ctx *cli.Context) error {
+		// debug.Exit()
+		// console.Stdin.Close() // Resets terminal mode.
+		return nil
+	}
+}
+
+func main() {
+	if err := App.Run(os.Args); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }
