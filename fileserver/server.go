@@ -1,34 +1,33 @@
+// Copyright 2018 The crowdcompute:crowdengine Authors
+// This file is part of the crowdcompute:crowdengine library.
+//
+// The crowdcompute:crowdengine library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The crowdcompute:crowdengine library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
+
 package fileserver
 
 import (
 	"fmt"
 	"io"
-	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
+
+	"github.com/crowdcompute/crowdengine/common"
 )
 
 // FileServer allows files upload over HTTP
 type FileServer struct {
-}
-
-var r *rand.Rand // Rand for this package.
-
-func init() {
-	r = rand.New(rand.NewSource(time.Now().UnixNano()))
-}
-
-// RandomString generates a random number of string
-func RandomString(strlen int) string {
-	const chars = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	result := ""
-	for i := 0; i < strlen; i++ {
-		index := r.Intn(len(chars))
-		result += chars[index : index+1]
-	}
-	return result
 }
 
 // ServeHTTP accepts file uploads multipart/form-data
@@ -45,7 +44,7 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 	// Save the file
-	filename := RandomString(30) + filepath.Ext(handler.Filename)
+	filename := common.RandomString(30) + filepath.Ext(handler.Filename)
 	f, err := os.OpenFile("./uploads/"+filename, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		fmt.Fprint(w, err)

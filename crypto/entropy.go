@@ -14,15 +14,20 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
 
-package common
+package crypto
 
-import "time"
+import (
+	"crypto/rand"
+	"errors"
+	"io"
+)
 
-// FileChunk is the size of a chunk when uploading a file
-const FileChunk = 1 * (1 << 20)
-
-// ImagesDest is the destination folder for storing images
-const ImagesDest = "./uploads/"
-
-// TenDays represents 10 days in time
-const TenDays time.Duration = 24 * time.Hour * 10
+// RandomEntropy returns a slice of n bytes fron rand.Reader
+func RandomEntropy(length int) ([]byte, error) {
+	buf := make([]byte, length)
+	n, err := io.ReadFull(rand.Reader, buf)
+	if err != nil || n != length {
+		return nil, errors.New("Unable to read random bytes of length")
+	}
+	return buf, nil
+}

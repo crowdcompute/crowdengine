@@ -1,3 +1,19 @@
+// Copyright 2018 The crowdcompute:crowdengine Authors
+// This file is part of the crowdcompute:crowdengine library.
+//
+// The crowdcompute:crowdengine library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The crowdcompute:crowdengine library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
+
 package manager
 
 import (
@@ -47,10 +63,6 @@ func (m *DockerManager) boot() bool {
 	m.client = cli
 	return true
 }
-
-//************************************************************************//
-//**************************** IMAGES ************************************//
-//************************************************************************//
 
 // BuildImageFromDockerfile builds an image from a Dockerfile
 func (m *DockerManager) BuildImageFromDockerfile() bool {
@@ -112,10 +124,6 @@ func (m *DockerManager) RemoveImage(imageID string, options types.ImageRemoveOpt
 	}
 	return r, nil
 }
-
-//************************************************************************//
-//**************************** CONTAINERS ********************************//
-//************************************************************************//
 
 // ListContainers list all the container
 // Shows all running containers by docker daemon

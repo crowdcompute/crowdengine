@@ -16,13 +16,25 @@
 
 package common
 
-import "time"
+import (
+	"math/rand"
+	"time"
+)
 
-// FileChunk is the size of a chunk when uploading a file
-const FileChunk = 1 * (1 << 20)
+var r *rand.Rand // Rand for this package.
 
-// ImagesDest is the destination folder for storing images
-const ImagesDest = "./uploads/"
+// check if applicable or should be placed inside random string
+func init() {
+	r = rand.New(rand.NewSource(time.Now().UnixNano()))
+}
 
-// TenDays represents 10 days in time
-const TenDays time.Duration = 24 * time.Hour * 10
+// RandomString generates a random string of strlen length
+func RandomString(strlen int) string {
+	const chars = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	result := ""
+	for i := 0; i < strlen; i++ {
+		index := r.Intn(len(chars))
+		result += chars[index : index+1]
+	}
+	return result
+}

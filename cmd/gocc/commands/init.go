@@ -1,3 +1,19 @@
+// Copyright 2018 The crowdcompute:crowdengine Authors
+// This file is part of the crowdcompute:crowdengine library.
+//
+// The crowdcompute:crowdengine library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The crowdcompute:crowdengine library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
+
 package commands
 
 import (
@@ -6,22 +22,43 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/crowdcompute/crowdengine/cmd/utils"
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/node"
 	"github.com/urfave/cli"
 )
 
 var (
+	// P2pPortFlag p2p port
+	P2pPortFlag = cli.IntFlag{
+		Name:  "port, p",
+		Usage: "The p2p port the node will listen to.",
+		Value: 12000,
+	}
+
+	// IPFlag listen
+	IPFlag = cli.StringFlag{
+		Name:  "ip",
+		Usage: "Setting the IP address",
+		Value: "127.0.0.0",
+	}
+	// RPCFlag settings
+	RPCFlag = cli.BoolFlag{
+		Name:  "rpc",
+		Usage: "Setting this flag will make this node listet to JSON-RPC calls",
+	}
+)
+
+var (
+	// InitCommand initializes and starts a node
 	InitCommand = cli.Command{
 		Action:    initNode,
 		Name:      "init",
 		Usage:     "Initialize a Crowd Compute node",
 		ArgsUsage: "<bootnodes>",
 		Flags: []cli.Flag{
-			utils.P2pPortFlag,
-			utils.IPFlag,
-			utils.RPCFlag,
+			P2pPortFlag,
+			IPFlag,
+			RPCFlag,
 		},
 		Category: "CC CLI",
 		Description: `
@@ -38,8 +75,7 @@ func initNode(ctx *cli.Context) error {
 	ip := ctx.String("ip")
 	rpcFlag := ctx.Bool("rpc") // BoolTFlag returns false if no flag was set
 
-	// Getting bootnodes from a txt file will be changed
-	bootnodes := getBootnodes(bootnodesFile)
+	bootnodes := getBootnodesFromFile(bootnodesFile)
 
 	// Creating a new Node.
 	// Takes port and ip command line arguments as parameters
@@ -54,7 +90,8 @@ func initNode(ctx *cli.Context) error {
 	return nil
 }
 
-func getBootnodes(bootnodesFile string) []string {
+// getBootnodesFromFile returns a slice of bootnodes given the file bootnodesFile
+func getBootnodesFromFile(bootnodesFile string) []string {
 	bootnodes := make([]string, 0)
 	if bootnodesFile != "" {
 		file, err := os.Open(bootnodesFile)

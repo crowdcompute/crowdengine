@@ -1,3 +1,19 @@
+// Copyright 2018 The crowdcompute:crowdengine Authors
+// This file is part of the crowdcompute:crowdengine library.
+//
+// The crowdcompute:crowdengine library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The crowdcompute:crowdengine library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
+
 package node
 
 import (
@@ -19,6 +35,8 @@ import (
 var (
 	errNodeStarted      = errors.New("node: already started")
 	errImageStoreExists = errors.New("Unable to create a new Image Store")
+	httpAddr            = flag.String("httpAddr", "localhost:8080", "http service address")
+	addrWS              = flag.String("addrWS", "localhost:8081", "web socket service address")
 )
 
 type Node struct {
@@ -34,10 +52,7 @@ func NewNode(port int, IP string, bootnodes []string) (*Node, error) {
 	n := &Node{
 		quit: make(chan struct{}),
 	}
-	// TODO: PATH has to be in a config
-	// n.store, errImageStoreExists = database.NewDBStore(filepath.Join(common.LvlDBPath, "store.db"))
-	// n.imgTable = database.NewTable(n.store, reflect.TypeOf(database.ImageLvlDB{}).Name())
-	// common.CheckErr(errImageStoreExists, "[NewNode] This level db file already exists")
+
 	n.host = p2p.NewHost(port, IP, bootnodes)
 	return n, nil
 }
@@ -46,15 +61,12 @@ func NewNode(port int, IP string, bootnodes []string) (*Node, error) {
 func (n *Node) Start(ctx context.Context, rpcFlag bool) error {
 	err := errNodeStarted
 	n.startOnce.Do(func() {
-		go n.run(ctx)
 		// TODO: Only if worker node run these two
 		go n.host.DeleteDiscoveryMsgs(n.quit)
 		go PruneImages(n.quit)
 		err = nil // clear error above, only once.
 	})
 
-	// Start listening for file upload requests
-	// Start listening for RPC calls
 	if rpcFlag {
 		fmt.Println("Starting RPC service")
 		go n.StartHTTP() // blocks forever
@@ -66,21 +78,12 @@ func (n *Node) Start(ctx context.Context, rpcFlag bool) error {
 	return err
 }
 
-// Run the node
-func (n *Node) run(ctx context.Context) {
-
-}
-
 func (n *Node) Stop() error {
 	n.store.Close()
 	close(n.quit)
 	log.Println("Node stopped")
 	return nil
 }
-
-//***************************************************************************************//
-//*****************************// RPC server //*********************************//
-//***************************************************************************************//
 
 // apis returns the collection of RPC descriptors this node offers.
 func (n *Node) apis() []rpc.API {
@@ -103,15 +106,16 @@ func (n *Node) apis() []rpc.API {
 			Service:   NewServiceAPI(n.host),
 			Public:    true,
 		},
+		{
+			Namespace: "bootnodes",
+			Version:   "1.0",
+			Service:   NewBootnodesAPI(n.host),
+			Public:    true,
+		},
 	}
 }
 
-var (
-	httpAddr = flag.String("httpAddr", "localhost:8080", "http service address")
-	addrWS   = flag.String("addrWS", "localhost:8081", "web socket service address")
-)
-
-// Starts serving HTTP requests
+// StartHTTP starts serving HTTP requests
 func (n *Node) StartHTTP() {
 	server := rpc.NewServer()
 	for _, api := range n.apis() {

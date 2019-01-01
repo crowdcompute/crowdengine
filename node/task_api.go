@@ -1,3 +1,19 @@
+// Copyright 2018 The crowdcompute:crowdengine Authors
+// This file is part of the crowdcompute:crowdengine library.
+//
+// The crowdcompute:crowdengine library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The crowdcompute:crowdengine library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
+
 package node
 
 import (
@@ -130,96 +146,3 @@ func (api *ImageManagerAPI) ListImages(ctx context.Context, nodePID string, publ
 	api.host.CreateAndSendListRequest(toNodeID, publicKey)
 	return <-api.host.ListChan, nil
 }
-
-// ************************************************************************************** //
-// 								The old way											      //
-/*
-// API call to push and run an image to the remote peer
-func (api *ImageManagerAPI) RunImageOnNode(ctx context.Context, nodePID string, imageFilePath string) (string, error) {
-	fmt.Printf("<%s> Running imageID %s to node %s\n", api.protocolTask.P2PHost.ID().String(), imageFilePath, nodePID)
-
-	// In the case we send the image via a POST request to the node
-	result, err := api.UploadAndRunImage(ctx, api.getNodeAddr(nodePID), imageFilePath)
-
-	// This is in the case the image is on a Registry,
-	// the imageID or key needs to be passed to the Node for it to load it.
-
-	// nodeID, _ := peer.IDB58Decode(nodePID)
-	// api.node.nodeExecImage(nodeID, imageFilePath)
-
-	return result, err
-}
-
-func (api *ImageManagerAPI) getNodeAddr(nodePID string) []ma.Multiaddr {
-	peerid, err := peer.IDB58Decode(nodePID)
-	common.CheckErr(err, "[getNodeAddr] Couldn't IDB58Decode nodePID.")
-	pi := api.protocolTask.P2PHost.Peerstore().PeerInfo(peerid)
-	return pi.Addrs
-}
-
-func (api *ImageManagerAPI) UploadAndRunImage(ctx context.Context, nodeAddr []ma.Multiaddr, imageFilePath string) (string, error) {
-	fmt.Println("I got this image:", imageFilePath)
-
-	// TODO: Need to change this logic and make it more generic
-	// Why always take the first nodeAddr[0]?
-	// Is IP always on the 3rd position?
-	uri := nodeAddr[0].String()
-	components := strings.Split(uri, "/")
-	url := "http://" + components[2] + ":" + strconv.Itoa(api.node.uploadAddrPort) + "/upload"
-	fmt.Println(url)
-
-	request, err := newfileUploadRequest(url, "file", imageFilePath)
-	common.CheckErr(err, "[UploadAndRunImage] Couldn't upload file.")
-
-	client := &http.Client{}
-	resp, err := client.Do(request)
-	common.CheckErr(err, "[UploadAndRunImage] Couldn't do http request.")
-
-	var bodyContent []byte
-	fmt.Println(resp.StatusCode)
-	fmt.Println(resp.Header)
-	resp.Body.Read(bodyContent)
-	fmt.Println(bodyContent)
-	resp.Body.Close()
-	return string(bodyContent), nil
-}
-*/
-//***************************************************************************************//
-//*******************************// Helper functions //**********************************//
-//***************************************************************************************//
-/*
-// Creates a new file upload http request with optional extra params
-func newfileUploadRequest(uri string, paramName, path string) (*http.Request, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	fileContents, err := ioutil.ReadAll(file)
-	if err != nil {
-		return nil, err
-	}
-	fi, err := file.Stat()
-	if err != nil {
-		return nil, err
-	}
-	file.Close()
-
-	body := new(bytes.Buffer)
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile(paramName, fi.Name())
-	if err != nil {
-		return nil, err
-	}
-	part.Write(fileContents)
-
-	err = writer.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", uri, body)
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-
-	return req, err
-}
-*/

@@ -14,18 +14,17 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
 
-package crypto
+package keystore
 
 import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"io"
 
+	"github.com/crowdcompute/crowdengine/crypto"
 	"golang.org/x/crypto/scrypt"
 )
 
@@ -59,7 +58,7 @@ func DecryptKey(password string, data string) (string, error) {
 	salt, err := hex.DecodeString(encjson.Crypto.KDFParams.Salt)
 	ciphertext, err := hex.DecodeString(encjson.Crypto.CipherText)
 	dk, err := scrypt.Key([]byte(password), salt, encjson.Crypto.KDFParams.N, encjson.Crypto.KDFParams.R, encjson.Crypto.KDFParams.P, encjson.Crypto.KDFParams.DKeyLength)
-	hash := Keccak256(dk[16:32], ciphertext)
+	hash := crypto.Keccak256(dk[16:32], ciphertext)
 	if !bytes.Equal(hash, mac) {
 		return "", errors.New("Mac Mismatch")
 	}
@@ -75,7 +74,7 @@ func DecryptKey(password string, data string) (string, error) {
 
 // EncryptKey encrypts a key using a symmetric algorithm
 func EncryptKey(password string, key *Key) (string, error) {
-	salt, err := RandomEntropy(32)
+	salt, err := crypto.RandomEntropy(32)
 	if err != nil {
 		return "", err
 	}
@@ -83,7 +82,7 @@ func EncryptKey(password string, key *Key) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	iv, err := RandomEntropy(aes.BlockSize)
+	iv, err := crypto.RandomEntropy(aes.BlockSize)
 	if err != nil {
 		return "", err
 	}
@@ -101,7 +100,7 @@ func EncryptKey(password string, key *Key) (string, error) {
 	cipherText := make([]byte, len(privateKeyBytes))
 	stream.XORKeyStream(cipherText, privateKeyBytes)
 
-	mac := Keccak256(dk[16:32], cipherText)
+	mac := crypto.Keccak256(dk[16:32], cipherText)
 	cipherParamsJSON := cipherparamsJSON{
 		IV: hex.EncodeToString(iv),
 	}
@@ -134,14 +133,4 @@ func EncryptKey(password string, key *Key) (string, error) {
 		return "", err
 	}
 	return string(data), nil
-}
-
-// RandomEntropy returns a slice of n bytes fron rand.Reader
-func RandomEntropy(length int) ([]byte, error) {
-	buf := make([]byte, length)
-	n, err := io.ReadFull(rand.Reader, buf)
-	if err != nil || n != length {
-		return nil, errors.New("Unable to read random bytes of length")
-	}
-	return buf, nil
 }

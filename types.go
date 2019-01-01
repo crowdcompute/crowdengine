@@ -14,15 +14,4 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
 
-package common
-
-import "time"
-
-// FileChunk is the size of a chunk when uploading a file
-const FileChunk = 1 * (1 << 20)
-
-// ImagesDest is the destination folder for storing images
-const ImagesDest = "./uploads/"
-
-// TenDays represents 10 days in time
-const TenDays time.Duration = 24 * time.Hour * 10
+package crowdengine

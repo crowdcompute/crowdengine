@@ -14,15 +14,27 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
 
-package common
+package database
 
-import "time"
+import (
+	"fmt"
+	"testing"
+	"time"
+)
 
-// FileChunk is the size of a chunk when uploading a file
-const FileChunk = 1 * (1 << 20)
+func TestGet(t *testing.T) {
+	image := ImageLvlDB{Hash: "hash", Signature: "signature", CreatedTime: time.Now().Unix()}
+	GetDB().Model(&image).Put([]byte("imageID"))
 
-// ImagesDest is the destination folder for storing images
-const ImagesDest = "./uploads/"
-
-// TenDays represents 10 days in time
-const TenDays time.Duration = 24 * time.Hour * 10
+	imageGet := ImageLvlDB{}
+	i, err := GetDB().Model(&imageGet).Get([]byte("imageID"))
+	if err == nil {
+		imageGet, ok := i.(*ImageLvlDB)
+		if !ok {
+			return
+		}
+		fmt.Println(imageGet)
+	} else {
+		fmt.Println(err)
+	}
+}

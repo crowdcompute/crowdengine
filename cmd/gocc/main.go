@@ -14,15 +14,47 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
 
-package common
+package main
 
-import "time"
+import (
+	"fmt"
+	"os"
+	"sort"
 
-// FileChunk is the size of a chunk when uploading a file
-const FileChunk = 1 * (1 << 20)
+	"github.com/crowdcompute/crowdengine/cmd"
+	"github.com/crowdcompute/crowdengine/cmd/gocc/commands"
+	"github.com/urfave/cli"
+)
 
-// ImagesDest is the destination folder for storing images
-const ImagesDest = "./uploads/"
+var (
+	// GitCommit is used to reference the commit used for the build
+	GitCommit string
 
-// TenDays represents 10 days in time
-const TenDays time.Duration = 24 * time.Hour * 10
+	// Version is passed using the make file
+	Version string
+
+	// App is an instance of a cli app
+	App = cmd.NewApp(GitCommit)
+)
+
+func init() {
+	// App.HideVersion = true
+	App.Version = Version
+	App.Commands = []cli.Command{
+		commands.AccountCommand,
+		commands.InitCommand,
+	}
+	sort.Sort(cli.CommandsByName(App.Commands))
+	App.After = func(ctx *cli.Context) error {
+		// debug.Exit()
+		// console.Stdin.Close() // Resets terminal mode.
+		return nil
+	}
+}
+
+func main() {
+	if err := App.Run(os.Args); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}

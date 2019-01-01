@@ -14,15 +14,33 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
 
-package common
+package node
 
-import "time"
+import (
+	"context"
 
-// FileChunk is the size of a chunk when uploading a file
-const FileChunk = 1 * (1 << 20)
+	"github.com/crowdcompute/crowdengine/p2p"
+	peer "github.com/libp2p/go-libp2p-peer"
+)
 
-// ImagesDest is the destination folder for storing images
-const ImagesDest = "./uploads/"
+type BootnodesAPI struct {
+	host *p2p.Host
+}
 
-// TenDays represents 10 days in time
-const TenDays time.Duration = 24 * time.Hour * 10
+// NewBootnodesAPI creates a new bootnode API
+func NewBootnodesAPI(h *p2p.Host) *BootnodesAPI {
+	return &BootnodesAPI{host: h}
+}
+
+// SetBootnodes connects the current node with the given nodes
+func (api *BootnodesAPI) SetBootnodes(ctx context.Context, nodes []string) {
+	api.host.ConnectWithNodes(nodes)
+}
+
+// GetBootnodes gets the current nodes connected to the current node
+func (api *BootnodesAPI) GetBootnodes(ctx context.Context) (peers []string) {
+	for _, v := range []peer.ID(api.host.P2PHost.Peerstore().PeersWithAddrs()) {
+		peers = append(peers, v.Pretty())
+	}
+	return
+}

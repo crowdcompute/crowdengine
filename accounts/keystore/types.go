@@ -14,9 +14,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
 
-package crypto
+package keystore
 
 import (
+	"github.com/crowdcompute/crowdengine/crypto"
 	"github.com/pborman/uuid"
 )
 
@@ -51,6 +52,6 @@ type encryptedKeyJSON struct {
 
 // Key represents a key with UUID
 type Key struct {
-	*KeyPair
+	*crypto.KeyPair
 	Id uuid.UUID
 }

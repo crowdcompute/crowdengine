@@ -3,6 +3,7 @@ set -e
 
 # Variables
 VMNAME=$1
+ARTIFACT=$2
 
 # colors and helpers
 bold() { echo -e "\e[1m$@\e[0m" ; }
@@ -31,7 +32,6 @@ function set_defaults ()
     USER_DATA=user-data
     META_DATA=meta-data
     # IMAGE_URL=https://cloud-images.ubuntu.com/releases/16.04/release
-    
     RESIZE_DISK=false               # Resize disk (boolean)
     PUBKEY=""                       # SSH public key
     DISTRO=centos7                  # Distribution
@@ -39,7 +39,6 @@ function set_defaults ()
     PORT=-1                         # Console port
     TIMEZONE=Europe/Athens          # Timezone
     ADDITIONAL_USER=${USER}         # User
-    
     # Reset OPTIND
     OPTIND=1
 }
@@ -53,7 +52,6 @@ provision_vm() {
     
     green "[OK] VM directory created"
     
-    
     pushd ${VMDIR}/${VMNAME}
     touch ${VMNAME}.log
     
@@ -63,9 +61,6 @@ provision_vm() {
     if [ ! -f ${IMAGEDIR}/${QCOW} ]
     then
         die "Cloud image not found. Please download it"
-        # set_wget
-        # ${WGET} --directory-prefix ${IMAGEDIR} ${IMAGE_URL}/${QCOW} || \
-        #     die "Could not download image."
     fi
     
     green "[OK] Base image found"
@@ -91,25 +86,17 @@ provision_vm() {
     DISK=${VMNAME}.qcow2
     cp $IMAGE "${VMDIR}/${VMNAME}/${DISK}" && ok
     
-    
-    
-    # Remove the unnecessary cloud init files
-    green "Cleaning up cloud-init files"
-    
-    #rm $USER_DATA $META_DATA $CI_ISO && ok
+
     import_vm
     
-    # vm is not started yet 
-    # copy the files to the vm
-    sudo virt-copy-in -d ${VMNAME} /home/younix/Desktop/deploy/install.sh /home/ubuntu/
-    # sudo virt-customize -d ${VMNAME} --copy-in "install.sh:/home/ubuntu/"
+    # copy artifacts to image using the -a arg
+    sudo virt-copy-in -a "${VMDIR}/${VMNAME}/${DISK}" ${ARTIFACT} /home/ubuntu/
 
     sleep 1
 
     (virsh start ${VMNAME}  &>> ${VMNAME}.log && ok )
-
+    
     sleep 1
-
 
     # Eject cdrom
     virsh change-media ${VMNAME} hda --eject --config &>> ${VMNAME}.log
@@ -130,27 +117,22 @@ provision_vm() {
                 break
             fi
         done
-        # check_delete_known_host
     else
         yellow "Bridge looks like a layer 2 bridge, get the domain's IP address from your DHCP server"
         IP="<IP address>"
     fi
     
-    green "SSH to ${VMNAME}: 'ssh ${LOGIN_USER}@${IP}' or 'ssh ${LOGIN_USER}@${VMNAME}'"
-
+    green "SSH to ${VMNAME}: 'ssh ubuntu@${IP}' or 'ssh ubuntu@${VMNAME}'"
+    
+    # Remove the unnecessary cloud init files
+    green "Cleaning up cloud-init files"
     rm $USER_DATA $META_DATA $CI_ISO && ok
 
     popd
-    #./kvm-installer create -t ubuntu1604 -c 2 -m 2048  my-ubuntu
-    
+
 }
 
-# delete_vm() {
-
-# }
-
 import_vm() {
-    #        --noreboot \
     (virt-install --import \
         --name ${VMNAME} \
         --memory ${MEMORY} \
@@ -257,7 +239,7 @@ _EOF_
     
     { echo "instance-id: ${VMNAME}"; echo "local-hostname: ${VMNAME}"; } > $META_DATA
     
-    # Create CD-ROM ISO with cloud-init config
+    # Create ISO with cloud-init config
     if command -v genisoimage &>/dev/null
     then
         genisoimage -output $CI_ISO \
@@ -272,7 +254,6 @@ _EOF_
     fi
     
 }
-
 
 # Main
 kvm_group="$(ls -l /dev/kvm | awk '{ print $4 }')"

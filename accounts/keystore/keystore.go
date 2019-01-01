@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
 
-package crypto
+package keystore
 
 import (
 	"fmt"
@@ -24,12 +24,13 @@ import (
 	"time"
 
 	"github.com/crowdcompute/crowdengine/cmd/terminal"
+	"github.com/crowdcompute/crowdengine/crypto"
 	"github.com/pborman/uuid"
 )
 
 // Create generates random keypair
 func Create() {
-	keypair, err := GenerateKeyPair()
+	keypair, err := crypto.GenerateKeyPair()
 	if err != nil {
 		log.Fatal(err)
 	}

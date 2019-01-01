@@ -1,3 +1,19 @@
+// Copyright 2018 The crowdcompute:crowdengine Authors
+// This file is part of the crowdcompute:crowdengine library.
+//
+// The crowdcompute:crowdengine library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The crowdcompute:crowdengine library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
+
 package protocols
 
 // This file is the communication Protocol for Joining a Docker Swarm network.
@@ -48,7 +64,7 @@ func NewJoinSwarmProtocol(p2pHost host.Host, managerIP string) *JoinSwarmProtoco
 	return p
 }
 
-// Sends a join swarm message to this nodes' bootnodes
+// SendJoinToNeighbours sends a join swarm message to this nodes' bootnodes
 func (p *JoinSwarmProtocol) SendJoinToNeighbours(taskReplicas int) {
 	fmt.Println("Sending Join to my Bootnodes")
 	neighbours := p.p2pHost.Peerstore().Peers()
@@ -69,8 +85,8 @@ func (p *JoinSwarmProtocol) SendJoinToNeighbours(taskReplicas int) {
 	log.Print("SWARM READY!")
 }
 
+// Join sends a join Request to a specific <hostID>
 // This is the initiation of a Join communication.
-// Sends a join Request to a specific <hostID>
 func (p *JoinSwarmProtocol) Join(hostID peer.ID) bool {
 	log.Printf("%s: Sending join swarm request to: %s....", p.p2pHost.ID(), hostID)
 
