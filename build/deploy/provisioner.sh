@@ -89,7 +89,8 @@ provision_vm() {
     # copy image to the destination directory
     DISK=${VMNAME}.qcow2
     cp $IMAGE "${VMDIR}/${VMNAME}/${DISK}" && ok
-    
+
+    sudo qemu-img resize "${VMDIR}/${VMNAME}/${DISK}" 10G && ok
 
     import_vm
     
@@ -126,7 +127,8 @@ provision_vm() {
         IP="<IP address>"
     fi
     
-    green "SSH to ${VMNAME}: 'ssh ubuntu@${IP}' or 'ssh ubuntu@${VMNAME}'"
+
+    green "SSH to ${VMNAME}: 'ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ubuntu@${IP}'"
     
     # Remove the unnecessary cloud init files
     green "Cleaning up cloud-init files"
