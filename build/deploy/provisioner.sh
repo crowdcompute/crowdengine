@@ -218,6 +218,7 @@ timezone: ${TIMEZONE}
 # Remove cloud-init when finished with it
 runcmd:
   - mkdir -p /home/ubuntu/uploads
+  - sudo chmod 777 /home/ubuntu/uploads
   - rm -r /home/ubuntu/go1.11.4.linux-amd64.tar.gz
   - sudo usermod -a -G docker ubuntu
   - sudo touch /etc/cloud/cloud-init.disabled
