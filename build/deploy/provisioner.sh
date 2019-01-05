@@ -13,8 +13,7 @@ yellow() { echo -e "\e[33m$@\e[0m" ; }
 die() { red "ERR: $@" >&2 ; exit 2 ; }
 ok() { green "${@:-OK}" ; }
 
-function set_defaults ()
-{
+set_defaults() {
     AUTOSTART=false                 # Automatically start VM at boot time
     CPUS=1                          # Number of virtual CPUs
     FEATURE=host                    # Use host cpu features to the guest
@@ -43,6 +42,11 @@ function set_defaults ()
     OPTIND=1
 }
 
+clean_vms() {
+    (virsh destroy ${VMNAME} > /dev/null 2>&1 || true )
+    (virsh undefine ${VMNAME} > /dev/null 2>&1 || true )
+    (rm -rf ${VMDIR}/${VMNAME} > /dev/null 2>&1 || true )
+}
 
 provision_vm() {
     check_vmname_set
@@ -152,15 +156,13 @@ check_vmname_set() {
     [ -n "${VMNAME}" ] || die "VMNAME not set."
 }
 
-function domain_exists ()
-{
+domain_exists() {
     virsh dominfo "${1}" > /dev/null 2>&1 \
     && DOMAIN_EXISTS=1 \
     || DOMAIN_EXISTS=0
 }
 
-function storpool_exists ()
-{
+storpool_exists() {
     virsh pool-info "${1}" > /dev/null 2>&1 \
     && STORPOOL_EXISTS=1 \
     || STORPOOL_EXISTS=0
@@ -259,6 +261,7 @@ _EOF_
 kvm_group="$(ls -l /dev/kvm | awk '{ print $4 }')"
 if groups $username | grep &>/dev/null "\b$kvm_group\b"; then
     green "[OK] Permissions are correct"
+    clean_vms
     set_defaults
     provision_vm
     
