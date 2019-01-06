@@ -39,6 +39,7 @@ var (
 	addrWS              = flag.String("addrWS", "localhost:8081", "web socket service address")
 )
 
+// Node represents a node
 type Node struct {
 	rpcAPIs         []rpc.API // list of APIs
 	startOnce       sync.Once
