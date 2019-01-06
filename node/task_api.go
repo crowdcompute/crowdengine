@@ -109,6 +109,7 @@ func fillString(retunString string, toLength int) string {
 	return retunString
 }
 
+// RunImage is the API call to run an imageID to the nodePID node
 func (api *ImageManagerAPI) RunImage(ctx context.Context, nodePID string, imageID string) string {
 	toNodeID, _ := peer.IDB58Decode(nodePID)
 	api.host.RunImage(toNodeID, imageID)
