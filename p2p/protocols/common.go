@@ -93,22 +93,22 @@ func authenticateMessage(message proto.Message, data *api.MessageData) bool {
 	data.Sign = sign
 
 	// restore peer id binary format from base58 encoded node id data
-	peerId, err := peer.IDB58Decode(data.NodeId)
+	peerID, err := peer.IDB58Decode(data.NodeId)
 	if err != nil {
 		log.Println(err, "Failed to decode node id from base58")
 		return false
 	}
 	// verify the data was authored by the signing peer identified by the public key
 	// and signature included in the message
-	return verifyData(bin, []byte(sign), peerId, data.NodePubKey)
+	return verifyData(bin, []byte(sign), peerID, data.NodePubKey)
 }
 
 // Verify incoming p2p message data integrity
 // data: data to verify
 // signature: author signature provided in the message payload
-// peerId: author peer id from the message payload
+// peerID: author peer id from the message payload
 // pubKeyData: author public key from the message payload
-func verifyData(data []byte, signature []byte, peerId peer.ID, pubKeyData []byte) bool {
+func verifyData(data []byte, signature []byte, peerID peer.ID, pubKeyData []byte) bool {
 	key, err := crypto.UnmarshalPublicKey(pubKeyData)
 	if err != nil {
 		log.Println(err, "Failed to extract key from message key data")
@@ -124,7 +124,7 @@ func verifyData(data []byte, signature []byte, peerId peer.ID, pubKeyData []byte
 	}
 
 	// verify that message author node id matches the provided node public key
-	if idFromKey != peerId {
+	if idFromKey != peerID {
 		log.Println(err, "Node id and provided public key mismatch")
 		return false
 	}
@@ -169,8 +169,7 @@ func sendProtoMessage(data proto.Message, s net.Stream) bool {
 	return true
 }
 
-//************************************* MESSAGES ***************************************//
-
+// NewMessageData ...
 // helper method - generate message data shared between all node's p2p protocols
 // messageId: unique for requests, copied from request for responses
 func NewMessageData(messageId string, gossip bool, p2pHost host.Host) *api.MessageData {

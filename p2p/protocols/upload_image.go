@@ -126,13 +126,20 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 	}
 	fmt.Println("Received file completely!")
 
-	imageID, err := loadImage(fileName)
+	imageID, err := loadImageToDocker(fileName)
 	if err != nil {
-		fmt.Printf("There was an error loading the image %s\n", err)
-		p.ImageIDchan <- "There was an error loading the image"
+		errmsg := fmt.Sprintf("There was an error loading the image. Error: %s\n", err)
+		fmt.Printf(errmsg)
+		removeImageFile(destFileName)
+		p.ImageIDchan <- errmsg
 		return
 	}
 
+	err = removeImageFile(destFileName)
+	if err != nil {
+		p.ImageIDchan <- err.Error()
+		return
+	}
 	p.storeNewImageToDB(imageID, hash, signature)
 
 	//Sending the response
@@ -147,38 +154,63 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 	sendMsg(p.p2pHost, s.Conn().RemotePeer(), resp, protocol.ID(imageUploadResponse))
 }
 
-func loadImage(filename string) (string, error) {
-	fmt.Println("Loading this image: ", filename)
-	response, err := manager.GetInstance().LoadImage(filename)
-	r, _ := regexp.Compile("sha256:(.*)")
-	matches := r.FindAllStringSubmatch(response, -1)
-	// No image ID exists, so it's the name:tag
-	if len(matches) == 0 {
-		imageNameTag := response[2 : len(response)-5]
-		fmt.Println(imageNameTag)
-
-		fargs := filters.NewArgs()
-		fargs.Add("reference", imageNameTag)
-
-		options := types.ImageListOptions{
-			Filters: fargs,
-		}
-
-		res, err := manager.GetInstance().ListImages(options)
-		if err != nil {
-			fmt.Println("error: ", err)
-		}
-		imgID := strings.Replace(res[0].ID, "sha256:", "", -1)
-		log.Println("Loaded image. Image ID: ")
-		log.Println(imgID)
-		return imgID, err
-	} else {
-		log.Println("Loaded image. Image ID: ")
-		log.Println(matches[0][1][:64])
-		return matches[0][1][:64], err
+// removeImageFile removes the imgFilePath file from the machine
+func removeImageFile(imgFilePath string) error {
+	err := os.Remove(imgFilePath)
+	if err != nil {
+		errmsg := fmt.Sprintf("There was an error removing the image. Error: %s\n", err)
+		fmt.Printf(errmsg)
+		return fmt.Errorf(errmsg)
 	}
+	return nil
 }
 
+// loadImageToDocker takes a path to an image file and loads it to the docker daemon
+func loadImageToDocker(filename string) (string, error) {
+	fmt.Println("Loading this image: ", filename)
+	response, err := manager.GetInstance().LoadImage(filename)
+	if err != nil {
+		return "", err
+	}
+
+	if matches, exists := imageIDExists(response); exists {
+		fmt.Println("Loaded image. Image ID: ")
+		fmt.Println(matches[0][1][:64])
+		return matches[0][1][:64], err
+	}
+
+	// If no image ID exists, we extract the image ID
+	// from listing the image using the tag
+	fmt.Println(response)
+	fmt.Println(len(response) - 5)
+	imageNameTag := response[2 : len(response)-5]
+	fmt.Println(imageNameTag)
+
+	fargs := filters.NewArgs()
+	fargs.Add("reference", imageNameTag)
+
+	options := types.ImageListOptions{
+		Filters: fargs,
+	}
+
+	res, err := manager.GetInstance().ListImages(options)
+	if err != nil {
+		fmt.Println("error: ", err)
+	}
+	imgID := strings.Replace(res[0].ID, "sha256:", "", -1)
+	log.Println("Loaded image. Image ID: ")
+	log.Println(imgID)
+	return imgID, err
+}
+
+// imageIDExists checks a docker api response if image ID exists (using regex on 'sha256:')
+func imageIDExists(response string) ([][]string, bool) {
+	r, _ := regexp.Compile("sha256:(.*)")
+	matches := r.FindAllStringSubmatch(response, -1)
+	return matches, len(matches) != 0
+}
+
+// storeNewImageToDB stores the new image to our level DB
 func (p *UploadImageProtocol) storeNewImageToDB(imageID string, hash string, signature string) {
 	image := database.ImageLvlDB{Hash: hash, Signature: signature, CreatedTime: time.Now().Unix()}
 	database.GetDB().Model(image).Put([]byte(imageID))
