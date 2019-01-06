@@ -45,7 +45,7 @@ func NewImageManagerAPI(h *p2p.Host) *ImageManagerAPI {
 	}
 }
 
-// API call to push an image to the remote peer
+// PushImage is the API call to push an image to the remote peer
 func (api *ImageManagerAPI) PushImage(ctx context.Context, nodePID string, imageFilePath string) (string, error) {
 
 	file, err := os.Open(imageFilePath)
