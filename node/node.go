@@ -48,7 +48,7 @@ type Node struct {
 	host            *p2p.Host
 }
 
-// New returns new Node instance.
+// NewNode returns new Node instance
 func NewNode(port int, IP string, bootnodes []string) (*Node, error) {
 	n := &Node{
 		quit: make(chan struct{}),
