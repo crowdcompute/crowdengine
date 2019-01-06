@@ -30,6 +30,7 @@ import (
 	peer "github.com/libp2p/go-libp2p-peer"
 )
 
+// ImageManagerAPI represents the image manager RPC API
 type ImageManagerAPI struct {
 	host   *p2p.Host
 	images map[string][]byte // image hash -> signature
