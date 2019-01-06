@@ -79,6 +79,7 @@ func (n *Node) Start(ctx context.Context, rpcFlag bool) error {
 	return err
 }
 
+// Stop is closing down everything that the node started
 func (n *Node) Stop() error {
 	n.store.Close()
 	close(n.quit)
