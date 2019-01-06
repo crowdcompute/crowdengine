@@ -36,6 +36,7 @@ type ImageManagerAPI struct {
 	images map[string][]byte // image hash -> signature
 }
 
+// NewImageManagerAPI creates a new image manager RPC API
 func NewImageManagerAPI(h *p2p.Host) *ImageManagerAPI {
 	return &ImageManagerAPI{
 		host: h,
