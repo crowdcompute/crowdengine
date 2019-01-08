@@ -28,6 +28,7 @@ import (
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/database"
 	"github.com/crowdcompute/crowdengine/p2p"
+	ccrpc "github.com/crowdcompute/crowdengine/rpc"
 
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -93,25 +94,25 @@ func (n *Node) apis() []rpc.API {
 		{
 			Namespace: "discovery",
 			Version:   "1.0",
-			Service:   NewDiscoveryAPI(n.host),
+			Service:   ccrpc.NewDiscoveryAPI(n.host),
 			Public:    true,
 		},
 		{
 			Namespace: "imagemanager",
 			Version:   "1.0",
-			Service:   NewImageManagerAPI(n.host),
+			Service:   ccrpc.NewImageManagerAPI(n.host),
 			Public:    true,
 		},
 		{
 			Namespace: "service",
 			Version:   "1.0",
-			Service:   NewServiceAPI(n.host),
+			Service:   ccrpc.NewServiceAPI(n.host),
 			Public:    true,
 		},
 		{
 			Namespace: "bootnodes",
 			Version:   "1.0",
-			Service:   NewBootnodesAPI(n.host),
+			Service:   ccrpc.NewBootnodesAPI(n.host),
 			Public:    true,
 		},
 	}
