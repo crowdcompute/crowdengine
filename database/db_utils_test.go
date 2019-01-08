@@ -17,24 +17,45 @@
 package database
 
 import (
-	"fmt"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestGet(t *testing.T) {
-	image := ImageLvlDB{Hash: "hash", Signature: "signature", CreatedTime: time.Now().Unix()}
-	GetDB().Model(&image).Put([]byte("imageID"))
+func init() {
+	imagePut := ImageLvlDB{Hash: "test", Signature: "test", CreatedTime: time.Now().Unix()}
+	GetDB().Model(&imagePut).Put([]byte("testKey"))
+}
 
+func TestPutGet(t *testing.T) {
 	imageGet := ImageLvlDB{}
-	i, err := GetDB().Model(&imageGet).Get([]byte("imageID"))
+	i, err := GetDB().Model(&imageGet).Get([]byte("testKey"))
 	if err == nil {
 		imageGet, ok := i.(*ImageLvlDB)
 		if !ok {
-			return
+			t.Errorf("Type assertion error")
 		}
-		fmt.Println(imageGet)
+		assert.Equal(t, imageGet.Hash, "test")
+		assert.Equal(t, imageGet.Signature, "test")
 	} else {
-		fmt.Println(err)
+		t.Errorf("Couldn't get the image")
+	}
+}
+
+func TestHas(t *testing.T) {
+	has, err := GetDB().Model(&ImageLvlDB{}).Has([]byte("testKey"))
+	if err != nil {
+		t.Errorf("Error getting image")
+	}
+	assert.True(t, has)
+}
+
+func TestDelete(t *testing.T) {
+	err := GetDB().Model(&ImageLvlDB{}).Delete([]byte("testKey"))
+	imageGet := ImageLvlDB{}
+	_, err = GetDB().Model(&imageGet).Get([]byte("testKey"))
+	if err == nil {
+		t.Errorf("Got a deleted image")
 	}
 }
