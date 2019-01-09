@@ -17,18 +17,18 @@
 package node
 
 import (
-	"context"
 	"errors"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"sync"
 
+	"github.com/crowdcompute/crowdengine/cmd/gocc/config"
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/database"
 	"github.com/crowdcompute/crowdengine/p2p"
 	ccrpc "github.com/crowdcompute/crowdengine/rpc"
+	"github.com/urfave/cli"
 
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -47,20 +47,21 @@ type Node struct {
 	quit            chan struct{} // Channel used for graceful exit
 	store, imgTable database.Database
 	host            *p2p.Host
+	cfg             *config.GlobalConfig
 }
 
 // NewNode returns new Node instance
-func NewNode(port int, IP string, bootnodes []string) (*Node, error) {
+func NewNode(cfg *config.GlobalConfig) (*Node, error) {
 	n := &Node{
+		cfg:  cfg,
 		quit: make(chan struct{}),
 	}
-
-	n.host = p2p.NewHost(port, IP, bootnodes)
+	n.host = p2p.NewHost(cfg.P2P.ListenPort, cfg.P2P.ListenAddress, cfg.P2P.Bootstraper.Nodes)
 	return n, nil
 }
 
 // Start starts a node instance & listens to RPC calls if the flag is set
-func (n *Node) Start(ctx context.Context, rpcFlag bool) error {
+func (n *Node) Start(ctx *cli.Context) error {
 	err := errNodeStarted
 	n.startOnce.Do(func() {
 		// TODO: Only if worker node run these two
@@ -69,14 +70,17 @@ func (n *Node) Start(ctx context.Context, rpcFlag bool) error {
 		err = nil // clear error above, only once.
 	})
 
-	if rpcFlag {
-		fmt.Println("Starting RPC service")
-		go n.StartHTTP() // blocks forever
-		n.StartWebSocket()
-	} else {
-		// Block here forever and wait for IPFS stream requests
-		select {}
+	if n.cfg.RPC.Enabled {
+		if n.cfg.RPC.HTTP.Enabled {
+			go n.StartHTTP()
+		}
+		if n.cfg.RPC.Websocket.Enabled {
+			n.StartWebSocket()
+		}
 	}
+
+	select {}
+
 	return err
 }
 
@@ -118,7 +122,7 @@ func (n *Node) apis() []rpc.API {
 	}
 }
 
-// StartHTTP starts serving HTTP requests
+// StartHTTP starts a http server
 func (n *Node) StartHTTP() {
 	server := rpc.NewServer()
 	for _, api := range n.apis() {
@@ -132,7 +136,7 @@ func (n *Node) StartHTTP() {
 	log.Fatal(http.ListenAndServe(*httpAddr, serveMux))
 }
 
-// StartWebSocket build a jsonrpc server
+// StartWebSocket starts a websocket server
 func (n *Node) StartWebSocket() {
 	server := rpc.NewServer()
 	for _, api := range n.apis() {

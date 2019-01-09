@@ -4,7 +4,8 @@ BINARY_NAME		=	gocc
 VERSION         :=	$(shell cat ./VERSION)
 
 build:
-	go build -ldflags "-X main.Version=$(VERSION)" -o "./build/bin/$(BINARY_NAME)" "./cmd/gocc/main.go"
+	go build -ldflags "-X main.Version=$(VERSION)" -o "./build/bin/$(BINARY_NAME)" "./cmd/gocc/"
+	cp "./cmd/gocc/config/config.development.toml" "./build/bin/"
 
 execute:
 	./build/bin/${BINARY_NAME}
