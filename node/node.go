@@ -19,9 +19,12 @@ package node
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
+
+	"github.com/crowdcompute/crowdengine/fileserver"
 
 	"github.com/crowdcompute/crowdengine/cmd/gocc/config"
 	"github.com/crowdcompute/crowdengine/common"
@@ -38,6 +41,7 @@ var (
 	errImageStoreExists = errors.New("Unable to create a new Image Store")
 	httpAddr            = flag.String("httpAddr", "localhost:8080", "http service address")
 	addrWS              = flag.String("addrWS", "localhost:8081", "web socket service address")
+	httpFileServerAddr  = flag.String("httpFileServerAddr", "localhost:8082", "http file server address")
 )
 
 // Node represents a node
@@ -73,6 +77,7 @@ func (n *Node) Start(ctx *cli.Context) error {
 	if n.cfg.RPC.Enabled {
 		if n.cfg.RPC.HTTP.Enabled {
 			go n.StartHTTP()
+			go n.StartFileServer()
 		}
 		if n.cfg.RPC.Websocket.Enabled {
 			n.StartWebSocket()
@@ -147,4 +152,12 @@ func (n *Node) StartWebSocket() {
 	serveMux.Handle("/", server.WebsocketHandler([]string{"*"}))
 
 	log.Fatal(http.ListenAndServe(*addrWS, serveMux))
+}
+
+// StartFileServer starts a file server
+func (n *Node) StartFileServer() {
+	serveMux := http.NewServeMux()
+	fmt.Printf("Starting upload file server...\n")
+	serveMux.HandleFunc("/upload", fileserver.ServeHTTP)
+	log.Fatal(http.ListenAndServe(*httpFileServerAddr, serveMux))
 }
