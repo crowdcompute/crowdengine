@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
 
-package protocols
+package p2p
 
 import (
 	"bufio"
@@ -29,7 +29,7 @@ import (
 	"github.com/crowdcompute/crowdengine/manager"
 	"github.com/docker/docker/api/types"
 
-	api "github.com/crowdcompute/crowdengine/p2p/protocols/protomsgs"
+	api "github.com/crowdcompute/crowdengine/p2p/protomsgs"
 	host "github.com/libp2p/go-libp2p-host"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	inet "github.com/libp2p/go-libp2p-net"

@@ -10,6 +10,8 @@ github.com/aristanetworks/goarista/monotime
 github.com/btcsuite/btcd/btcec
 # github.com/coreos/go-semver v0.2.0
 github.com/coreos/go-semver/semver
+# github.com/davecgh/go-spew v1.1.1
+github.com/davecgh/go-spew/spew
 # github.com/deckarep/golang-set v1.7.1
 github.com/deckarep/golang-set
 # github.com/docker/distribution v2.7.0+incompatible
@@ -52,6 +54,8 @@ github.com/go-stack/stack
 # github.com/gogo/protobuf v1.2.0
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/io
+# github.com/golang/mock v1.2.0
+github.com/golang/mock/gomock
 # github.com/golang/protobuf v1.2.0
 github.com/golang/protobuf/proto
 # github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db
@@ -244,12 +248,16 @@ github.com/pborman/uuid
 github.com/peterh/liner
 # github.com/pkg/errors v0.8.0
 github.com/pkg/errors
+# github.com/pmezard/go-difflib v1.0.0
+github.com/pmezard/go-difflib/difflib
 # github.com/rs/cors v1.6.0
 github.com/rs/cors
 # github.com/satori/go.uuid v1.2.0
 github.com/satori/go.uuid
 # github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72
 github.com/spaolacci/murmur3
+# github.com/stretchr/testify v1.2.2
+github.com/stretchr/testify/assert
 # github.com/syndtr/goleveldb v0.0.0-20181128100959-b001fa50d6b2
 github.com/syndtr/goleveldb/leveldb
 github.com/syndtr/goleveldb/leveldb/cache
@@ -289,8 +297,8 @@ github.com/whyrusleeping/yamux
 golang.org/x/crypto/scrypt
 golang.org/x/crypto/sha3
 golang.org/x/crypto/pbkdf2
-golang.org/x/crypto/blake2s
 golang.org/x/crypto/blowfish
+golang.org/x/crypto/blake2s
 # golang.org/x/net v0.0.0-20181220203305-927f97764cc3
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
@@ -302,8 +310,8 @@ golang.org/x/net/html
 golang.org/x/net/html/atom
 # golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e
 golang.org/x/sys/windows
-golang.org/x/sys/cpu
 golang.org/x/sys/unix
+golang.org/x/sys/cpu
 # golang.org/x/text v0.3.0
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
