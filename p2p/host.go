@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"github.com/crowdcompute/crowdengine/common"
-	"github.com/crowdcompute/crowdengine/p2p/protocols"
 
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
@@ -40,12 +39,12 @@ type Host struct {
 	dht     *dht.IpfsDHT
 	IP      string
 
-	*protocols.JoinSwarmProtocol
-	*protocols.TaskProtocol
-	*protocols.DiscoveryProtocol
-	*protocols.UploadImageProtocol
-	*protocols.InspectContainerProtocol
-	*protocols.ListImagesProtocol
+	*JoinSwarmProtocol
+	*TaskProtocol
+	*DiscoveryProtocol
+	*UploadImageProtocol
+	*InspectContainerProtocol
+	*ListImagesProtocol
 }
 
 // NewHost creates a new Host
@@ -66,14 +65,14 @@ func NewHost(port int, IP string, bootnodes []string) *Host {
 // Registering all Protocols
 func (h *Host) registerProtocols() {
 	// TODO: PATH has to be in a config
-	h.JoinSwarmProtocol = protocols.NewJoinSwarmProtocol(h.P2PHost, h.IP)
-	h.DiscoveryProtocol = protocols.NewDiscoveryProtocol(h.P2PHost, h.dht)
-	h.TaskProtocol = protocols.NewTaskProtocol(h.P2PHost)
+	h.JoinSwarmProtocol = NewJoinSwarmProtocol(h.P2PHost, h.IP)
+	h.DiscoveryProtocol = NewDiscoveryProtocol(h.P2PHost, h.dht)
+	h.TaskProtocol = NewTaskProtocol(h.P2PHost)
 	// Registering the Observer that wants to get notified when the task is done.
 	h.TaskProtocol.Register(h.DiscoveryProtocol)
-	h.UploadImageProtocol = protocols.NewUploadImageProtocol(h.P2PHost)
-	h.InspectContainerProtocol = protocols.NewInspectContainerProtocol(h.P2PHost)
-	h.ListImagesProtocol = protocols.NewListImagesProtocol(h.P2PHost)
+	h.UploadImageProtocol = NewUploadImageProtocol(h.P2PHost)
+	h.InspectContainerProtocol = NewInspectContainerProtocol(h.P2PHost)
+	h.ListImagesProtocol = NewListImagesProtocol(h.P2PHost)
 }
 
 // makeRandomHost creates a libp2p host with a randomly generated identity.

@@ -7,10 +7,10 @@ import "node/protocols/protomsgs/common.proto";
 
 message DiscoveryMsgData {
     MessageData messageData = 1;
-    string initNodeID = 2;     // The node that initialized the Discovery
+    string initNodeID = 2;      // The node that initialized the Discovery
     uint32 Expiry = 3;
     uint32 TTL = 4;
-    string InitHash = 5;
+    string InitHash = 5;        // The hash of the node that initialized the discovery
 }
 
 
