@@ -20,20 +20,20 @@ import (
 	"testing"
 
 	api "github.com/crowdcompute/crowdengine/p2p/protomsgs"
-	peer "github.com/libp2p/go-libp2p-peer"
-	ps "github.com/libp2p/go-libp2p-peerstore"
 	protocol "github.com/libp2p/go-libp2p-protocol"
 	"github.com/stretchr/testify/assert"
 )
 
+var (
+	testHost1 = NewHost(2000, "127.0.0.1", nil)
+	testHost2 = NewHost(2001, "127.0.0.1", []string{testHost1.FullAddr})
+)
+
 func discoveryProtocol(port int) *DiscoveryProtocol {
-	testHost1 := NewHost(port, "127.0.0.1", nil)
-	return NewDiscoveryProtocol(testHost1.P2PHost, testHost1.dht)
+	return testHost1.DiscoveryProtocol
 }
 
 func TestSignAuthenticate(t *testing.T) {
-	testHost1 := NewHost(2000, "127.0.0.1", nil)
-
 	req := &api.JoinRequest{MessageData: NewMessageData("1", true, testHost1.P2PHost),
 		Message: api.MessageType_JoinReq}
 	key := testHost1.P2PHost.Peerstore().PrivKey(testHost1.P2PHost.ID())
@@ -43,27 +43,19 @@ func TestSignAuthenticate(t *testing.T) {
 }
 
 func TestSendMsgSuccess(t *testing.T) {
-	dproto := discoveryProtocol(2000)
-	testHost2 := NewHost(2001, "127.0.0.1", nil)
+	req := discoveryRequestMsg(testHost1.P2PHost)
+	req.DiscoveryMsgData.InitNodeID = testHost1.P2PHost.ID().Pretty()
+	testHost1.setReqExpiryTime(req, 10)
 
-	dproto.p2pHost.Peerstore().AddAddrs(testHost2.P2PHost.ID(), testHost2.P2PHost.Addrs(), ps.PermanentAddrTTL)
-
-	req := discRequest(dproto.p2pHost)
-	req.DiscoveryMsgData.InitNodeID = peer.IDB58Encode(testHost2.P2PHost.ID())
-	dproto.setReqExpiryTime(req, 10)
-
-	success := sendMsg(dproto.p2pHost, testHost2.P2PHost.ID(), req, protocol.ID(discoveryRequest))
-	assert.True(t, success)
+	ok := sendMsg(testHost1.P2PHost, testHost2.P2PHost.ID(), req, protocol.ID(discoveryRequest))
+	assert.True(t, ok)
 }
 
 func TestSendMsgFail(t *testing.T) {
-	dproto := discoveryProtocol(2000)
-	testHost2 := NewHost(2001, "127.0.0.1", nil)
+	req := discoveryRequestMsg(testHost1.P2PHost)
+	// req.DiscoveryMsgData.InitNodeID = peer.IDB58Encode(testHost2.P2PHost.ID())
+	testHost1.setReqExpiryTime(req, 10)
 
-	req := discRequest(dproto.p2pHost)
-	req.DiscoveryMsgData.InitNodeID = peer.IDB58Encode(testHost2.P2PHost.ID())
-	dproto.setReqExpiryTime(req, 10)
-
-	success := sendMsg(dproto.p2pHost, testHost2.P2PHost.ID(), req, protocol.ID(discoveryRequest))
-	assert.False(t, success)
+	ok := sendMsg(testHost1.P2PHost, testHost2.P2PHost.ID(), req, protocol.ID(discoveryRequest))
+	assert.False(t, ok)
 }

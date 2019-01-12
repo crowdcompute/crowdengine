@@ -45,7 +45,7 @@ import (
 const discoveryRequest = "/Discovery/discoveryreq/0.0.1"
 const discoveryResponse = "/Discovery/discoveryresp/0.0.1"
 
-// DiscoveryProtocol type
+// DiscoveryProtocol implements Observer interface
 type DiscoveryProtocol struct {
 	p2pHost       host.Host                          // local host
 	dht           *dht.IpfsDHT                       // local host

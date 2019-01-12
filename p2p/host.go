@@ -35,9 +35,10 @@ import (
 )
 
 type Host struct {
-	P2PHost host.Host
-	dht     *dht.IpfsDHT
-	IP      string
+	P2PHost  host.Host
+	dht      *dht.IpfsDHT
+	IP       string
+	FullAddr string
 
 	*JoinSwarmProtocol
 	*TaskProtocol
@@ -49,17 +50,17 @@ type Host struct {
 
 // NewHost creates a new Host
 func NewHost(port int, IP string, bootnodes []string) *Host {
-	s := &Host{IP: IP}
-	s.makeRandomHost(port, IP)
+	host := &Host{IP: IP}
+	host.makeRandomHost(port, IP)
 
 	if len(bootnodes) > 0 {
-		s.ConnectWithNodes(bootnodes)
+		host.ConnectWithNodes(bootnodes)
 	}
 	fmt.Print("Here is my p2p ID: ")
-	fmt.Printf("/ip4/%s/tcp/%d/ipfs/%s\n", IP, port, s.P2PHost.ID().Pretty())
-
-	s.registerProtocols()
-	return s
+	host.FullAddr = fmt.Sprintf("/ip4/%s/tcp/%d/ipfs/%s", IP, port, host.P2PHost.ID().Pretty())
+	fmt.Println(host.FullAddr)
+	host.registerProtocols()
+	return host
 }
 
 // Registering all Protocols
@@ -106,9 +107,9 @@ func (h *Host) makeRandomHost(port int, IP string) {
 	common.CheckErr(err, "[makeRandomHost] Couldn't bootstrap the host.")
 }
 
-// ConnectWithNodes establishes a libp2p connection to this nodes' bootnodes
+// ConnectWithNodes establishes a libp2p connection with the nodes
 func (h *Host) ConnectWithNodes(nodes []string) {
-	fmt.Println("Connecting to my Bootnodes: ")
+	fmt.Println("Connecting to the nodes: ", nodes)
 	for _, nodeAddr := range nodes {
 		h.addAddrToPeerstore(nodeAddr)
 	}

@@ -138,8 +138,8 @@ func verifyData(data []byte, signature []byte, peerID peer.ID, pubKeyData []byte
 	return res
 }
 
-func sendMsg(p2pHost host.Host, neighbourID peer.ID, msg proto.Message, protocol protocol.ID) bool {
-	s, err := p2pHost.NewStream(context.Background(), neighbourID, protocol)
+func sendMsg(fromHost host.Host, toID peer.ID, msg proto.Message, protocol protocol.ID) bool {
+	s, err := fromHost.NewStream(context.Background(), toID, protocol)
 	if err != nil {
 		log.Println(err)
 		return false

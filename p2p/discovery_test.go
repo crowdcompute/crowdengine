@@ -27,14 +27,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func discRequest(host host.Host) *api.DiscoveryRequest {
+func discoveryRequestMsg(host host.Host) *api.DiscoveryRequest {
 	return &api.DiscoveryRequest{DiscoveryMsgData: NewDiscoveryMsgData("1", true, host),
 		Message: api.DiscoveryMessage_DiscoveryReq}
 }
 
 func TestRequestExpired(t *testing.T) {
 	dproto := discoveryProtocol(2000)
-	req := discRequest(dproto.p2pHost)
+	req := discoveryRequestMsg(dproto.p2pHost)
 	dproto.setReqExpiryTime(req, 0)
 	time.Sleep(time.Second)
 	assert.True(t, dproto.requestExpired(req))
@@ -42,7 +42,7 @@ func TestRequestExpired(t *testing.T) {
 
 func TestMessageReceivedAgain(t *testing.T) {
 	dproto := discoveryProtocol(2000)
-	req := discRequest(dproto.p2pHost)
+	req := discoveryRequestMsg(dproto.p2pHost)
 	req.DiscoveryMsgData.InitHash = hexutil.Encode(crypto.GetProtoHash(req))
 	// Put this request in the received messages list
 	dproto.receivedMsg[req.DiscoveryMsgData.InitHash] = 1000
@@ -50,6 +50,9 @@ func TestMessageReceivedAgain(t *testing.T) {
 }
 
 // func TestPendingRequests(t *testing.T) {
+// 	dproto := discoveryProtocol(2000)
+// 	req := discoveryRequestMsg(dproto.p2pHost)
+
 // 	testHost1, dht1 := host.MakeRandomHost(2000, "127.0.0.1")
 // 	testHost2, dht2 := host.MakeRandomHost(2001, "127.0.0.1")
 // 	dproto1 := NewDiscoveryProtocol(testHost1, dht1)
@@ -57,12 +60,12 @@ func TestMessageReceivedAgain(t *testing.T) {
 // 	testHost1.Peerstore().AddAddrs(testHost2.ID(), testHost2.Addrs(), ps.PermanentAddrTTL)
 // 	testHost2.Peerstore().AddAddrs(testHost1.ID(), testHost1.Addrs(), ps.PermanentAddrTTL)
 
-// 	req := &api.DiscoveryRequest{DiscoveryMsgData: NewDiscoveryMsgData("1", true, testHost1),
+// 	req := &api.discoveryRequest{DiscoveryMsgData: NewDiscoveryMsgData("1", true, testHost1),
 // 		Message: api.DiscoveryMessage_DiscoveryReq}
 // 	req.DiscoveryMsgData.InitNodeID = peer.IDB58Encode(testHost2.ID())
 // 	dproto1.setReqExpiryTime(req, 10)
 // 	dproto1.pendingReq = append(dproto1.pendingReq, req)
-// 	dproto1.CheckPendingReq()
+// 	dproto1.onNotify()
 
 // 	assert.Equal(t, testHost2.ID(), <-dproto2.AvailableNodeID)
 // }

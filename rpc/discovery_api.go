@@ -42,7 +42,10 @@ func (api *DiscoveryAPI) Discover(ctx context.Context, numberOfNodes int) ([]str
 	}
 
 	pid := peer.IDB58Encode(api.host.P2PHost.ID())
-	initialRequest := api.host.InitNodeDiscoveryReq(numberOfNodes, pid)
+	fmt.Println(pid)
+	pid2 := api.host.P2PHost.ID().Pretty()
+	fmt.Println(pid2)
+	initialRequest := api.host.InitNodeDiscoveryReq(numberOfNodes, pid2)
 	// This is the initial forward of this message. No neighbour sent me this message, that's why the empty receivedNeighbour
 	api.host.ForwardToNeighbours(initialRequest, "")
 	// TODO: this channel has to have a TIMEOUT.
