@@ -134,7 +134,7 @@ func (p *TaskProtocol) onRunRequest(s inet.Stream) {
 	go p.waitForJobToFinish(containerID)
 }
 
-// Running for ever, or until job's done
+// Running until job's done
 func (p *TaskProtocol) waitForJobToFinish(containerID string) {
 	fmt.Println("start task status tracking")
 	// TODO: Time has to be a const somewhere
