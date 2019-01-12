@@ -21,7 +21,6 @@ import (
 
 	"github.com/crowdcompute/crowdengine/log"
 	"github.com/crowdcompute/crowdengine/p2p"
-	peer "github.com/libp2p/go-libp2p-peer"
 )
 
 // DiscoveryAPI represents the discovery RPC API
@@ -41,10 +40,7 @@ func (api *DiscoveryAPI) Discover(ctx context.Context, numberOfNodes int) ([]str
 		log.Println("", api.host.P2PHost.Addrs()[index])
 	}
 
-	pid := peer.IDB58Encode(api.host.P2PHost.ID())
-	log.Println(pid)
 	pid2 := api.host.P2PHost.ID().Pretty()
-	log.Println(pid2)
 	initialRequest := api.host.InitNodeDiscoveryReq(numberOfNodes, pid2)
 	// This is the initial forward of this message. No neighbour sent me this message, that's why the empty receivedNeighbour
 	api.host.ForwardToNeighbours(initialRequest, "")
