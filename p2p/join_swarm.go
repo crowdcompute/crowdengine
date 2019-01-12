@@ -96,7 +96,7 @@ func (p *JoinSwarmProtocol) Join(hostID peer.ID) bool {
 		Message: api.MessageType_JoinReq}
 
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
-	req.MessageData.Sign = signData(req, key)
+	req.MessageData.Sign = signProtoMsg(req, key)
 
 	sendMsg(p.p2pHost, hostID, req, protocol.ID(joinReq))
 
@@ -117,7 +117,7 @@ func (p *JoinSwarmProtocol) onJoinRequest(s net.Stream) {
 
 	log.Printf("%s: Received join swarm request from %s. Message: %s", s.Conn().LocalPeer(), s.Conn().RemotePeer(), data.Message)
 
-	valid := authenticateMessage(data, data.MessageData)
+	valid := authenticateProtoMsg(data, data.MessageData)
 
 	if !valid {
 		log.Println("Failed to authenticate message")
@@ -143,7 +143,7 @@ func (p *JoinSwarmProtocol) onJoinRequest(s net.Stream) {
 
 		// sign the data
 		key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
-		resp.MessageData.Sign = signData(resp, key)
+		resp.MessageData.Sign = signProtoMsg(resp, key)
 
 		// send the response
 		if sendMsg(p.p2pHost, s.Conn().RemotePeer(), resp, protocol.ID(joinResOK)) {
@@ -169,7 +169,7 @@ func (p *JoinSwarmProtocol) onJoinResponseOK(s net.Stream) {
 	err := decoder.Decode(data)
 	common.CheckErr(err, "[onJoinResponseOK] Could not decode data.")
 
-	valid := authenticateMessage(data, data.MessageData)
+	valid := authenticateProtoMsg(data, data.MessageData)
 
 	if !valid {
 		log.Println("Failed to authenticate message")
@@ -196,7 +196,7 @@ func (p *JoinSwarmProtocol) onJoinResponseOK(s net.Stream) {
 			Message: api.MessageType_JoinReqToken, JoinToken: p.WorkerToken, JoinMasterAddr: fmt.Sprintf("%s:%s", p.managerIP, "2377")}
 
 		key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
-		req.MessageData.Sign = signData(req, key)
+		req.MessageData.Sign = signProtoMsg(req, key)
 
 		// send the response
 		if sendMsg(p.p2pHost, s.Conn().RemotePeer(), req, protocol.ID(joinReqToken)) {
@@ -218,7 +218,7 @@ func (p *JoinSwarmProtocol) onJoinReqToken(s net.Stream) {
 
 	log.Printf("%s: Received join request with Token from %s. Message: %s", s.Conn().LocalPeer(), s.Conn().RemotePeer(), data.Message)
 
-	valid := authenticateMessage(data, data.MessageData)
+	valid := authenticateProtoMsg(data, data.MessageData)
 
 	if !valid {
 		log.Println("Failed to authenticate message")
@@ -241,7 +241,7 @@ func (p *JoinSwarmProtocol) onJoinReqToken(s net.Stream) {
 			Message: api.MessageType_JoinResOK}
 
 		key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
-		resp.MessageData.Sign = signData(resp, key)
+		resp.MessageData.Sign = signProtoMsg(resp, key)
 
 		// send the response
 		if sendMsg(p.p2pHost, s.Conn().RemotePeer(), resp, protocol.ID(joinResJoined)) {
@@ -257,7 +257,7 @@ func (p *JoinSwarmProtocol) onJoinResJoined(s net.Stream) {
 	err := decoder.Decode(data)
 	common.CheckErr(err, "[onJoinResJoined] Couldn't decode data.")
 
-	valid := authenticateMessage(data, data.MessageData)
+	valid := authenticateProtoMsg(data, data.MessageData)
 
 	if !valid {
 		log.Println("Failed to authenticate message")

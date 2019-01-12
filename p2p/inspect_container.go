@@ -53,7 +53,7 @@ func (p *InspectContainerProtocol) CreateSendInspectRequest(toHostID peer.ID, co
 	req := &api.InspectContRequest{InspectContMsgData: NewInspectContMsgData(uuid.Must(uuid.NewV4(), nil).String(), true, p.p2pHost),
 		ContainerID: containerID}
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
-	req.InspectContMsgData.MessageData.Sign = signData(req, key)
+	req.InspectContMsgData.MessageData.Sign = signProtoMsg(req, key)
 
 	sendMsg(p.p2pHost, toHostID, req, protocol.ID(inspectContainerRequest))
 }
@@ -64,7 +64,7 @@ func (p *InspectContainerProtocol) onInspectRequest(s inet.Stream) {
 	err := decoder.Decode(data)
 	common.CheckErr(err, "[onInspectRequest] Could not decode data.")
 	// Authenticate integrity and authenticity of the message
-	if valid := authenticateMessage(data, data.InspectContMsgData.MessageData); !valid {
+	if valid := authenticateProtoMsg(data, data.InspectContMsgData.MessageData); !valid {
 		log.Println("Failed to authenticate message")
 		return
 	}
@@ -78,7 +78,7 @@ func (p *InspectContainerProtocol) onInspectRequest(s inet.Stream) {
 
 	// sign the data
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
-	resp.InspectContMsgData.MessageData.Sign = signData(resp, key)
+	resp.InspectContMsgData.MessageData.Sign = signProtoMsg(resp, key)
 
 	// send the response
 	sendMsg(p.p2pHost, s.Conn().RemotePeer(), resp, protocol.ID(inspectContainerResponse))
@@ -99,7 +99,7 @@ func (p *InspectContainerProtocol) onInspectResponse(s inet.Stream) {
 	common.CheckErr(err, "[onInspectResponse] Could not decode data.")
 
 	// Authenticate integrity and authenticity of the message
-	if valid := authenticateMessage(data, data.InspectContMsgData.MessageData); !valid {
+	if valid := authenticateProtoMsg(data, data.InspectContMsgData.MessageData); !valid {
 		log.Println("Failed to authenticate message")
 		return
 	}

@@ -84,7 +84,7 @@ func (p *TaskProtocol) RunImage(hostID peer.ID, imageID string) bool {
 		ImageID: imageID}
 
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
-	req.RunImageMsgData.MessageData.Sign = signData(req, key)
+	req.RunImageMsgData.MessageData.Sign = signProtoMsg(req, key)
 
 	if !sendMsg(p.p2pHost, hostID, req, protocol.ID(runRequest)) {
 		return false
@@ -104,7 +104,7 @@ func (p *TaskProtocol) onRunRequest(s inet.Stream) {
 
 	log.Printf("%s: Received avail request from %s.", s.Conn().LocalPeer(), s.Conn().RemotePeer())
 
-	valid := authenticateMessage(data, data.RunImageMsgData.MessageData)
+	valid := authenticateProtoMsg(data, data.RunImageMsgData.MessageData)
 
 	if !valid {
 		log.Println("Failed to authenticate message")
@@ -120,7 +120,7 @@ func (p *TaskProtocol) onRunRequest(s inet.Stream) {
 		ContainerID: containerID}
 
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
-	resp.RunImageMsgData.MessageData.Sign = signData(resp, key)
+	resp.RunImageMsgData.MessageData.Sign = signProtoMsg(resp, key)
 
 	// send the response
 	if sendMsg(p.p2pHost, s.Conn().RemotePeer(), resp, protocol.ID(runResponse)) {
@@ -182,7 +182,7 @@ func (p *TaskProtocol) onRunResponse(s inet.Stream) {
 	err := decoder.Decode(data)
 	common.CheckErr(err, "[onRunResponse] Couldn't decode data.")
 
-	valid := authenticateMessage(data, data.RunImageMsgData.MessageData)
+	valid := authenticateProtoMsg(data, data.RunImageMsgData.MessageData)
 
 	if !valid {
 		log.Println("Failed to authenticate message")

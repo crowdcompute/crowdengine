@@ -62,7 +62,7 @@ func (p *ListImagesProtocol) CreateAndSendListRequest(toHostID peer.ID, pubKey s
 	req := &api.ListImagesRequest{ListImagesMsgData: NewListImagesMsgData(uuid.Must(uuid.NewV4(), nil).String(), true, p.p2pHost),
 		PubKey: pubKey}
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
-	req.ListImagesMsgData.MessageData.Sign = signData(req, key)
+	req.ListImagesMsgData.MessageData.Sign = signProtoMsg(req, key)
 	sendMsg(p.p2pHost, toHostID, req, protocol.ID(imageListRequest))
 }
 
@@ -72,7 +72,7 @@ func (p *ListImagesProtocol) onListRequest(s inet.Stream) {
 	err := decoder.Decode(data)
 	common.CheckErr(err, "[onListRequest] Could not decode data.")
 	// Authenticate integrity and authenticity of the message
-	if valid := authenticateMessage(data, data.ListImagesMsgData.MessageData); !valid {
+	if valid := authenticateProtoMsg(data, data.ListImagesMsgData.MessageData); !valid {
 		log.Println("Failed to authenticate message")
 		return
 	}
@@ -91,7 +91,7 @@ func (p *ListImagesProtocol) onListRequest(s inet.Stream) {
 
 	// sign the data
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
-	resp.ListImagesMsgData.MessageData.Sign = signData(resp, key)
+	resp.ListImagesMsgData.MessageData.Sign = signProtoMsg(resp, key)
 
 	// send the response
 	sendMsg(p.p2pHost, s.Conn().RemotePeer(), resp, protocol.ID(imageListResponse))
@@ -146,7 +146,7 @@ func (p *ListImagesProtocol) onListResponse(s inet.Stream) {
 	common.CheckErr(err, "[onListResponse] Could not decode data.")
 
 	// Authenticate integrity and authenticity of the message
-	if valid := authenticateMessage(data, data.ListImagesMsgData.MessageData); !valid {
+	if valid := authenticateProtoMsg(data, data.ListImagesMsgData.MessageData); !valid {
 		log.Println("Failed to authenticate message")
 		return
 	}

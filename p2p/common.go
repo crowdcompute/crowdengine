@@ -55,28 +55,25 @@ func containerRunning(containerID string) bool {
 	return false
 }
 
-func signData(data proto.Message, key crypto.PrivKey) []byte {
-	signature, err := signProtoMessage(data, key)
+// signProtoMsg signs a p2p message payload
+func signProtoMsg(message proto.Message, key crypto.PrivKey) []byte {
+	data, err := proto.Marshal(message)
 	if err != nil {
-		log.Println("failed to sign proto message")
+		log.Println("Failed to marshal proto message")
+		return nil
+	}
+	signature, err := key.Sign(data)
+	if err != nil {
+		log.Println("Failed to sign proto message")
 		return nil
 	}
 	return signature
 }
 
-// sign an outgoing p2p message payload
-func signProtoMessage(message proto.Message, key crypto.PrivKey) ([]byte, error) {
-	data, err := proto.Marshal(message)
-	if err != nil {
-		return nil, err
-	}
-	return key.Sign(data)
-}
-
-// Authenticate incoming p2p message
+// authenticateProtoMsg authenticates incoming p2p message
 // message: a protobufs go data object
 // data: common p2p message data
-func authenticateMessage(message proto.Message, data *api.MessageData) bool {
+func authenticateProtoMsg(message proto.Message, data *api.MessageData) bool {
 	// store a temp ref to signature and remove it from message data
 	// sign is a string to allow easy reset to zero-value (empty string)
 	sign := data.Sign

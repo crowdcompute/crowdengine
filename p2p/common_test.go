@@ -37,8 +37,8 @@ func TestSignAuthenticate(t *testing.T) {
 	req := discoveryRequestMsg(testHost1.P2PHost)
 
 	key := testHost1.P2PHost.Peerstore().PrivKey(testHost1.P2PHost.ID())
-	req.DiscoveryMsgData.MessageData.Sign = signData(req, key)
-	valid := authenticateMessage(req, req.DiscoveryMsgData.MessageData)
+	req.DiscoveryMsgData.MessageData.Sign = signProtoMsg(req, key)
+	valid := authenticateProtoMsg(req, req.DiscoveryMsgData.MessageData)
 	assert.True(t, valid)
 }
 

@@ -149,7 +149,7 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 
 	// sign the data
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
-	resp.UploadImageMsgData.MessageData.Sign = signData(resp, key)
+	resp.UploadImageMsgData.MessageData.Sign = signProtoMsg(resp, key)
 
 	// send the response
 	sendMsg(p.p2pHost, s.Conn().RemotePeer(), resp, protocol.ID(imageUploadResponse))
@@ -224,7 +224,7 @@ func (p *UploadImageProtocol) onUploadResponse(s inet.Stream) {
 	common.CheckErr(err, "[onUploadResponse] Couldn't decode data.")
 
 	// Authenticate integrity and authenticity of the message
-	if valid := authenticateMessage(data, data.UploadImageMsgData.MessageData); !valid {
+	if valid := authenticateProtoMsg(data, data.UploadImageMsgData.MessageData); !valid {
 		log.Println("Failed to authenticate message")
 		return
 	}

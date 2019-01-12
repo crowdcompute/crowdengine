@@ -121,7 +121,7 @@ func (p *DiscoveryProtocol) ForwardToNeighbours(request *api.DiscoveryRequest, r
 	req.DiscoveryMsgData.InitHash = request.DiscoveryMsgData.InitHash
 
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
-	req.DiscoveryMsgData.MessageData.Sign = signData(req, key)
+	req.DiscoveryMsgData.MessageData.Sign = signProtoMsg(req, key)
 
 	excludePeers := make([]peer.ID, 0)
 	excludePeers = append(excludePeers, receivedNeighbour) // The neighbour that sent me the message
@@ -156,7 +156,7 @@ func (p *DiscoveryProtocol) onDiscoveryRequest(s inet.Stream) {
 	p.receivedMsg[data.DiscoveryMsgData.InitHash] = data.DiscoveryMsgData.Expiry
 
 	// Authenticate integrity and authenticity of the message
-	if valid := authenticateMessage(data, data.DiscoveryMsgData.MessageData); !valid {
+	if valid := authenticateProtoMsg(data, data.DiscoveryMsgData.MessageData); !valid {
 		log.Println("Failed to authenticate message")
 		return
 	}
@@ -219,7 +219,7 @@ func (p *DiscoveryProtocol) createSendResponse(data *api.DiscoveryRequest) bool 
 
 	// sign the data
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
-	resp.DiscoveryMsgData.MessageData.Sign = signData(resp, key)
+	resp.DiscoveryMsgData.MessageData.Sign = signProtoMsg(resp, key)
 
 	log.Printf("%s: Discovery response to: %s was sent. Message Id: %s, Message: %s",
 		p.p2pHost.ID(), initPeerID, resp.DiscoveryMsgData.MessageData.Id, resp.Message)
@@ -266,7 +266,7 @@ func (p *DiscoveryProtocol) onDiscoveryResponse(s inet.Stream) {
 	common.CheckErr(err, "[onDiscoveryResponse] Could not decode data.")
 
 	// Authenticate integrity and authenticity of the message
-	if valid := authenticateMessage(data, data.DiscoveryMsgData.MessageData); !valid {
+	if valid := authenticateProtoMsg(data, data.DiscoveryMsgData.MessageData); !valid {
 		log.Println("Failed to authenticate message")
 		return
 	}
