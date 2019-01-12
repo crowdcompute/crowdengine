@@ -3,6 +3,7 @@ package log
 import (
 	"io"
 	"net"
+	"os"
 	"time"
 
 	logrustash "github.com/bshuster-repo/logrus-logstash-hook"
@@ -11,9 +12,14 @@ import (
 
 func init() {
 	d := net.Dialer{Timeout: 1 * time.Second}
-	conn, connErr = d.Dial("tcp", "172.17.0.2:5044")
+	logstashIP := os.Getenv("HOSTIP")
+	if logstashIP == "" {
+		logstashIP = "localhost"
+	}
+	conn, connErr = d.Dial("tcp", logstashIP+":5044")
 	if connErr == nil {
-		hook := logrustash.New(conn, logrustash.DefaultFormatter(logrus.Fields{"type": "GOCC"}))
+		hostname, _ := os.Hostname()
+		hook := logrustash.New(conn, logrustash.DefaultFormatter(logrus.Fields{"application": "gocc", "@node": hostname}))
 		AddHook(hook)
 	}
 }

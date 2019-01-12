@@ -27,6 +27,6 @@ build-logserver:
 
 provision_script:
 	./build/deploy/provisioner.sh $(NODENAME)1 $(DIR)/build/bin/$(BINARY_NAME)
-	#./build/deploy/provisioner.sh $(NODENAME)2 $(DIR)/build/bin/$(BINARY_NAME)
+	./build/deploy/provisioner.sh $(NODENAME)2 $(DIR)/build/bin/$(BINARY_NAME)
 
 .PHONY: test build run provision_script deploy

@@ -228,6 +228,7 @@ runcmd:
   - sudo systemctl disable cloud-init.service
   - export HOSTIP=${HOSTIP}
   - echo "export HOSTIP=${HOSTIP}" >> /home/ubuntu/.profile
+  - cd /home/ubuntu/ && ./gocc
 _EOF_
     
     if [ ! -z "${SCRIPTNAME+x}" ]
