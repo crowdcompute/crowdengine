@@ -27,24 +27,6 @@ import (
 	"github.com/docker/docker/api/types"
 )
 
-// Running for ever, or until job's done
-func WaitForJobToFinish(containerID string) bool {
-	log.Println("start task status tracking")
-	// TODO: Time has to be a const somewhere
-	ticker := time.NewTicker(time.Second * 3)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			log.Println("Checking if job's done...")
-			if !containerRunning(containerID) {
-				return true
-			}
-		}
-	}
-}
-
 func containerRunning(containerID string) bool {
 	cjson, err := manager.GetInstance().InspectContainer(containerID)
 	if err != nil {

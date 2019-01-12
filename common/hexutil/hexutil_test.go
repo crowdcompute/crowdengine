@@ -14,23 +14,28 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
 
-package common
+package hexutil
 
-import "reflect"
+import "testing"
 
-// SliceExists takes an interface as a slice and an interface as an item and
-// returns true if the item exists in the slice and false otherwise
-func SliceExists(slice interface{}, item interface{}) bool {
-	s := reflect.ValueOf(slice)
+type tester struct {
+	input  interface{}
+	expect string
+}
 
-	if s.Kind() != reflect.Slice {
-		panic("SliceExists: given a non-slice type")
+var (
+	encodeBytesToHexTests = []tester{
+		{[]byte{}, "0x"},
+		{[]byte{0}, "0x00"},
+		{[]byte{0, 'a'}, "0x0061"},
 	}
+)
 
-	for i := 0; i < s.Len(); i++ {
-		if s.Index(i).Interface() == item {
-			return true
+func TestEncode(t *testing.T) {
+	for _, test := range encodeBytesToHexTests {
+		enc := Encode(test.input.([]byte))
+		if enc != test.expect {
+			t.Errorf("Input %x: Wrong hex encoding %s", test.input, enc)
 		}
 	}
-	return false
 }
