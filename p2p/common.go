@@ -48,7 +48,6 @@ func containerRunning(containerID string) bool {
 		log.Println("Error inspecting container. ID : \n", containerID)
 		return false
 	}
-	// If at least one is running then state that I am busy
 	if cjson.State.Running {
 		return true
 	}
