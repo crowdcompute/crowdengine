@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/crowdcompute/crowdengine/common"
+	"github.com/crowdcompute/crowdengine/log"
 
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
@@ -55,8 +56,8 @@ func NewHost(port int, IP string, bootnodes []string) *Host {
 	if len(bootnodes) > 0 {
 		s.ConnectWithNodes(bootnodes)
 	}
-	fmt.Print("Here is my p2p ID: ")
-	fmt.Printf("/ip4/%s/tcp/%d/ipfs/%s\n", IP, port, s.P2PHost.ID().Pretty())
+	log.Print("Here is my p2p ID: ")
+	log.Printf("/ip4/%s/tcp/%d/ipfs/%s\n", IP, port, s.P2PHost.ID().Pretty())
 
 	s.registerProtocols()
 	return s
@@ -108,7 +109,7 @@ func (h *Host) makeRandomHost(port int, IP string) {
 
 // ConnectWithNodes establishes a libp2p connection to this nodes' bootnodes
 func (h *Host) ConnectWithNodes(nodes []string) {
-	fmt.Println("Connecting to my Bootnodes: ")
+	log.Println("Connecting to my Bootnodes: ")
 	for _, nodeAddr := range nodes {
 		h.addAddrToPeerstore(nodeAddr)
 	}

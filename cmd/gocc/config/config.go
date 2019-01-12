@@ -17,9 +17,10 @@
 package config
 
 import (
-	"log"
 	"os"
 	"strings"
+
+	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/naoina/toml"
 	"github.com/urfave/cli"

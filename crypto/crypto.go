@@ -21,8 +21,9 @@ import (
 	"encoding/hex"
 	"hash"
 	"io"
-	"log"
 	"os"
+
+	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/ethereum/go-ethereum/crypto/sha3"

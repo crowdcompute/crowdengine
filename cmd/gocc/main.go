@@ -18,9 +18,10 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"sort"
+
+	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/cmd"
 	"github.com/crowdcompute/crowdengine/cmd/gocc/commands"

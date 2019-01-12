@@ -19,8 +19,8 @@ package rpc
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"log"
+
+	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/manager"
@@ -46,7 +46,7 @@ func NewServiceAPI(h *p2p.Host) *ServiceAPI {
 func (s *ServiceAPI) Run(ctx context.Context, task string) error {
 	t := Task{}
 	json.Unmarshal([]byte(task), &t)
-	fmt.Println("I got this task:", t)
+	log.Println("I got this task:", t)
 
 	// Initialize a docker Swarm
 	_, err := manager.GetInstance().InitSwarm(s.host.IP, "0.0.0.0:2377")
@@ -66,7 +66,7 @@ func (s *ServiceAPI) Run(ctx context.Context, task string) error {
 	service, err := s.createService(&t)
 
 	if err != nil {
-		fmt.Printf("Cannot create service. Error: %s", err)
+		log.Printf("Cannot create service. Error: %s", err)
 		return err
 	}
 
@@ -94,7 +94,7 @@ func (s *ServiceAPI) createService(task *Task) (string, error) {
 	serviceCreate, err := manager.GetInstance().ServiceCreate(serviceSpec, types.ServiceCreateOptions{})
 
 	if err != nil {
-		fmt.Printf("Cannot create service. Error: %s", err)
+		log.Printf("Cannot create service. Error: %s", err)
 		return "", err
 	}
 

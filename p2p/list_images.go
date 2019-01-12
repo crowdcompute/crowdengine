@@ -20,8 +20,9 @@ import (
 	"bufio"
 	"encoding/hex"
 	"encoding/json"
-	"log"
 	"strings"
+
+	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/crypto"
