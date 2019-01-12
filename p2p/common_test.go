@@ -19,12 +19,12 @@ package p2p
 import (
 	"testing"
 
-	api "github.com/crowdcompute/crowdengine/p2p/protomsgs"
 	protocol "github.com/libp2p/go-libp2p-protocol"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
+	// TestHost2 has testHost1 as a peer, but not the other way around
 	testHost1 = NewHost(2000, "127.0.0.1", nil)
 	testHost2 = NewHost(2001, "127.0.0.1", []string{testHost1.FullAddr})
 )
@@ -34,27 +34,27 @@ func discoveryProtocol(port int) *DiscoveryProtocol {
 }
 
 func TestSignAuthenticate(t *testing.T) {
-	req := &api.JoinRequest{MessageData: NewMessageData("1", true, testHost1.P2PHost),
-		Message: api.MessageType_JoinReq}
+	req := discoveryRequestMsg(testHost1.P2PHost)
+
 	key := testHost1.P2PHost.Peerstore().PrivKey(testHost1.P2PHost.ID())
-	req.MessageData.Sign = signData(req, key)
-	valid := authenticateMessage(req, req.MessageData)
+	req.DiscoveryMsgData.MessageData.Sign = signData(req, key)
+	valid := authenticateMessage(req, req.DiscoveryMsgData.MessageData)
 	assert.True(t, valid)
 }
 
-func TestSendMsgSuccess(t *testing.T) {
-	req := discoveryRequestMsg(testHost1.P2PHost)
-	req.DiscoveryMsgData.InitNodeID = testHost1.P2PHost.ID().Pretty()
-	testHost1.setReqExpiryTime(req, 10)
+// TestHost2 sends a message to testHost1
+// TestHost2 has testHost1 as a peer
+func TestSendMsgFromConnectedPeers(t *testing.T) {
+	req := discoveryRequestMsg(testHost2.P2PHost)
 
-	ok := sendMsg(testHost1.P2PHost, testHost2.P2PHost.ID(), req, protocol.ID(discoveryRequest))
+	ok := sendMsg(testHost2.P2PHost, testHost1.P2PHost.ID(), req, protocol.ID(discoveryRequest))
 	assert.True(t, ok)
 }
 
-func TestSendMsgFail(t *testing.T) {
+// TestHost1 sends a message to testHost2
+// TestHost1 doesn't have testHost2 as a peer
+func TestSendMsgFromUnconnectedPeers(t *testing.T) {
 	req := discoveryRequestMsg(testHost1.P2PHost)
-	// req.DiscoveryMsgData.InitNodeID = peer.IDB58Encode(testHost2.P2PHost.ID())
-	testHost1.setReqExpiryTime(req, 10)
 
 	ok := sendMsg(testHost1.P2PHost, testHost2.P2PHost.ID(), req, protocol.ID(discoveryRequest))
 	assert.False(t, ok)
