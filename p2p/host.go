@@ -110,11 +110,7 @@ func (h *Host) makeRandomHost(port int, IP string) {
 
 // ConnectWithNodes establishes a libp2p connection with the nodes
 func (h *Host) ConnectWithNodes(nodes []string) {
-<<<<<<< HEAD
-	fmt.Println("Connecting to the nodes: ", nodes)
-=======
-	log.Println("Connecting to my Bootnodes: ")
->>>>>>> 6943dc49246a99fefbf8bed9962bd7ae2c1324b1
+	log.Println("Connecting to the nodes: ", nodes)
 	for _, nodeAddr := range nodes {
 		h.addAddrToPeerstore(nodeAddr)
 	}
