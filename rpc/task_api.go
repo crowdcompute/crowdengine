@@ -19,10 +19,11 @@ package rpc
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"os"
 	"strconv"
+
+	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/crypto"
@@ -74,18 +75,18 @@ func (api *ImageManagerAPI) PushImage(ctx context.Context, nodePID string, image
 	filledSignature := fillString(signatureString, 150)
 	// TODO: Not sure what number to give here. Need to see the range
 	filledHash := fillString(hashString, 100)
-	fmt.Println("Sending filename and filesize!")
-	fmt.Println("fileSize: ", fileSize)
-	fmt.Println("fileName: ", fileName)
-	fmt.Println("filledSignature: ", filledSignature)
-	fmt.Println("filledHash: ", filledHash)
+	log.Println("Sending filename and filesize!")
+	log.Println("fileSize: ", fileSize)
+	log.Println("fileName: ", fileName)
+	log.Println("filledSignature: ", filledSignature)
+	log.Println("filledHash: ", filledHash)
 
 	api.host.UploadChunk([]byte(fileSize))
 	api.host.UploadChunk([]byte(fileName))
 	api.host.UploadChunk([]byte(filledSignature))
 	api.host.UploadChunk([]byte(filledHash))
 	sendBuffer := make([]byte, common.FileChunk)
-	fmt.Println("Start sending file!")
+	log.Println("Start sending file!")
 	for {
 		_, err = file.Read(sendBuffer)
 		if err == io.EOF {
@@ -93,7 +94,7 @@ func (api *ImageManagerAPI) PushImage(ctx context.Context, nodePID string, image
 		}
 		api.host.UploadChunk(sendBuffer)
 	}
-	fmt.Println("File has been sent, closing connection!")
+	log.Println("File has been sent, closing connection!")
 	return <-api.host.ImageIDchan, nil
 }
 
@@ -116,14 +117,14 @@ func (api *ImageManagerAPI) RunImage(ctx context.Context, nodePID string, imageI
 
 	// Check if there are any pending requests to run
 	containerID := <-api.host.ContainerID
-	fmt.Println("Result running the job: ", containerID)
+	log.Println("Result running the job: ", containerID)
 	return containerID
 }
 
 func (api *ImageManagerAPI) InspectContainer(ctx context.Context, nodePID string, containerID string) (string, error) {
 	toNodeID, _ := peer.IDB58Decode(nodePID)
 	api.host.CreateSendInspectRequest(toNodeID, containerID)
-	fmt.Println("Result running the job: ")
+	log.Println("Result running the job: ")
 	return <-api.host.InspectChan, nil
 }
 

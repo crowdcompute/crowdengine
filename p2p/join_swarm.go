@@ -21,7 +21,8 @@ package p2p
 import (
 	"bufio"
 	"fmt"
-	"log"
+
+	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/manager"
@@ -66,7 +67,7 @@ func NewJoinSwarmProtocol(p2pHost host.Host, managerIP string) *JoinSwarmProtoco
 
 // SendJoinToNeighbours sends a join swarm message to this nodes' bootnodes
 func (p *JoinSwarmProtocol) SendJoinToNeighbours(taskReplicas int) {
-	fmt.Println("Sending Join to my Bootnodes")
+	log.Println("Sending Join to my Bootnodes")
 	neighbours := p.p2pHost.Peerstore().Peers()
 	// nodesToSwarm := len(neighbours)
 
@@ -127,7 +128,7 @@ func (p *JoinSwarmProtocol) onJoinRequest(s net.Stream) {
 	busy, err := nodePartOfSwarm()
 	common.CheckErr(err, "[onJoinRequest] CheckIfNodeBusy couldn't get info for the swarm.")
 
-	fmt.Printf("I am busy: %t", busy)
+	log.Printf("I am busy: %t", busy)
 
 	// If this node is not busy with another task then it sends a Join OK response to
 	// the node that wants to create a Swarm (manager) so that this node can get another message
@@ -153,7 +154,7 @@ func (p *JoinSwarmProtocol) onJoinRequest(s net.Stream) {
 
 func nodePartOfSwarm() (bool, error) {
 	swarmInfo, err := manager.GetInstance().SwarmInfo()
-	fmt.Printf("[checkIfNodeBusy] I have this nodeID: %s \n", swarmInfo.NodeID)
+	log.Printf("[checkIfNodeBusy] I have this nodeID: %s \n", swarmInfo.NodeID)
 	if swarmInfo.NodeID == "" {
 		return false, err
 	}
@@ -233,7 +234,7 @@ func (p *JoinSwarmProtocol) onJoinReqToken(s net.Stream) {
 	result, err := manager.GetInstance().SwarmJoin(p.managerIP, "", remoteAddrs, data.JoinToken, "0.0.0.0:2377")
 	common.CheckErr(err, "[onJoinReqToken] Couldn't join swarm.")
 
-	fmt.Printf("Swarm result: %t\n", result)
+	log.Printf("Swarm result: %t\n", result)
 	if result {
 		log.Printf("%s: Sending joined successfully message to: %s....", p.p2pHost.ID(), data.MessageData.Id)
 		resp := &api.JoinResponse{MessageData: NewMessageData(data.MessageData.Id, false, p.p2pHost),

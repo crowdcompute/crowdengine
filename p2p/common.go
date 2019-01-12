@@ -19,9 +19,9 @@ package p2p
 import (
 	"bufio"
 	"context"
-	"fmt"
-	"log"
 	"time"
+
+	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/manager"
@@ -45,7 +45,7 @@ const (
 func containerRunning(containerID string) bool {
 	cjson, err := manager.GetInstance().InspectContainer(containerID)
 	if err != nil {
-		fmt.Println("Error inspecting container. ID : \n", containerID)
+		log.Println("Error inspecting container. ID : \n", containerID)
 		return false
 	}
 	// If at least one is running then state that I am busy

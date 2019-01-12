@@ -18,8 +18,8 @@ package p2p
 
 import (
 	"bufio"
-	"fmt"
-	"log"
+
+	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/manager"
@@ -85,10 +85,10 @@ func (p *InspectContainerProtocol) onInspectRequest(s inet.Stream) {
 }
 
 func inspectContainerRaw(containerId string) ([]byte, error) {
-	fmt.Println("Inspecting this container: ", containerId)
+	log.Println("Inspecting this container: ", containerId)
 	getSize := true
 	inspection, rawData, err := manager.GetInstance().InspectContainerRaw(containerId, getSize)
-	fmt.Printf("Result inspection the container %t\n", inspection.State.Running)
+	log.Printf("Result inspection the container %t\n", inspection.State.Running)
 	return rawData, err
 }
 

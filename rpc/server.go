@@ -18,8 +18,9 @@ package rpc
 
 import (
 	"flag"
-	"log"
 	"net/http"
+
+	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/fileserver"
 	"github.com/ethereum/go-ethereum/rpc"

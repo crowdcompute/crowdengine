@@ -19,9 +19,9 @@ package p2p
 import (
 	"bufio"
 	"context"
-	"fmt"
-	"log"
 	"time"
+
+	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/common/hexutil"
@@ -56,7 +56,7 @@ type DiscoveryProtocol struct {
 }
 
 func NewDiscoveryProtocol(p2pHost host.Host, dht *dht.IpfsDHT) *DiscoveryProtocol {
-	fmt.Println("initializing discovery proto")
+	log.Println("initializing discovery proto")
 	p := &DiscoveryProtocol{
 		p2pHost:       p2pHost,
 		dht:           dht,
@@ -74,10 +74,10 @@ func NewDiscoveryProtocol(p2pHost host.Host, dht *dht.IpfsDHT) *DiscoveryProtoco
 // Start tracking pending requests we received while we were busy
 // Sending a reponse back to the requests that I got earlier
 func (p *DiscoveryProtocol) onNotify() {
-	fmt.Println(" pending requests: ", p.pendingReq)
+	log.Println(" pending requests: ", p.pendingReq)
 	for req := range p.pendingReq {
 		if !p.requestExpired(req) {
-			fmt.Println("Request not expired, trying to send response")
+			log.Println("Request not expired, trying to send response")
 			if p.createSendResponse(req) {
 				delete(p.pendingReq, req)
 			}
@@ -183,7 +183,7 @@ func (p *DiscoveryProtocol) onDiscoveryRequest(s inet.Stream) {
 		if uint16(len(p.pendingReq)) < p.maxPendingReq {
 			p.pendingReq[data] = struct{}{}
 		}
-		fmt.Println("I am busy at the moment. Returning...")
+		log.Println("I am busy at the moment. Returning...")
 		return
 	}
 
@@ -232,8 +232,8 @@ func (p *DiscoveryProtocol) requestExpired(req *api.DiscoveryRequest) bool {
 	now := uint32(time.Now().Unix())
 
 	if req.DiscoveryMsgData.Expiry < now {
-		fmt.Printf("Now: %d, expiry: %d", now, req.DiscoveryMsgData.Expiry)
-		fmt.Println("Message Expired. Dropping message... ")
+		log.Printf("Now: %d, expiry: %d", now, req.DiscoveryMsgData.Expiry)
+		log.Println("Message Expired. Dropping message... ")
 		return true
 	}
 
@@ -301,7 +301,7 @@ func (p *DiscoveryProtocol) deleteExpiredMsgs() {
 	now := uint32(time.Now().Unix())
 	for hash, expiry := range p.receivedMsg {
 		if expiry < now {
-			fmt.Printf("about to delete this: %s\n", hash)
+			log.Printf("about to delete this: %s\n", hash)
 			delete(p.receivedMsg, hash)
 		}
 	}

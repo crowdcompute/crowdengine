@@ -19,10 +19,10 @@ package node
 import (
 	"errors"
 	"flag"
-	"fmt"
-	"log"
 	"net/http"
 	"sync"
+
+	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/fileserver"
 
@@ -157,7 +157,7 @@ func (n *Node) StartWebSocket() {
 // StartFileServer starts a file server
 func (n *Node) StartFileServer() {
 	serveMux := http.NewServeMux()
-	fmt.Printf("Starting upload file server...\n")
+	log.Printf("Starting upload file server...\n")
 	serveMux.HandleFunc("/upload", fileserver.ServeHTTP)
 	log.Fatal(http.ListenAndServe(*httpFileServerAddr, serveMux))
 }

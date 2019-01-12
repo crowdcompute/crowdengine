@@ -16,7 +16,7 @@
 
 package common
 
-import "log"
+import "github.com/crowdcompute/crowdengine/log"
 
 // CheckErr checks if an error is nil and logs and fatals it
 func CheckErr(err error, message string) {

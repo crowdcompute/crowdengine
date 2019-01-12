@@ -4,6 +4,8 @@ set -e
 # Variables
 VMNAME=$1
 ARTIFACT=$2
+IFACE=$(route | grep '^default' | grep -o '[^ ]*$')
+HOSTIP=$(ifconfig ${IFACE} | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p')
 
 # colors and helpers
 bold() { echo -e "\e[1m$@\e[0m" ; }
@@ -224,6 +226,9 @@ runcmd:
   - sudo touch /etc/cloud/cloud-init.disabled
   - sudo systemctl stop networking && systemctl start networking
   - sudo systemctl disable cloud-init.service
+  - export HOSTIP=${HOSTIP}
+  - echo "export HOSTIP=${HOSTIP}" >> /home/ubuntu/.profile
+  - cd /home/ubuntu/ && ./gocc
 _EOF_
     
     if [ ! -z "${SCRIPTNAME+x}" ]

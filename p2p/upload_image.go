@@ -21,12 +21,13 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/database"
@@ -73,7 +74,7 @@ func (p *UploadImageProtocol) SetConsistentStream(hostID peer.ID) bool {
 
 func (p *UploadImageProtocol) UploadChunk(chunk []byte) bool {
 	if _, err := p.stream.Write(chunk); err != nil {
-		fmt.Println("Error writting to stream", err)
+		log.Println("Error writting to stream", err)
 		return false
 	}
 	return true
@@ -84,7 +85,7 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 	log.Printf("%s: Received upload request from: %s.", p.p2pHost.ID(), s.Conn().RemotePeer())
 	defer s.Reset()
 
-	fmt.Println("Start receiving the file name and file size")
+	log.Println("Start receiving the file name and file size")
 	// TODO: all those numbers should go as constants
 	bufferFileName := make([]byte, 64)
 	bufferFileSize := make([]byte, 10)
@@ -93,11 +94,11 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 
 	s.Read(bufferFileSize)
 	fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), ":"), 10, 64)
-	fmt.Println(fileSize)
+	log.Println(fileSize)
 
 	s.Read(bufferFileName)
 	fileName := strings.Trim(string(bufferFileName), ":")
-	fmt.Println(fileName)
+	log.Println(fileName)
 
 	s.Read(bufferSignature)
 	signature := strings.Trim(string(bufferSignature), ":")
@@ -124,12 +125,12 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 		io.CopyN(newFile, s, common.FileChunk)
 		receivedBytes += common.FileChunk
 	}
-	fmt.Println("Received file completely!")
+	log.Println("Received file completely!")
 
 	imageID, err := loadImageToDocker(fileName)
 	if err != nil {
 		errmsg := fmt.Sprintf("There was an error loading the image. Error: %s\n", err)
-		fmt.Printf(errmsg)
+		log.Printf(errmsg)
 		removeImageFile(destFileName)
 		p.ImageIDchan <- errmsg
 		return
@@ -159,7 +160,7 @@ func removeImageFile(imgFilePath string) error {
 	err := os.Remove(imgFilePath)
 	if err != nil {
 		errmsg := fmt.Sprintf("There was an error removing the image. Error: %s\n", err)
-		fmt.Printf(errmsg)
+		log.Printf(errmsg)
 		return fmt.Errorf(errmsg)
 	}
 	return nil
@@ -167,24 +168,24 @@ func removeImageFile(imgFilePath string) error {
 
 // loadImageToDocker takes a path to an image file and loads it to the docker daemon
 func loadImageToDocker(filename string) (string, error) {
-	fmt.Println("Loading this image: ", filename)
+	log.Println("Loading this image: ", filename)
 	response, err := manager.GetInstance().LoadImage(filename)
 	if err != nil {
 		return "", err
 	}
 
 	if matches, exists := imageIDExists(response); exists {
-		fmt.Println("Loaded image. Image ID: ")
-		fmt.Println(matches[0][1][:64])
+		log.Println("Loaded image. Image ID: ")
+		log.Println(matches[0][1][:64])
 		return matches[0][1][:64], err
 	}
 
 	// If no image ID exists, we extract the image ID
 	// from listing the image using the tag
-	fmt.Println(response)
-	fmt.Println(len(response) - 5)
+	log.Println(response)
+	log.Println(len(response) - 5)
 	imageNameTag := response[2 : len(response)-5]
-	fmt.Println(imageNameTag)
+	log.Println(imageNameTag)
 
 	fargs := filters.NewArgs()
 	fargs.Add("reference", imageNameTag)
@@ -195,7 +196,7 @@ func loadImageToDocker(filename string) (string, error) {
 
 	res, err := manager.GetInstance().ListImages(options)
 	if err != nil {
-		fmt.Println("error: ", err)
+		log.Println("error: ", err)
 	}
 	imgID := strings.Replace(res[0].ID, "sha256:", "", -1)
 	log.Println("Loaded image. Image ID: ")

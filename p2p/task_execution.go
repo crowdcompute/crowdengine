@@ -19,8 +19,9 @@ package p2p
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"time"
+
+	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/manager"
@@ -127,7 +128,7 @@ func (p *TaskProtocol) onRunRequest(s inet.Stream) {
 	}
 
 	p.runningContainers = append(p.runningContainers, containerID)
-	fmt.Println("Start tracking job's status...")
+	log.Println("Start tracking job's status...")
 	// Start tracking jobs' status
 	// Wait here for the job to finish.
 	// TODO: We shouldn't wait here, we should have a switch
@@ -136,7 +137,7 @@ func (p *TaskProtocol) onRunRequest(s inet.Stream) {
 
 // Running until job's done
 func (p *TaskProtocol) waitForJobToFinish(containerID string) {
-	fmt.Println("start task status tracking")
+	log.Println("start task status tracking")
 	// TODO: Time has to be a const somewhere
 	ticker := time.NewTicker(time.Second * 3)
 	defer ticker.Stop()
@@ -144,10 +145,10 @@ func (p *TaskProtocol) waitForJobToFinish(containerID string) {
 	for {
 		select {
 		case <-ticker.C:
-			fmt.Println("Checking if job's done...")
+			log.Println("Checking if job's done...")
 			if !containerRunning(containerID) {
 				deleteValFromSlice(p.runningContainers, containerID)
-				fmt.Println("Job's done checking pending requests...")
+				log.Println("Job's done checking pending requests...")
 				p.Notify()
 				return
 			}
