@@ -30,7 +30,7 @@ var (
 	// DataDirFlag to store all the engine related data
 	DataDirFlag = cli.StringFlag{
 		Name:  "datadir",
-		Usage: "Data sirectory to store data/metadata",
+		Usage: "Data directory to store data/metadata",
 	}
 
 	// DatabaseNameFlag used to store user data
@@ -84,91 +84,91 @@ var (
 	// RPCServicesFlag list of rpc services available
 	RPCServicesFlag = cli.StringFlag{
 		Name:  "rpcservices",
-		Usage: "List of rpc services that are allowed to be called",
+		Usage: "List of rpc services allowed",
 	}
 
 	// RPCWhitelistFlag allows ips to connect
 	RPCWhitelistFlag = cli.StringFlag{
 		Name:  "rpcwhitelist",
-		Usage: "IP address whitelist",
+		Usage: "Allow IP addresses to access the RPC servers",
 	}
 
 	// RPCSocketEnabledFlag indicates whether or not to listen on unix sock
 	RPCSocketEnabledFlag = cli.BoolFlag{
 		Name:  "socket",
-		Usage: "Listen on unix domain socket",
+		Usage: "Enable IPC-RPC interface",
 	}
 
 	// RPCSocketPathFlag sockpath
 	RPCSocketPathFlag = cli.StringFlag{
 		Name:  "socketpath",
-		Usage: "Unix domain socket path",
+		Usage: "Path of the socker/pipe file",
 	}
 
 	// RPCHTTPEnabledFlag rpc over http
 	RPCHTTPEnabledFlag = cli.BoolFlag{
 		Name:  "http",
-		Usage: "Enable RPC over HTTP",
+		Usage: "Enable the HTTP-RPC server",
 	}
 
 	// RPCHTTPPortFlag rpc http port
 	RPCHTTPPortFlag = cli.IntFlag{
 		Name:  "httpport",
-		Usage: "HTTP port of RPC",
+		Usage: "HTTP-RPC server listening port",
 	}
 
 	// RPCHTTPAddrFlag rpc http listen address
 	RPCHTTPAddrFlag = cli.StringFlag{
 		Name:  "httpaddr",
-		Usage: "HTTP listen address",
+		Usage: "HTTP-RPC server listening interface",
 	}
 
 	// RPCHTTPCrossOriginFlag rpc http cross origin value
 	RPCHTTPCrossOriginFlag = cli.StringFlag{
 		Name:  "httporigin",
-		Usage: "HTTP cross origin value for browser compatibility",
+		Usage: "HTTP-RPC cross-origin value",
 	}
 
 	// RPCWSEnabledFlag rpc over ws
 	RPCWSEnabledFlag = cli.BoolFlag{
 		Name:  "ws",
-		Usage: "Enable RPC over Websocket",
+		Usage: "Enable the WS-RPC server",
 	}
 
 	// RPCWSPortFlag rpc ws port
 	RPCWSPortFlag = cli.IntFlag{
 		Name:  "wsport",
-		Usage: "WS port of RPC",
+		Usage: "WS-RPC server listening port",
 	}
 
 	// RPCWSAddrFlag rpc ws listen address
 	RPCWSAddrFlag = cli.StringFlag{
 		Name:  "wsaddr",
-		Usage: "WS listen address",
+		Usage: "WS-RPC server listening interface",
 	}
 
 	// RPCWSCrossOriginFlag rpc ws cross origin value
 	RPCWSCrossOriginFlag = cli.StringFlag{
 		Name:  "wsorigin",
-		Usage: "WS cross origin value for browser compatibility",
+		Usage: "WS-RPC cross-origin value",
 	}
 
 	// MaxPeersFlag max num of peers
 	MaxPeersFlag = cli.IntFlag{
 		Name:  "maxpeers",
-		Usage: "Maximun number of peers allowed to connect",
+		Usage: "Maximum number of peers to connect",
 	}
 
 	// P2PListenPortFlag p2p port
 	P2PListenPortFlag = cli.IntFlag{
 		Name:  "port",
-		Usage: "P2P port to listen",
+		Usage: "P2P listening port",
 	}
 
 	// P2PListenAddrFlag p2p address
 	P2PListenAddrFlag = cli.StringFlag{
 		Name:  "addr",
-		Usage: "P2P address to listen",
+		Usage: "P2P listening interface",
 	}
 
 	// P2PTimeoutFlag p2p connection timeout
