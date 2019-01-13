@@ -19,8 +19,12 @@ execute:
 
 run-logserver:
 	sudo sysctl -w vm.max_map_count=262144
-	docker run -p 5601:5601 -p 9200:9200 -p 5044:5044 -d gocc-logstack
+	docker run -p 5601:5601 -p 9200:9200 -p 5044:5044 --name gocc-logstack  -d gocc-logstack 
 	echo "Open: http://localhost:5601"
+
+stop-logserver:
+	docker container stop gocc-logstack
+	docker container rm -f gocc-logstack
 
 build-logserver:
 	docker build --tag gocc-logstack ./build/gocc-logstack/
