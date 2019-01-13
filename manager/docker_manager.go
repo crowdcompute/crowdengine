@@ -20,10 +20,11 @@ import (
 	"context"
 	"errors"
 	"io/ioutil"
-	"log"
 	"os"
 	"regexp"
 	"sync"
+
+	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/docker/docker/api/types"

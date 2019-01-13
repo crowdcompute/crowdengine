@@ -4,6 +4,8 @@ set -e
 # Variables
 VMNAME=$1
 ARTIFACT=$2
+IFACE=$(route | grep '^default' | grep -o '[^ ]*$')
+HOSTIP=$(ifconfig ${IFACE} | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p')
 
 # colors and helpers
 bold() { echo -e "\e[1m$@\e[0m" ; }
@@ -13,8 +15,7 @@ yellow() { echo -e "\e[33m$@\e[0m" ; }
 die() { red "ERR: $@" >&2 ; exit 2 ; }
 ok() { green "${@:-OK}" ; }
 
-function set_defaults ()
-{
+set_defaults() {
     AUTOSTART=false                 # Automatically start VM at boot time
     CPUS=1                          # Number of virtual CPUs
     FEATURE=host                    # Use host cpu features to the guest
@@ -43,6 +44,11 @@ function set_defaults ()
     OPTIND=1
 }
 
+clean_vms() {
+    (virsh destroy ${VMNAME} > /dev/null 2>&1 || true )
+    (virsh undefine ${VMNAME} > /dev/null 2>&1 || true )
+    (rm -rf ${VMDIR}/${VMNAME} > /dev/null 2>&1 || true )
+}
 
 provision_vm() {
     check_vmname_set
@@ -85,7 +91,8 @@ provision_vm() {
     # copy image to the destination directory
     DISK=${VMNAME}.qcow2
     cp $IMAGE "${VMDIR}/${VMNAME}/${DISK}" && ok
-    
+
+    sudo qemu-img resize "${VMDIR}/${VMNAME}/${DISK}" 10G && ok
 
     import_vm
     
@@ -122,7 +129,8 @@ provision_vm() {
         IP="<IP address>"
     fi
     
-    green "SSH to ${VMNAME}: 'ssh ubuntu@${IP}' or 'ssh ubuntu@${VMNAME}'"
+
+    green "SSH to ${VMNAME}: 'ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ubuntu@${IP}'"
     
     # Remove the unnecessary cloud init files
     green "Cleaning up cloud-init files"
@@ -152,15 +160,13 @@ check_vmname_set() {
     [ -n "${VMNAME}" ] || die "VMNAME not set."
 }
 
-function domain_exists ()
-{
+domain_exists() {
     virsh dominfo "${1}" > /dev/null 2>&1 \
     && DOMAIN_EXISTS=1 \
     || DOMAIN_EXISTS=0
 }
 
-function storpool_exists ()
-{
+storpool_exists() {
     virsh pool-info "${1}" > /dev/null 2>&1 \
     && STORPOOL_EXISTS=1 \
     || STORPOOL_EXISTS=0
@@ -213,10 +219,16 @@ timezone: ${TIMEZONE}
 
 # Remove cloud-init when finished with it
 runcmd:
+  - mkdir -p /home/ubuntu/uploads
+  - sudo chmod 777 /home/ubuntu/uploads
+  - rm -r /home/ubuntu/go1.11.4.linux-amd64.tar.gz
   - sudo usermod -a -G docker ubuntu
   - sudo touch /etc/cloud/cloud-init.disabled
   - sudo systemctl stop networking && systemctl start networking
   - sudo systemctl disable cloud-init.service
+  - export HOSTIP=${HOSTIP}
+  - echo "export HOSTIP=${HOSTIP}" >> /home/ubuntu/.profile
+  - cd /home/ubuntu/ && ./gocc
 _EOF_
     
     if [ ! -z "${SCRIPTNAME+x}" ]
@@ -259,6 +271,7 @@ _EOF_
 kvm_group="$(ls -l /dev/kvm | awk '{ print $4 }')"
 if groups $username | grep &>/dev/null "\b$kvm_group\b"; then
     green "[OK] Permissions are correct"
+    clean_vms
     set_defaults
     provision_vm
     

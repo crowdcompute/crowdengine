@@ -21,17 +21,21 @@ import (
 	"os"
 	"sort"
 
+	"github.com/crowdcompute/crowdengine/log"
+
 	"github.com/crowdcompute/crowdengine/cmd"
 	"github.com/crowdcompute/crowdengine/cmd/gocc/commands"
+	"github.com/crowdcompute/crowdengine/cmd/gocc/config"
+	"github.com/crowdcompute/crowdengine/node"
 	"github.com/urfave/cli"
 )
 
 var (
-	// GitCommit is used to reference the commit used for the build
-	GitCommit string
-
 	// Version is passed using the make file
 	Version string
+
+	// GitCommit is used to reference the commit used for the build
+	GitCommit string
 
 	// App is an instance of a cli app
 	App = cmd.NewApp(GitCommit)
@@ -39,17 +43,41 @@ var (
 
 func init() {
 	// App.HideVersion = true
+	App.Action = gocc
 	App.Version = Version
 	App.Commands = []cli.Command{
 		commands.AccountCommand,
-		commands.InitCommand,
 	}
+	App.Flags = config.GOCCAppFlags
 	sort.Sort(cli.CommandsByName(App.Commands))
 	App.After = func(ctx *cli.Context) error {
 		// debug.Exit()
 		// console.Stdin.Close() // Resets terminal mode.
 		return nil
 	}
+}
+
+func gocc(ctx *cli.Context) error {
+	// create default config
+	cfg := config.DefaultConfig()
+
+	// if config file is given, load it
+	confFile := ctx.String("config")
+	if confFile != "" {
+		config.LoadTomlConfig(ctx, cfg)
+	}
+
+	// apply flags to config
+	config.ApplyFlags(ctx, cfg)
+
+	// create and start node
+	if node, err := node.NewNode(cfg); err != nil {
+		log.Fatal(err)
+	} else {
+		node.Start(ctx)
+	}
+
+	return nil
 }
 
 func main() {

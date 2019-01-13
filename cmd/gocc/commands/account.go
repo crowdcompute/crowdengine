@@ -20,6 +20,7 @@ Manage accounts, create update and import new stuff`,
 				Usage: "add a new account",
 				Action: func(c *cli.Context) error {
 					fmt.Println("new account...")
+					fmt.Println(c.GlobalFlagNames())
 					return nil
 				},
 			},

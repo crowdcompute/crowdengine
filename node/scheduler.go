@@ -17,38 +17,20 @@
 package node
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/database"
+	"github.com/crowdcompute/crowdengine/log"
 	"github.com/crowdcompute/crowdengine/manager"
 	"github.com/docker/docker/api/types"
 )
 
-// Running for ever, or until job's done
-func WaitForJobToFinish(containerID string) bool {
-	fmt.Println("start task status tracking")
-	// TODO: Time has to be a const somewhere
-	ticker := time.NewTicker(time.Second * 3)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			fmt.Println("Checking if job's done...")
-			if !containerRunning(containerID) {
-				return true
-			}
-		}
-	}
-}
-
 func containerRunning(containerID string) bool {
 	cjson, err := manager.GetInstance().InspectContainer(containerID)
 	if err != nil {
-		fmt.Println("Error inspecting container. ID : \n", containerID)
+		log.Println("Error inspecting container. ID : \n", containerID)
 		return false
 	}
 	// If at least one is running then state that I am busy
@@ -61,7 +43,7 @@ func containerRunning(containerID string) bool {
 // PruneImages checks if there are any images to be removed based on a time interval
 // Running for ever, or until node dies
 func PruneImages(quit <-chan struct{}) {
-	fmt.Println("start prunning images")
+	log.Println("start prunning images")
 	// TODO: Time has to be a const somewhere
 	ticker := time.NewTicker(time.Second * 10)
 	defer ticker.Stop()
@@ -69,7 +51,7 @@ func PruneImages(quit <-chan struct{}) {
 	for {
 		select {
 		case <-ticker.C:
-			fmt.Println("Checking if there are images to be removed...")
+			log.Println("Checking if there are images to be removed...")
 			RemoveImages()
 		case <-quit:
 			ticker.Stop()
@@ -95,7 +77,7 @@ func RemoveImages() {
 		// If the image was found into the DB
 		if err == nil {
 			if time.Unix(image.CreatedTime, 0).Add(common.TenDays).Unix() <= now {
-				fmt.Println("Removing image: ", img.ID)
+				log.Println("Removing image: ", img.ID)
 				manager.GetInstance().RemoveImage(img.ID, types.ImageRemoveOptions{Force: true, PruneChildren: true})
 			}
 		}

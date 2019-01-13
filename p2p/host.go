@@ -21,7 +21,7 @@ import (
 	"fmt"
 
 	"github.com/crowdcompute/crowdengine/common"
-	"github.com/crowdcompute/crowdengine/p2p/protocols"
+	"github.com/crowdcompute/crowdengine/log"
 
 	ds "github.com/ipfs/go-datastore"
 	dsync "github.com/ipfs/go-datastore/sync"
@@ -36,44 +36,45 @@ import (
 )
 
 type Host struct {
-	P2PHost host.Host
-	dht     *dht.IpfsDHT
-	IP      string
+	P2PHost  host.Host
+	dht      *dht.IpfsDHT
+	IP       string
+	FullAddr string
 
-	*protocols.JoinSwarmProtocol
-	*protocols.TaskProtocol
-	*protocols.DiscoveryProtocol
-	*protocols.UploadImageProtocol
-	*protocols.InspectContainerProtocol
-	*protocols.ListImagesProtocol
+	*JoinSwarmProtocol
+	*TaskProtocol
+	*DiscoveryProtocol
+	*UploadImageProtocol
+	*InspectContainerProtocol
+	*ListImagesProtocol
 }
 
 // NewHost creates a new Host
 func NewHost(port int, IP string, bootnodes []string) *Host {
-	s := &Host{IP: IP}
-	s.makeRandomHost(port, IP)
+	host := &Host{IP: IP}
+	host.makeRandomHost(port, IP)
 
 	if len(bootnodes) > 0 {
-		s.ConnectWithNodes(bootnodes)
+		host.ConnectWithNodes(bootnodes)
 	}
-	fmt.Print("Here is my p2p ID: ")
-	fmt.Printf("/ip4/%s/tcp/%d/ipfs/%s\n", IP, port, s.P2PHost.ID().Pretty())
-
-	s.registerProtocols()
-	return s
+	log.Print("Here is my p2p ID: ")
+	host.FullAddr = fmt.Sprintf("/ip4/%s/tcp/%d/ipfs/%s", IP, port, host.P2PHost.ID().Pretty())
+	log.Println(host.FullAddr)
+	host.registerProtocols()
+	return host
 }
 
 // Registering all Protocols
 func (h *Host) registerProtocols() {
 	// TODO: PATH has to be in a config
-	h.JoinSwarmProtocol = protocols.NewJoinSwarmProtocol(h.P2PHost, h.IP)
-	h.DiscoveryProtocol = protocols.NewDiscoveryProtocol(h.P2PHost, h.dht)
-	h.TaskProtocol = protocols.NewTaskProtocol(h.P2PHost)
+	h.JoinSwarmProtocol = NewJoinSwarmProtocol(h.P2PHost, h.IP)
+	h.DiscoveryProtocol = NewDiscoveryProtocol(h.P2PHost, h.dht)
+	h.TaskProtocol = NewTaskProtocol(h.P2PHost)
 	// Registering the Observer that wants to get notified when the task is done.
 	h.TaskProtocol.Register(h.DiscoveryProtocol)
-	h.UploadImageProtocol = protocols.NewUploadImageProtocol(h.P2PHost)
-	h.InspectContainerProtocol = protocols.NewInspectContainerProtocol(h.P2PHost)
-	h.ListImagesProtocol = protocols.NewListImagesProtocol(h.P2PHost)
+	h.UploadImageProtocol = NewUploadImageProtocol(h.P2PHost)
+	h.InspectContainerProtocol = NewInspectContainerProtocol(h.P2PHost)
+	h.ListImagesProtocol = NewListImagesProtocol(h.P2PHost)
 }
 
 // makeRandomHost creates a libp2p host with a randomly generated identity.
@@ -107,9 +108,9 @@ func (h *Host) makeRandomHost(port int, IP string) {
 	common.CheckErr(err, "[makeRandomHost] Couldn't bootstrap the host.")
 }
 
-// ConnectWithNodes establishes a libp2p connection to this nodes' bootnodes
+// ConnectWithNodes establishes a libp2p connection with the nodes
 func (h *Host) ConnectWithNodes(nodes []string) {
-	fmt.Println("Connecting to my Bootnodes: ")
+	log.Println("Connecting to the nodes: ", nodes)
 	for _, nodeAddr := range nodes {
 		h.addAddrToPeerstore(nodeAddr)
 	}

@@ -17,17 +17,21 @@
 package node
 
 import (
-	"context"
 	"errors"
 	"flag"
-	"fmt"
-	"log"
 	"net/http"
 	"sync"
 
+	"github.com/crowdcompute/crowdengine/log"
+
+	"github.com/crowdcompute/crowdengine/fileserver"
+
+	"github.com/crowdcompute/crowdengine/cmd/gocc/config"
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/database"
 	"github.com/crowdcompute/crowdengine/p2p"
+	ccrpc "github.com/crowdcompute/crowdengine/rpc"
+	"github.com/urfave/cli"
 
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -37,28 +41,31 @@ var (
 	errImageStoreExists = errors.New("Unable to create a new Image Store")
 	httpAddr            = flag.String("httpAddr", "localhost:8080", "http service address")
 	addrWS              = flag.String("addrWS", "localhost:8081", "web socket service address")
+	httpFileServerAddr  = flag.String("httpFileServerAddr", "localhost:8082", "http file server address")
 )
 
+// Node represents a node
 type Node struct {
 	rpcAPIs         []rpc.API // list of APIs
 	startOnce       sync.Once
 	quit            chan struct{} // Channel used for graceful exit
 	store, imgTable database.Database
 	host            *p2p.Host
+	cfg             *config.GlobalConfig
 }
 
-// New returns new Node instance.
-func NewNode(port int, IP string, bootnodes []string) (*Node, error) {
+// NewNode returns new Node instance
+func NewNode(cfg *config.GlobalConfig) (*Node, error) {
 	n := &Node{
+		cfg:  cfg,
 		quit: make(chan struct{}),
 	}
-
-	n.host = p2p.NewHost(port, IP, bootnodes)
+	n.host = p2p.NewHost(cfg.P2P.ListenPort, cfg.P2P.ListenAddress, cfg.P2P.Bootstraper.Nodes)
 	return n, nil
 }
 
 // Start starts a node instance & listens to RPC calls if the flag is set
-func (n *Node) Start(ctx context.Context, rpcFlag bool) error {
+func (n *Node) Start(ctx *cli.Context) error {
 	err := errNodeStarted
 	n.startOnce.Do(func() {
 		// TODO: Only if worker node run these two
@@ -67,17 +74,22 @@ func (n *Node) Start(ctx context.Context, rpcFlag bool) error {
 		err = nil // clear error above, only once.
 	})
 
-	if rpcFlag {
-		fmt.Println("Starting RPC service")
-		go n.StartHTTP() // blocks forever
-		n.StartWebSocket()
-	} else {
-		// Block here forever and wait for IPFS stream requests
-		select {}
+	if n.cfg.RPC.Enabled {
+		if n.cfg.RPC.HTTP.Enabled {
+			go n.StartHTTP()
+			go n.StartFileServer()
+		}
+		if n.cfg.RPC.Websocket.Enabled {
+			n.StartWebSocket()
+		}
 	}
+
+	select {}
+
 	return err
 }
 
+// Stop is closing down everything that the node started
 func (n *Node) Stop() error {
 	n.store.Close()
 	close(n.quit)
@@ -91,31 +103,31 @@ func (n *Node) apis() []rpc.API {
 		{
 			Namespace: "discovery",
 			Version:   "1.0",
-			Service:   NewDiscoveryAPI(n.host),
+			Service:   ccrpc.NewDiscoveryAPI(n.host),
 			Public:    true,
 		},
 		{
 			Namespace: "imagemanager",
 			Version:   "1.0",
-			Service:   NewImageManagerAPI(n.host),
+			Service:   ccrpc.NewImageManagerAPI(n.host),
 			Public:    true,
 		},
 		{
 			Namespace: "service",
 			Version:   "1.0",
-			Service:   NewServiceAPI(n.host),
+			Service:   ccrpc.NewServiceAPI(n.host),
 			Public:    true,
 		},
 		{
 			Namespace: "bootnodes",
 			Version:   "1.0",
-			Service:   NewBootnodesAPI(n.host),
+			Service:   ccrpc.NewBootnodesAPI(n.host),
 			Public:    true,
 		},
 	}
 }
 
-// StartHTTP starts serving HTTP requests
+// StartHTTP starts a http server
 func (n *Node) StartHTTP() {
 	server := rpc.NewServer()
 	for _, api := range n.apis() {
@@ -129,7 +141,7 @@ func (n *Node) StartHTTP() {
 	log.Fatal(http.ListenAndServe(*httpAddr, serveMux))
 }
 
-// StartWebSocket build a jsonrpc server
+// StartWebSocket starts a websocket server
 func (n *Node) StartWebSocket() {
 	server := rpc.NewServer()
 	for _, api := range n.apis() {
@@ -140,4 +152,12 @@ func (n *Node) StartWebSocket() {
 	serveMux.Handle("/", server.WebsocketHandler([]string{"*"}))
 
 	log.Fatal(http.ListenAndServe(*addrWS, serveMux))
+}
+
+// StartFileServer starts a file server
+func (n *Node) StartFileServer() {
+	serveMux := http.NewServeMux()
+	log.Printf("Starting upload file server...\n")
+	serveMux.HandleFunc("/upload", fileserver.ServeHTTP)
+	log.Fatal(http.ListenAndServe(*httpFileServerAddr, serveMux))
 }

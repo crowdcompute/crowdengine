@@ -17,8 +17,7 @@
 package terminal
 
 import (
-	"fmt"
-	"log"
+	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/peterh/liner"
 )
@@ -62,13 +61,13 @@ func (t *Terminal) getPassword(prompt string) (passwd string, err error) {
 		return t.State.PasswordPrompt(prompt)
 	}
 	if !t.warned {
-		fmt.Println("Terminal is unsupported and password will be shown!")
+		log.Println("Terminal is unsupported and password will be shown!")
 		t.warned = true
 	}
 
-	fmt.Print(prompt)
+	log.Print(prompt)
 	passwd, err = t.State.Prompt("")
-	fmt.Println()
+	log.Println()
 	return passwd, err
 }
 
