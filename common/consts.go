@@ -26,3 +26,6 @@ const ImagesDest = "./uploads/"
 
 // TenDays represents 10 days in time
 const TenDays time.Duration = 24 * time.Hour * 10
+
+// TTLmsg represents the time to live of a p2p message
+const TTLmsg time.Duration = time.Second * 15

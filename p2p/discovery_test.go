@@ -34,7 +34,7 @@ func discoveryRequestMsg(host host.Host) *api.DiscoveryRequest {
 
 func TestRequestExpired(t *testing.T) {
 	req := discoveryRequestMsg(testHost1.P2PHost)
-	testHost1.setReqExpiryTime(req, 0)
+	testHost1.setTTLForDiscReq(req, 0)
 	time.Sleep(time.Second)
 	assert.True(t, testHost1.requestExpired(req))
 }
@@ -51,7 +51,7 @@ func TestMessageReceived(t *testing.T) {
 
 // 	req.DiscoveryMsgData.InitNodeID = testHost1.P2PHost.ID().Pretty()
 
-// 	testHost2.setReqExpiryTime(req, 10)
+// 	testHost2.setTTLForDiscReq(req, 10)
 // 	testHost2.pendingReq[req] = struct{}{}
 // 	testHost2.onNotify()
 
