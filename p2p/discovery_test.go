@@ -33,39 +33,28 @@ func discoveryRequestMsg(host host.Host) *api.DiscoveryRequest {
 }
 
 func TestRequestExpired(t *testing.T) {
-	dproto := discoveryProtocol(2000)
-	req := discoveryRequestMsg(dproto.p2pHost)
-	dproto.setReqExpiryTime(req, 0)
+	req := discoveryRequestMsg(testHost1.P2PHost)
+	testHost1.setReqExpiryTime(req, 0)
 	time.Sleep(time.Second)
-	assert.True(t, dproto.requestExpired(req))
+	assert.True(t, testHost1.requestExpired(req))
 }
 
-func TestMessageReceivedAgain(t *testing.T) {
-	dproto := discoveryProtocol(2000)
-	req := discoveryRequestMsg(dproto.p2pHost)
+func TestMessageReceived(t *testing.T) {
+	req := discoveryRequestMsg(testHost1.P2PHost)
 	req.DiscoveryMsgData.InitHash = hexutil.Encode(crypto.GetProtoHash(req))
-	// Put this request in the received messages list
-	dproto.receivedMsg[req.DiscoveryMsgData.InitHash] = 1000
-	assert.True(t, dproto.checkMsgReceived(req))
+	testHost1.receivedMsg[req.DiscoveryMsgData.InitHash] = uint32(time.Now().UnixNano())
+	assert.True(t, testHost1.checkMsgReceived(req))
 }
 
 // func TestPendingRequests(t *testing.T) {
-// 	dproto := discoveryProtocol(2000)
-// 	req := discoveryRequestMsg(dproto.p2pHost)
+// 	req := discoveryRequestMsg(testHost1.P2PHost)
 
-// 	testHost1, dht1 := host.MakeRandomHost(2000, "127.0.0.1")
-// 	testHost2, dht2 := host.MakeRandomHost(2001, "127.0.0.1")
-// 	dproto1 := NewDiscoveryProtocol(testHost1, dht1)
-// 	dproto2 := NewDiscoveryProtocol(testHost2, dht2)
-// 	testHost1.Peerstore().AddAddrs(testHost2.ID(), testHost2.Addrs(), ps.PermanentAddrTTL)
-// 	testHost2.Peerstore().AddAddrs(testHost1.ID(), testHost1.Addrs(), ps.PermanentAddrTTL)
+// 	req.DiscoveryMsgData.InitNodeID = testHost1.P2PHost.ID().Pretty()
 
-// 	req := &api.discoveryRequest{DiscoveryMsgData: NewDiscoveryMsgData("1", true, testHost1),
-// 		Message: api.DiscoveryMessage_DiscoveryReq}
-// 	req.DiscoveryMsgData.InitNodeID = peer.IDB58Encode(testHost2.ID())
-// 	dproto1.setReqExpiryTime(req, 10)
-// 	dproto1.pendingReq = append(dproto1.pendingReq, req)
-// 	dproto1.onNotify()
+// 	testHost2.setReqExpiryTime(req, 10)
+// 	testHost2.pendingReq[req] = struct{}{}
+// 	testHost2.onNotify()
 
-// 	assert.Equal(t, testHost2.ID(), <-dproto2.AvailableNodeID)
+// 	// fmt.Println(<-testHost1.NodeID)
+// 	assert.Equal(t, testHost2.P2PHost.ID(), <-testHost1.NodeID)
 // }

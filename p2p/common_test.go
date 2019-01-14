@@ -29,10 +29,6 @@ var (
 	testHost2 = NewHost(2001, "127.0.0.1", []string{testHost1.FullAddr})
 )
 
-func discoveryProtocol(port int) *DiscoveryProtocol {
-	return testHost1.DiscoveryProtocol
-}
-
 func TestSignAuthenticate(t *testing.T) {
 	req := discoveryRequestMsg(testHost1.P2PHost)
 
