@@ -32,6 +32,14 @@ func discoveryRequestMsg(host host.Host) *api.DiscoveryRequest {
 		Message: api.DiscoveryMessage_DiscoveryReq}
 }
 
+// TODO: Rethink of this test
+func TestSetTTLForDiscReq(t *testing.T) {
+	req := discoveryRequestMsg(testHost2.P2PHost)
+	testHost2.setTTLForDiscReq(req, time.Second)
+	assert.True(t, req.DiscoveryMsgData.TTL == uint32(time.Second))
+	assert.True(t, req.DiscoveryMsgData.Expiry == uint32(time.Now().Add(time.Second).Unix()))
+}
+
 func TestMsgExpired(t *testing.T) {
 	req := discoveryRequestMsg(testHost1.P2PHost)
 	testHost1.setTTLForDiscReq(req, 0)
