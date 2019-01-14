@@ -64,6 +64,14 @@ func TestDeleteExpiredMsgs(t *testing.T) {
 	assert.True(t, len(testHost1.receivedMsg) == 0)
 }
 
+func TestCopyNewDiscoveryRequest(t *testing.T) {
+	req := discoveryRequestMsg(testHost2.P2PHost)
+	copiedReq := testHost1.copyNewDiscoveryRequest(req)
+	reqSignature := string(req.DiscoveryMsgData.MessageData.Sign)
+	copiedReqSignature := string(copiedReq.DiscoveryMsgData.MessageData.Sign)
+	assert.True(t, reqSignature != copiedReqSignature)
+}
+
 // func TestPendingRequests(t *testing.T) {
 // 	req := discoveryRequestMsg(testHost1.P2PHost)
 
