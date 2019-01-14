@@ -41,14 +41,15 @@ func (api *DiscoveryAPI) Discover(ctx context.Context, numberOfNodes int) ([]str
 	}
 
 	peerID := api.host.P2PHost.ID().Pretty()
-	initialRequest := api.host.GetInitialDiscoveryReq(numberOfNodes, peerID)
+	api.host.InitializeReturnChan(numberOfNodes)
+	initialRequest := api.host.GetInitialDiscoveryReq(peerID)
 	// No neighbour sent me this message, that's why the empty string as a second parameter
-	api.host.ForwardToPeers(initialRequest, "")
+	api.host.ForwardMsgToPeers(initialRequest, "")
 	// TODO: this channel has to have a TIMEOUT.
 	// TODO: Count the number of nodes that replied
 	nodeIDs := make([]string, numberOfNodes)
 	for i := 0; i < numberOfNodes; i++ {
-		nodeIDs = append(nodeIDs, (<-api.host.NodeID).Pretty())
+		nodeIDs = append(nodeIDs, (<-api.host.NodeIDchan).Pretty())
 	}
 
 	return nodeIDs, nil

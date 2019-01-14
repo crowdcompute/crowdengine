@@ -52,7 +52,7 @@ type DiscoveryProtocol struct {
 	receivedMsg   map[string]uint32                  // Store all received msgs, so that we do not re-send them when received again
 	pendingReq    map[*api.DiscoveryRequest]struct{} // Store all requests that were unable to be fullfiled at the time the node was busy
 	maxPendingReq uint16                             // The maximum requests the node stores for later process
-	NodeID        chan peer.ID                       // a way to return the Node ID to the main form
+	NodeIDchan    chan peer.ID                       // a way to return the Node ID to the main form
 }
 
 func NewDiscoveryProtocol(p2pHost host.Host, dht *dht.IpfsDHT) *DiscoveryProtocol {
@@ -62,7 +62,7 @@ func NewDiscoveryProtocol(p2pHost host.Host, dht *dht.IpfsDHT) *DiscoveryProtoco
 		dht:           dht,
 		receivedMsg:   make(map[string]uint32),
 		maxPendingReq: 5,
-		NodeID:        nil,
+		NodeIDchan:    nil,
 	}
 	p.pendingReq = map[*api.DiscoveryRequest]struct{}{} //p.maxPendingReq
 	// Set the handlers the node will be listening to
@@ -85,15 +85,17 @@ func (p *DiscoveryProtocol) onNotify() {
 	}
 }
 
-// GetInitialDiscoveryReq
-// Full node creates the initial discovery Request
-// Sets the full node's nodeID
-// Sets the expiry time of the request
-// Sets the unique hash of the request
-func (p *DiscoveryProtocol) GetInitialDiscoveryReq(numberOfNodes int, initNodeID string) *api.DiscoveryRequest {
-	// initialize the channel
-	p.NodeID = make(chan peer.ID, numberOfNodes)
-	// create message data
+// InitializeReturnChan initializes the channel
+// TODO: change return data logic maybe?
+func (p *DiscoveryProtocol) InitializeReturnChan(numberOfNodes int) {
+	p.NodeIDchan = make(chan peer.ID, numberOfNodes)
+}
+
+// GetInitialDiscoveryReq initializes the msg request that will be forwarded along the network
+// Sets the ID of the node that initiated the discovery request
+// Sets the unique hash of the msg request
+// Sets the TTL & expiry time of the msg request
+func (p *DiscoveryProtocol) GetInitialDiscoveryReq(initNodeID string) *api.DiscoveryRequest {
 	req := &api.DiscoveryRequest{DiscoveryMsgData: NewDiscoveryMsgData(uuid.Must(uuid.NewV4(), nil).String(), true, p.p2pHost),
 		Message: api.DiscoveryMessage_DiscoveryReq}
 
@@ -109,23 +111,10 @@ func (p *DiscoveryProtocol) setTTLForDiscReq(req *api.DiscoveryRequest, ttl time
 	req.DiscoveryMsgData.Expiry = uint32(time.Now().Add(ttl).Unix())
 }
 
-// ForwardToPeers creates a new Discovery request and sends it to its neighbours
-func (p *DiscoveryProtocol) ForwardToPeers(request *api.DiscoveryRequest, peerWhoSentMsg peer.ID) {
+// ForwardMsgToPeers creates a new Discovery request and sends it to its neighbours
+func (p *DiscoveryProtocol) ForwardMsgToPeers(request *api.DiscoveryRequest, peerWhoSentMsg peer.ID) {
 	req := p.copyNewDiscoveryRequest(request)
-
-	// Excluded peers from sending a message
-	excludedPeers := map[peer.ID]struct{}{}
-	excludedPeers[p.p2pHost.ID()] = struct{}{} // Myself
-	excludedPeers[peerWhoSentMsg] = struct{}{} // The peer who sent the message to the current node
-
-	// Send messages to peers
-	for _, neighbourID := range p.p2pHost.Peerstore().Peers() {
-		if _, ok := excludedPeers[neighbourID]; !ok {
-			go sendMsg(p.p2pHost, neighbourID, req, protocol.ID(discoveryRequest))
-			log.Printf("%s: Discovery message to: %s was sent. Message Id: %s, Message: %s",
-				p.p2pHost.ID(), neighbourID, request.DiscoveryMsgData.MessageData.Id, request.Message)
-		}
-	}
+	p.sendMsgToPeers(req, peerWhoSentMsg)
 }
 
 // copyNewDiscoveryRequest gets a DiscoveryRequest and returns a copy of it,
@@ -141,6 +130,22 @@ func (p *DiscoveryProtocol) copyNewDiscoveryRequest(request *api.DiscoveryReques
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
 	req.DiscoveryMsgData.MessageData.Sign = signProtoMsg(req, key)
 	return req
+}
+
+func (p *DiscoveryProtocol) sendMsgToPeers(req *api.DiscoveryRequest, peerWhoSentMsg peer.ID) {
+	// Excluded peers from sending a message
+	excludedPeers := map[peer.ID]struct{}{}
+	excludedPeers[p.p2pHost.ID()] = struct{}{} // Myself
+	excludedPeers[peerWhoSentMsg] = struct{}{} // The peer who sent the message to the current node
+
+	// Send message to peers
+	for _, neighbourID := range p.p2pHost.Peerstore().Peers() {
+		if _, ok := excludedPeers[neighbourID]; !ok {
+			go sendMsg(p.p2pHost, neighbourID, req, protocol.ID(discoveryRequest))
+			log.Printf("%s: Discovery message to: %s was sent. Message Id: %s, Message: %s",
+				p.p2pHost.ID(), neighbourID, req.DiscoveryMsgData.MessageData.Id, req.Message)
+		}
+	}
 }
 
 // remote peer requests handler
@@ -169,7 +174,7 @@ func (p *DiscoveryProtocol) onDiscoveryRequest(s inet.Stream) {
 	}
 
 	// Pass this message to my neighbours
-	p.ForwardToPeers(data, s.Conn().RemotePeer())
+	p.ForwardMsgToPeers(data, s.Conn().RemotePeer())
 
 	// Even if there is possibility that we never send a reply to this Node (because of being busy),
 	// we still store it our our Peerstore, because there is high possibility to
@@ -280,7 +285,7 @@ func (p *DiscoveryProtocol) onDiscoveryResponse(s inet.Stream) {
 	discoveryPeer := s.Conn().RemotePeer()
 
 	log.Printf("%s: Received discovery response from %s. Message id:%s. Message: %s.", s.Conn().LocalPeer(), discoveryPeer, data.DiscoveryMsgData.MessageData.Id, data.Message)
-	p.NodeID <- discoveryPeer
+	p.NodeIDchan <- discoveryPeer
 }
 
 // Runs forever or until the node's done
