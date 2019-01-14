@@ -32,18 +32,28 @@ func discoveryRequestMsg(host host.Host) *api.DiscoveryRequest {
 		Message: api.DiscoveryMessage_DiscoveryReq}
 }
 
-func TestRequestExpired(t *testing.T) {
+func TestMsgExpired(t *testing.T) {
 	req := discoveryRequestMsg(testHost1.P2PHost)
 	testHost1.setTTLForDiscReq(req, 0)
 	time.Sleep(time.Second)
 	assert.True(t, testHost1.requestExpired(req))
 }
 
-func TestMessageReceived(t *testing.T) {
-	req := discoveryRequestMsg(testHost1.P2PHost)
-	req.DiscoveryMsgData.InitHash = hexutil.Encode(crypto.GetProtoHash(req))
-	testHost1.receivedMsg[req.DiscoveryMsgData.InitHash] = uint32(time.Now().UnixNano())
+func TestMsgReceived(t *testing.T) {
+	req := discoveryRequestMsg(testHost2.P2PHost)
+	req.DiscoveryMsgData.InitHash = hexutil.Encode(crypto.HashProtoMsg(req))
+	testHost1.receivedMsg[req.DiscoveryMsgData.InitHash] = uint32(time.Now().Unix())
 	assert.True(t, testHost1.checkMsgReceived(req))
+}
+
+func TestDeleteExpiredMsgs(t *testing.T) {
+	req := discoveryRequestMsg(testHost2.P2PHost)
+	req.DiscoveryMsgData.InitHash = hexutil.Encode(crypto.HashProtoMsg(req))
+	testHost1.receivedMsg[req.DiscoveryMsgData.InitHash] = uint32(time.Now().Unix())
+	assert.False(t, len(testHost1.receivedMsg) == 0)
+	time.Sleep(time.Second) // making message to expire
+	testHost1.deleteExpiredMsgs()
+	assert.True(t, len(testHost1.receivedMsg) == 0)
 }
 
 // func TestPendingRequests(t *testing.T) {

@@ -100,7 +100,7 @@ func (p *DiscoveryProtocol) GetInitialDiscoveryReq(initNodeID string) *api.Disco
 		Message: api.DiscoveryMessage_DiscoveryReq}
 
 	req.DiscoveryMsgData.InitNodeID = initNodeID
-	req.DiscoveryMsgData.InitHash = hexutil.Encode(crypto.GetProtoHash(req))
+	req.DiscoveryMsgData.InitHash = hexutil.Encode(crypto.HashProtoMsg(req))
 
 	p.setTTLForDiscReq(req, common.TTLmsg)
 	return req

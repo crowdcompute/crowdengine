@@ -44,9 +44,9 @@ func Sha256Hash(data []byte) hash.Hash {
 	return d
 }
 
-func GetProtoHash(data proto.Message) []byte {
+func HashProtoMsg(data proto.Message) []byte {
 	bin, err := proto.Marshal(data)
-	common.CheckErr(err, "[GetProtoHash] Failed to marshal pb message.")
+	common.CheckErr(err, "[HashProtoMsg] Failed to marshal pb message.")
 
 	return Sha256Hash(bin).Sum(nil)
 }
