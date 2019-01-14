@@ -48,13 +48,13 @@ func DefaultConfig() *GlobalConfig {
 			EnabledServices: []string{},
 			HTTP: HTTPWsConfig{
 				Enabled:          false,
-				ListenPort:       8080,
+				ListenPort:       8668,
 				ListenAddress:    "localhost",
 				CrossOriginValue: "localhost",
 			},
 			Websocket: HTTPWsConfig{
 				Enabled:          false,
-				ListenPort:       8081,
+				ListenPort:       8669,
 				ListenAddress:    "localhost",
 				CrossOriginValue: "localhost",
 			},
@@ -65,7 +65,7 @@ func DefaultConfig() *GlobalConfig {
 		},
 		P2P: P2P{
 			MaxPeers:           20,
-			ListenPort:         12000,
+			ListenPort:         10209,
 			ListenAddress:      "localhost",
 			ConnectionTimeout:  40,
 			MinPeersThreashold: 2,
