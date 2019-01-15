@@ -27,6 +27,7 @@ var (
 	// TestHost2 has testHost1 as a peer, but not the other way around
 	testHost1 = NewHost(2000, "127.0.0.1", nil)
 	testHost2 = NewHost(2001, "127.0.0.1", []string{testHost1.FullAddr})
+	testHost3 = NewHost(2002, "127.0.0.1", nil)
 )
 
 func TestSignAuthenticate(t *testing.T) {
@@ -50,8 +51,8 @@ func TestSendMsgFromConnectedPeers(t *testing.T) {
 // TestHost1 sends a message to testHost2
 // TestHost1 doesn't have testHost2 as a peer
 func TestSendMsgFromUnconnectedPeers(t *testing.T) {
-	req := discoveryRequestMsg(testHost1.P2PHost)
+	req := discoveryRequestMsg(testHost3.P2PHost)
 
-	ok := sendMsg(testHost1.P2PHost, testHost2.P2PHost.ID(), req, protocol.ID(discoveryRequest))
+	ok := sendMsg(testHost3.P2PHost, testHost1.P2PHost.ID(), req, protocol.ID(discoveryRequest))
 	assert.False(t, ok)
 }
