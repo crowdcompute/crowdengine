@@ -56,7 +56,8 @@ func NewListImagesProtocol(p2pHost host.Host) *ListImagesProtocol {
 	return p
 }
 
-func (p *ListImagesProtocol) CreateAndSendListRequest(toHostID peer.ID, pubKey string) {
+// InitiateListRequest sends a list images request to toHostID using the pubKey of the user who initiated it
+func (p *ListImagesProtocol) InitiateListRequest(toHostID peer.ID, pubKey string) {
 	req := &api.ListImagesRequest{ListImagesMsgData: NewListImagesMsgData(uuid.Must(uuid.NewV4(), nil).String(), true, p.p2pHost),
 		PubKey: pubKey}
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
@@ -73,27 +74,18 @@ func (p *ListImagesProtocol) onListRequest(s inet.Stream) {
 		return
 	}
 
-	imgSummaries, err := p.ListImages(data.PubKey)
+	imgSummaries, err := p.listImages(data.PubKey)
 	common.CheckErr(err, "[onListRequest] Could not List images.")
-
-	imgSummariesBytes, _ := json.Marshal(imgSummaries)
-
-	log.Printf("Image summaries:")
-	log.Printf(string(imgSummariesBytes))
-	// ***************************************** //
-	// Sending the response back to the sender of the msg
-	resp := &api.ListImagesResponse{ListImagesMsgData: NewListImagesMsgData(uuid.Must(uuid.NewV4(), nil).String(), false, p.p2pHost),
-		ListResult: string(imgSummariesBytes)}
-
-	// sign the data
-	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
-	resp.ListImagesMsgData.MessageData.Sign = signProtoMsg(resp, key)
-
-	// send the response
-	sendMsg(p.p2pHost, s.Conn().RemotePeer(), resp, protocol.ID(imageListResponse))
+	imgSummariesBytes, err := json.Marshal(imgSummaries)
+	if err != nil {
+		log.Println(err, "Error marshaling image summaries")
+		return
+	}
+	log.Println("Image summaries:", string(imgSummariesBytes))
+	p.createSendResponse(s.Conn().RemotePeer(), string(imgSummariesBytes))
 }
 
-func (p *ListImagesProtocol) ListImages(publicKey string) ([]types.ImageSummary, error) {
+func (p *ListImagesProtocol) listImages(publicKey string) ([]types.ImageSummary, error) {
 	imgSummaries := make([]types.ImageSummary, 0)
 	summaries, err := manager.GetInstance().ListImages(types.ImageListOptions{All: true})
 	common.CheckErr(err, "[ListImages] Failed to List images")
@@ -133,6 +125,20 @@ func (p *ListImagesProtocol) ListImages(publicKey string) ([]types.ImageSummary,
 		}
 	}
 	return imgSummaries, nil
+}
+
+// Create and send a response to the Init note
+func (p *ListImagesProtocol) createSendResponse(toPeer peer.ID, response string) bool {
+	// Sending the response back to the sender of the msg
+	resp := &api.ListImagesResponse{ListImagesMsgData: NewListImagesMsgData(uuid.Must(uuid.NewV4(), nil).String(), false, p.p2pHost),
+		ListResult: response}
+
+	// sign the data
+	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
+	resp.ListImagesMsgData.MessageData.Sign = signProtoMsg(resp, key)
+
+	// send the response
+	return sendMsg(p.p2pHost, toPeer, resp, protocol.ID(imageListResponse))
 }
 
 func (p *ListImagesProtocol) onListResponse(s inet.Stream) {

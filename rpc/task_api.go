@@ -148,6 +148,6 @@ func (api *ImageManagerAPI) UploadImage(ctx context.Context, imageFilePath strin
 // Getting the list of images specific to the publicKey
 func (api *ImageManagerAPI) ListImages(ctx context.Context, nodePID string, publicKey string) (string, error) {
 	toNodeID, _ := peer.IDB58Decode(nodePID)
-	api.host.CreateAndSendListRequest(toNodeID, publicKey)
+	api.host.InitiateListRequest(toNodeID, publicKey)
 	return <-api.host.ListChan, nil
 }
