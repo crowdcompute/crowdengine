@@ -84,6 +84,29 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 	defer s.Reset()
 
 	log.Println("Start receiving the file name and file size")
+
+	filePath, signature, hash := getFileFromStream(s)
+
+	imageID, err := loadImageToDocker(filePath)
+	if err != nil {
+		errmsg := fmt.Sprintf("There was an error loading the image. Error: %s\n", err)
+		log.Printf(errmsg)
+		removeImageFile(filePath)
+		p.ImageIDchan <- errmsg
+		return
+	}
+
+	err = removeImageFile(filePath)
+	if err != nil {
+		p.ImageIDchan <- err.Error()
+		return
+	}
+	p.storeNewImageToDB(imageID, hash, signature)
+
+	p.createSendResponse(s.Conn().RemotePeer(), imageID)
+}
+
+func getFileFromStream(s inet.Stream) (string, string, string) {
 	// TODO: all those numbers should go as constants
 	bufferFileName := make([]byte, 64)
 	bufferFileSize := make([]byte, 10)
@@ -104,9 +127,8 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 	s.Read(bufferHash)
 	hash := strings.Trim(string(bufferHash), ":")
 
-	// TODO: we have to set this as a const
-	destFileName := common.ImagesDest + fileName
-	newFile, err := os.Create(destFileName)
+	filePath := common.ImagesDest + fileName
+	newFile, err := os.Create(filePath)
 	common.CheckErr(err, "[onUploadRequest] Couldn't create a new file.")
 
 	defer newFile.Close()
@@ -124,50 +146,13 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 		receivedBytes += common.FileChunk
 	}
 	log.Println("Received file completely!")
-
-	imageID, err := loadImageToDocker(fileName)
-	if err != nil {
-		errmsg := fmt.Sprintf("There was an error loading the image. Error: %s\n", err)
-		log.Printf(errmsg)
-		removeImageFile(destFileName)
-		p.ImageIDchan <- errmsg
-		return
-	}
-
-	err = removeImageFile(destFileName)
-	if err != nil {
-		p.ImageIDchan <- err.Error()
-		return
-	}
-	p.storeNewImageToDB(imageID, hash, signature)
-
-	//Sending the response
-	resp := &api.UploadImageResponse{UploadImageMsgData: NewUploadImageMsgData(uuid.Must(uuid.NewV4(), nil).String(), false, p.p2pHost),
-		ImageID: imageID}
-
-	// sign the data
-	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
-	resp.UploadImageMsgData.MessageData.Sign = signProtoMsg(resp, key)
-
-	// send the response
-	sendMsg(p.p2pHost, s.Conn().RemotePeer(), resp, protocol.ID(imageUploadResponse))
-}
-
-// removeImageFile removes the imgFilePath file from the machine
-func removeImageFile(imgFilePath string) error {
-	err := os.Remove(imgFilePath)
-	if err != nil {
-		errmsg := fmt.Sprintf("There was an error removing the image. Error: %s\n", err)
-		log.Printf(errmsg)
-		return fmt.Errorf(errmsg)
-	}
-	return nil
+	return filePath, signature, hash
 }
 
 // loadImageToDocker takes a path to an image file and loads it to the docker daemon
-func loadImageToDocker(filename string) (string, error) {
-	log.Println("Loading this image: ", filename)
-	response, err := manager.GetInstance().LoadImage(filename)
+func loadImageToDocker(filePath string) (string, error) {
+	log.Println("Loading this image: ", filePath)
+	response, err := manager.GetInstance().LoadImage(filePath)
 	if err != nil {
 		return "", err
 	}
@@ -209,10 +194,34 @@ func imageIDExists(response string) ([][]string, bool) {
 	return matches, len(matches) != 0
 }
 
+// removeImageFile removes the imgFilePath file from the machine
+func removeImageFile(imgFilePath string) error {
+	err := os.Remove(imgFilePath)
+	if err != nil {
+		errmsg := fmt.Sprintf("There was an error removing the image. Error: %s\n", err)
+		log.Printf(errmsg)
+		return fmt.Errorf(errmsg)
+	}
+	return nil
+}
+
 // storeNewImageToDB stores the new image to our level DB
 func (p *UploadImageProtocol) storeNewImageToDB(imageID string, hash string, signature string) {
 	image := database.ImageLvlDB{Hash: hash, Signature: signature, CreatedTime: time.Now().Unix()}
 	database.GetDB().Model(image).Put([]byte(imageID))
+}
+
+// Create and send a response to the toPeer note
+func (p *UploadImageProtocol) createSendResponse(toPeer peer.ID, response string) bool {
+	resp := &api.UploadImageResponse{UploadImageMsgData: NewUploadImageMsgData(uuid.Must(uuid.NewV4(), nil).String(), false, p.p2pHost),
+		ImageID: response}
+
+	// sign the data
+	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
+	resp.UploadImageMsgData.MessageData.Sign = signProtoMsg(resp, key)
+
+	// send the response
+	return sendMsg(p.p2pHost, toPeer, resp, protocol.ID(imageUploadResponse))
 }
 
 func (p *UploadImageProtocol) onUploadResponse(s inet.Stream) {

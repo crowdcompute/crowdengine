@@ -26,7 +26,6 @@ import (
 
 	"github.com/crowdcompute/crowdengine/log"
 
-	"github.com/crowdcompute/crowdengine/common"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
@@ -71,8 +70,8 @@ func (m *DockerManager) BuildImageFromDockerfile() bool {
 }
 
 // LoadImage loads a complete image
-func (m *DockerManager) LoadImage(filename string) (string, error) {
-	destination, err := os.Open(common.ImagesDest + filename)
+func (m *DockerManager) LoadImage(filePath string) (string, error) {
+	destination, err := os.Open(filePath)
 	if err != nil {
 		return "", err
 	}

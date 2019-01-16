@@ -111,6 +111,13 @@ func (p *TaskProtocol) onRunRequest(s inet.Stream) {
 	go p.waitForJobToFinish(containerID)
 }
 
+func createRunContainer(imageID string) string {
+	container, err := manager.GetInstance().CreateContainer(imageID)
+	_, err = manager.GetInstance().RunContainer(container.ID)
+	common.CheckErr(err, fmt.Sprintf("Error running the container %s: %s", imageID, err))
+	return container.ID
+}
+
 // Create and send a response to the toPeer note
 func (p *TaskProtocol) createSendResponse(toPeer peer.ID, response string) bool {
 	log.Printf("%s: Sending run image response to %s.", p.p2pHost.ID(), toPeer)
@@ -148,13 +155,6 @@ func (p *TaskProtocol) waitForJobToFinish(containerID string) {
 			}
 		}
 	}
-}
-
-func createRunContainer(imageID string) string {
-	container, err := manager.GetInstance().CreateContainer(imageID)
-	_, err = manager.GetInstance().RunContainer(container.ID)
-	common.CheckErr(err, fmt.Sprintf("Error running the container %s: %s", imageID, err))
-	return container.ID
 }
 
 // remote ping response handler
