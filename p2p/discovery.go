@@ -17,7 +17,6 @@
 package p2p
 
 import (
-	"bufio"
 	"context"
 	"time"
 
@@ -37,7 +36,6 @@ import (
 	ps "github.com/libp2p/go-libp2p-peerstore"
 	protocol "github.com/libp2p/go-libp2p-protocol"
 
-	protobufCodec "github.com/multiformats/go-multicodec/protobuf"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -152,9 +150,7 @@ func (p *DiscoveryProtocol) sendMsgToPeers(req *api.DiscoveryRequest, peerWhoSen
 func (p *DiscoveryProtocol) onDiscoveryRequest(s inet.Stream) {
 	// get request data
 	data := &api.DiscoveryRequest{}
-	decoder := protobufCodec.Multicodec(nil).Decoder(bufio.NewReader(s))
-	err := decoder.Decode(data)
-	common.CheckErr(err, "[onDiscoveryRequest] Could not decode data.")
+	decodeProtoMessage(data, s)
 
 	// Log the reception of the message
 	log.Printf("%s: Received discovery request from %s. Message: %s", s.Conn().LocalPeer(), s.Conn().RemotePeer(), data.Message)
@@ -272,9 +268,7 @@ func (p *DiscoveryProtocol) dhtFindAddrAndStore(initPeerID peer.ID) {
 // Init node gets all responses from its peers
 func (p *DiscoveryProtocol) onDiscoveryResponse(s inet.Stream) {
 	data := &api.DiscoveryResponse{}
-	decoder := protobufCodec.Multicodec(nil).Decoder(bufio.NewReader(s))
-	err := decoder.Decode(data)
-	common.CheckErr(err, "[onDiscoveryResponse] Could not decode data.")
+	decodeProtoMessage(data, s)
 
 	// Authenticate integrity and authenticity of the message
 	if valid := authenticateProtoMsg(data, data.DiscoveryMsgData.MessageData); !valid {

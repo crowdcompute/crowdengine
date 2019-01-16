@@ -17,8 +17,6 @@
 package p2p
 
 import (
-	"bufio"
-
 	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/common"
@@ -28,7 +26,6 @@ import (
 	inet "github.com/libp2p/go-libp2p-net"
 	peer "github.com/libp2p/go-libp2p-peer"
 	protocol "github.com/libp2p/go-libp2p-protocol"
-	protobufCodec "github.com/multiformats/go-multicodec/protobuf"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -49,7 +46,8 @@ func NewInspectContainerProtocol(p2pHost host.Host) *InspectContainerProtocol {
 	return p
 }
 
-func (p *InspectContainerProtocol) CreateSendInspectRequest(toHostID peer.ID, containerID string) {
+// InitiateInspectRequest sends an inspect request to toHostID for the containerID
+func (p *InspectContainerProtocol) InitiateInspectRequest(toHostID peer.ID, containerID string) {
 	req := &api.InspectContRequest{InspectContMsgData: NewInspectContMsgData(uuid.Must(uuid.NewV4(), nil).String(), true, p.p2pHost),
 		ContainerID: containerID}
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
@@ -59,10 +57,9 @@ func (p *InspectContainerProtocol) CreateSendInspectRequest(toHostID peer.ID, co
 }
 
 func (p *InspectContainerProtocol) onInspectRequest(s inet.Stream) {
+	log.Println("Received inspect container request...")
 	data := &api.InspectContRequest{}
-	decoder := protobufCodec.Multicodec(nil).Decoder(bufio.NewReader(s))
-	err := decoder.Decode(data)
-	common.CheckErr(err, "[onInspectRequest] Could not decode data.")
+	decodeProtoMessage(data, s)
 	// Authenticate integrity and authenticity of the message
 	if valid := authenticateProtoMsg(data, data.InspectContMsgData.MessageData); !valid {
 		log.Println("Failed to authenticate message")
@@ -94,9 +91,7 @@ func inspectContainerRaw(containerId string) ([]byte, error) {
 
 func (p *InspectContainerProtocol) onInspectResponse(s inet.Stream) {
 	data := &api.InspectContResponse{}
-	decoder := protobufCodec.Multicodec(nil).Decoder(bufio.NewReader(s))
-	err := decoder.Decode(data)
-	common.CheckErr(err, "[onInspectResponse] Could not decode data.")
+	decodeProtoMessage(data, s)
 
 	// Authenticate integrity and authenticity of the message
 	if valid := authenticateProtoMsg(data, data.InspectContMsgData.MessageData); !valid {

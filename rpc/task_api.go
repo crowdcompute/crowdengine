@@ -123,7 +123,8 @@ func (api *ImageManagerAPI) RunImage(ctx context.Context, nodePID string, imageI
 
 func (api *ImageManagerAPI) InspectContainer(ctx context.Context, nodePID string, containerID string) (string, error) {
 	toNodeID, _ := peer.IDB58Decode(nodePID)
-	api.host.CreateSendInspectRequest(toNodeID, containerID)
+	log.Println("About to inspect a container...")
+	api.host.InitiateInspectRequest(toNodeID, containerID)
 	log.Println("Result running the job: ")
 	return <-api.host.InspectChan, nil
 }

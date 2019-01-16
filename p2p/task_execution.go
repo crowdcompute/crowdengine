@@ -17,7 +17,6 @@
 package p2p
 
 import (
-	"bufio"
 	"fmt"
 	"time"
 
@@ -31,7 +30,6 @@ import (
 	inet "github.com/libp2p/go-libp2p-net"
 	peer "github.com/libp2p/go-libp2p-peer"
 	protocol "github.com/libp2p/go-libp2p-protocol"
-	protobufCodec "github.com/multiformats/go-multicodec/protobuf"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -98,9 +96,7 @@ func (p *TaskProtocol) RunImage(hostID peer.ID, imageID string) bool {
 func (p *TaskProtocol) onRunRequest(s inet.Stream) {
 	// get request data
 	data := &api.RunRequest{}
-	decoder := protobufCodec.Multicodec(nil).Decoder(bufio.NewReader(s))
-	err := decoder.Decode(data)
-	common.CheckErr(err, "[onRunRequest] Couldn't decode data.")
+	decodeProtoMessage(data, s)
 
 	log.Printf("%s: Received avail request from %s.", s.Conn().LocalPeer(), s.Conn().RemotePeer())
 
@@ -178,9 +174,7 @@ func createRunContainer(imageID string) string {
 // remote ping response handler
 func (p *TaskProtocol) onRunResponse(s inet.Stream) {
 	data := &api.RunResponse{}
-	decoder := protobufCodec.Multicodec(nil).Decoder(bufio.NewReader(s))
-	err := decoder.Decode(data)
-	common.CheckErr(err, "[onRunResponse] Couldn't decode data.")
+	decodeProtoMessage(data, s)
 
 	valid := authenticateProtoMsg(data, data.RunImageMsgData.MessageData)
 

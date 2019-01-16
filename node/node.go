@@ -39,8 +39,8 @@ import (
 var (
 	errNodeStarted      = errors.New("node: already started")
 	errImageStoreExists = errors.New("Unable to create a new Image Store")
-	httpAddr            = flag.String("httpAddr", "localhost:8080", "http service address")
-	addrWS              = flag.String("addrWS", "localhost:8081", "web socket service address")
+	httpAddr            = flag.String("httpAddr", "localhost:8081", "http service address")
+	addrWS              = flag.String("addrWS", "localhost:8082", "web socket service address")
 	httpFileServerAddr  = flag.String("httpFileServerAddr", "localhost:8082", "http file server address")
 )
 

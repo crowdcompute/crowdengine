@@ -19,7 +19,6 @@ package p2p
 // This file is the communication Protocol for Joining a Docker Swarm network.
 
 import (
-	"bufio"
 	"fmt"
 
 	"github.com/crowdcompute/crowdengine/log"
@@ -31,7 +30,6 @@ import (
 	net "github.com/libp2p/go-libp2p-net"
 	peer "github.com/libp2p/go-libp2p-peer"
 	protocol "github.com/libp2p/go-libp2p-protocol"
-	protobufCodec "github.com/multiformats/go-multicodec/protobuf"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -67,8 +65,8 @@ func NewJoinSwarmProtocol(p2pHost host.Host, managerIP string) *JoinSwarmProtoco
 
 // SendJoinToNeighbours sends a join swarm message to this nodes' bootnodes
 func (p *JoinSwarmProtocol) SendJoinToNeighbours(taskReplicas int) {
-	log.Println("Sending Join to my Bootnodes")
-	neighbours := p.p2pHost.Peerstore().Peers()
+	log.Println("Sending Join to my connected peers")
+	peers := p.p2pHost.Peerstore().Peers()
 	// nodesToSwarm := len(neighbours)
 
 	// if nodesToSwarm != taskReplicas {
@@ -76,8 +74,10 @@ func (p *JoinSwarmProtocol) SendJoinToNeighbours(taskReplicas int) {
 	// 	return
 	// }
 
-	for _, nodeAddr := range neighbours {
-		p.Join(nodeAddr)
+	for _, nodeAddr := range peers {
+		if p.p2pHost.ID() != nodeAddr {
+			p.Join(nodeAddr)
+		}
 	}
 	for i := 0; i < taskReplicas; i++ {
 		<-p.done
@@ -111,9 +111,7 @@ func (p *JoinSwarmProtocol) Join(hostID peer.ID) bool {
 func (p *JoinSwarmProtocol) onJoinRequest(s net.Stream) {
 	// get request data
 	data := &api.JoinRequest{}
-	decoder := protobufCodec.Multicodec(nil).Decoder(bufio.NewReader(s))
-	err := decoder.Decode(data)
-	common.CheckErr(err, "[onJoinRequest] Couldn't decode data.")
+	decodeProtoMessage(data, s)
 
 	log.Printf("%s: Received join swarm request from %s. Message: %s", s.Conn().LocalPeer(), s.Conn().RemotePeer(), data.Message)
 
@@ -165,9 +163,7 @@ func nodePartOfSwarm() (bool, error) {
 // and sends the Join token and address back to the node
 func (p *JoinSwarmProtocol) onJoinResponseOK(s net.Stream) {
 	data := &api.JoinResponse{}
-	decoder := protobufCodec.Multicodec(nil).Decoder(bufio.NewReader(s))
-	err := decoder.Decode(data)
-	common.CheckErr(err, "[onJoinResponseOK] Could not decode data.")
+	decodeProtoMessage(data, s)
 
 	valid := authenticateProtoMsg(data, data.MessageData)
 
@@ -177,12 +173,12 @@ func (p *JoinSwarmProtocol) onJoinResponseOK(s net.Stream) {
 	}
 
 	// locate request data and remove it if found
-	_, ok := p.requests[data.MessageData.Id]
-	if ok {
+
+	if _, ok := p.requests[data.MessageData.Id]; ok {
 		// remove request from map as we have processed it here
 		delete(p.requests, data.MessageData.Id)
 	} else {
-		log.Println("Failed to locate request data boject for response")
+		log.Println("Failed to locate request data object for response")
 		return
 	}
 
@@ -212,9 +208,7 @@ func (p *JoinSwarmProtocol) onJoinReqToken(s net.Stream) {
 
 	// get request data
 	data := &api.JoinRequest{}
-	decoder := protobufCodec.Multicodec(nil).Decoder(bufio.NewReader(s))
-	err := decoder.Decode(data)
-	common.CheckErr(err, "[onJoinReqToken] Could not decode data.")
+	decodeProtoMessage(data, s)
 
 	log.Printf("%s: Received join request with Token from %s. Message: %s", s.Conn().LocalPeer(), s.Conn().RemotePeer(), data.Message)
 
@@ -253,9 +247,7 @@ func (p *JoinSwarmProtocol) onJoinReqToken(s net.Stream) {
 // Getting a sesponse from a node that they joined the swarm successfully
 func (p *JoinSwarmProtocol) onJoinResJoined(s net.Stream) {
 	data := &api.JoinResponse{}
-	decoder := protobufCodec.Multicodec(nil).Decoder(bufio.NewReader(s))
-	err := decoder.Decode(data)
-	common.CheckErr(err, "[onJoinResJoined] Couldn't decode data.")
+	decodeProtoMessage(data, s)
 
 	valid := authenticateProtoMsg(data, data.MessageData)
 

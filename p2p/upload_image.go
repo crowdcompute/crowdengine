@@ -17,7 +17,6 @@
 package p2p
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -41,7 +40,6 @@ import (
 	inet "github.com/libp2p/go-libp2p-net"
 	peer "github.com/libp2p/go-libp2p-peer"
 	protocol "github.com/libp2p/go-libp2p-protocol"
-	protobufCodec "github.com/multiformats/go-multicodec/protobuf"
 )
 
 const imageUploadRequest = "/image/uploadreq/0.0.1"
@@ -219,9 +217,7 @@ func (p *UploadImageProtocol) storeNewImageToDB(imageID string, hash string, sig
 
 func (p *UploadImageProtocol) onUploadResponse(s inet.Stream) {
 	data := &api.UploadImageResponse{}
-	decoder := protobufCodec.Multicodec(nil).Decoder(bufio.NewReader(s))
-	err := decoder.Decode(data)
-	common.CheckErr(err, "[onUploadResponse] Couldn't decode data.")
+	decodeProtoMessage(data, s)
 
 	// Authenticate integrity and authenticity of the message
 	if valid := authenticateProtoMsg(data, data.UploadImageMsgData.MessageData); !valid {

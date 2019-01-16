@@ -29,6 +29,7 @@ import (
 
 	crypto "github.com/libp2p/go-libp2p-crypto"
 	host "github.com/libp2p/go-libp2p-host"
+	inet "github.com/libp2p/go-libp2p-net"
 	net "github.com/libp2p/go-libp2p-net"
 	peer "github.com/libp2p/go-libp2p-peer"
 	protocol "github.com/libp2p/go-libp2p-protocol"
@@ -132,6 +133,13 @@ func verifyData(data []byte, signature []byte, peerID peer.ID, pubKeyData []byte
 	}
 
 	return res
+}
+
+// decodeProtoMessage receives a pointer to a proto.Message and decodes it's data
+func decodeProtoMessage(message proto.Message, s inet.Stream) {
+	decoder := protobufCodec.Multicodec(nil).Decoder(bufio.NewReader(s))
+	err := decoder.Decode(message)
+	common.CheckErr(err, "[onInspectRequest] Could not decode data.")
 }
 
 func sendMsg(fromHost host.Host, toID peer.ID, msg proto.Message, protocol protocol.ID) bool {

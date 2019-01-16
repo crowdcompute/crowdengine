@@ -17,7 +17,6 @@
 package p2p
 
 import (
-	"bufio"
 	"encoding/hex"
 	"encoding/json"
 	"strings"
@@ -34,7 +33,6 @@ import (
 	inet "github.com/libp2p/go-libp2p-net"
 	peer "github.com/libp2p/go-libp2p-peer"
 	protocol "github.com/libp2p/go-libp2p-protocol"
-	protobufCodec "github.com/multiformats/go-multicodec/protobuf"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -68,9 +66,7 @@ func (p *ListImagesProtocol) CreateAndSendListRequest(toHostID peer.ID, pubKey s
 
 func (p *ListImagesProtocol) onListRequest(s inet.Stream) {
 	data := &api.ListImagesRequest{}
-	decoder := protobufCodec.Multicodec(nil).Decoder(bufio.NewReader(s))
-	err := decoder.Decode(data)
-	common.CheckErr(err, "[onListRequest] Could not decode data.")
+	decodeProtoMessage(data, s)
 	// Authenticate integrity and authenticity of the message
 	if valid := authenticateProtoMsg(data, data.ListImagesMsgData.MessageData); !valid {
 		log.Println("Failed to authenticate message")
@@ -141,9 +137,7 @@ func (p *ListImagesProtocol) ListImages(publicKey string) ([]types.ImageSummary,
 
 func (p *ListImagesProtocol) onListResponse(s inet.Stream) {
 	data := &api.ListImagesResponse{}
-	decoder := protobufCodec.Multicodec(nil).Decoder(bufio.NewReader(s))
-	err := decoder.Decode(data)
-	common.CheckErr(err, "[onListResponse] Could not decode data.")
+	decodeProtoMessage(data, s)
 
 	// Authenticate integrity and authenticity of the message
 	if valid := authenticateProtoMsg(data, data.ListImagesMsgData.MessageData); !valid {
