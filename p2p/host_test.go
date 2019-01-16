@@ -9,18 +9,16 @@ import (
 )
 
 var (
-	// TestHost2 has testHost1 as a peer, but not the other way around
 	testHost4 = NewHost(2002, "127.0.0.1", nil)
 	testHost5 = NewHost(2002, "127.0.0.1", nil)
 )
 
 func TestConnectWithNodes(t *testing.T) {
 	testHost4.ConnectWithNodes([]string{testHost5.FullAddr})
-
-	assert.True(t, testHost4.P2PHost.Peerstore().Peers().Len() == 2)
-}
-
-func TestConnectWithNodes2(t *testing.T) {
-	exists := common.SliceExists(testHost4.P2PHost.Peerstore().Peers(), testHost5.P2PHost.ID())
-	assert.True(t, exists)
+	// Should have itself and the peer 5
+	noOfPeers := testHost4.P2PHost.Peerstore().Peers().Len()
+	assert.True(t, noOfPeers == 2)
+	// Check that the host connected exists in the peerstore
+	existsInPeerstore := common.SliceExists(testHost4.P2PHost.Peerstore().Peers(), testHost5.P2PHost.ID())
+	assert.True(t, existsInPeerstore)
 }
