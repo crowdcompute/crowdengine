@@ -177,7 +177,10 @@ func loadImageToDocker(filePath string) (string, error) {
 func getImageID(loadImageResp string) (string, bool) {
 	r, _ := regexp.Compile("sha256:(.*)")
 	matches := r.FindAllStringSubmatch(loadImageResp, -1)
-	return matches[0][1], len(matches) != 0
+	if len(matches) != 0 {
+		return matches[0][1], true
+	}
+	return "", false
 }
 
 func getImageSummaryFromTag(tag string) types.ImageSummary {
