@@ -67,12 +67,6 @@ func NewJoinSwarmProtocol(p2pHost host.Host, managerIP string) *JoinSwarmProtoco
 func (p *JoinSwarmProtocol) SendJoinToNeighbours(taskReplicas int) {
 	log.Println("Sending Join to my connected peers")
 	peers := p.p2pHost.Peerstore().Peers()
-	// nodesToSwarm := len(neighbours)
-
-	// if nodesToSwarm != taskReplicas {
-	// 	log.Print("Nodes for the swarm are different from the task's replicas")
-	// 	return
-	// }
 
 	for _, nodeAddr := range peers {
 		if p.p2pHost.ID() != nodeAddr {
@@ -109,7 +103,6 @@ func (p *JoinSwarmProtocol) Join(hostID peer.ID) bool {
 // The nodes receives a Join Request, decodes, validates it
 // and sends a response if it's ok with joining the Swarm
 func (p *JoinSwarmProtocol) onJoinRequest(s net.Stream) {
-	// get request data
 	data := &api.JoinRequest{}
 	decodeProtoMessage(data, s)
 
@@ -124,27 +117,13 @@ func (p *JoinSwarmProtocol) onJoinRequest(s net.Stream) {
 	busy, err := nodePartOfSwarm()
 	common.CheckErr(err, "[onJoinRequest] CheckIfNodeBusy couldn't get info for the swarm.")
 
-	log.Printf("I am busy: %t", busy)
+	log.Printf("I am already part of a swarm: %t", busy)
 
 	// If this node is not busy with another task then it sends a Join OK response to
 	// the node that wants to create a Swarm (manager) so that this node can get another message
 	// with the join Swarm token.
 	if !busy {
-
-		// generate response message
-		log.Printf("%s: Sending join swarm response to %s. Message id: %s...", s.Conn().LocalPeer(), s.Conn().RemotePeer(), data.MessageData.Id)
-
-		resp := &api.JoinResponse{MessageData: NewMessageData(data.MessageData.Id, false, p.p2pHost),
-			Message: api.MessageType_JoinResOK}
-
-		// sign the data
-		key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
-		resp.MessageData.Sign = signProtoMsg(resp, key)
-
-		// send the response
-		if sendMsg(p.p2pHost, s.Conn().RemotePeer(), resp, protocol.ID(joinResOK)) {
-			log.Printf("%s: Join swarm response to %s sent.", s.Conn().LocalPeer().String(), s.Conn().RemotePeer().String())
-		}
+		p.createSendResponse(s.Conn().RemotePeer(), api.MessageType_JoinResOK, protocol.ID(joinResOK))
 	}
 }
 
@@ -171,7 +150,6 @@ func (p *JoinSwarmProtocol) onJoinResponseOK(s net.Stream) {
 	}
 
 	// locate request data and remove it if found
-
 	if _, ok := p.requests[data.MessageData.Id]; ok {
 		// remove request from map as we have processed it here
 		delete(p.requests, data.MessageData.Id)
@@ -203,8 +181,6 @@ func (p *JoinSwarmProtocol) onJoinResponseOK(s net.Stream) {
 // Node receives a Join Token & address message, decodes, validates it
 // and joins the Swarm
 func (p *JoinSwarmProtocol) onJoinReqToken(s net.Stream) {
-
-	// get request data
 	data := &api.JoinRequest{}
 	decodeProtoMessage(data, s)
 
@@ -222,24 +198,35 @@ func (p *JoinSwarmProtocol) onJoinReqToken(s net.Stream) {
 
 	// Join the swarm
 	remoteAddrs := []string{data.JoinMasterAddr}
-	// I will need to test this :p.p2pHost.Addrs[0], i used to be node.config.IP
-	result, err := manager.GetInstance().SwarmJoin(p.managerIP, "", remoteAddrs, data.JoinToken, "0.0.0.0:2377")
+	// I will need to test this :p.p2pHost.Addrs[0], it used to be node.config.IP
+	// TODO: port here should go on config
+	joinSwarmResult, err := manager.GetInstance().SwarmJoin(p.managerIP, "", remoteAddrs, data.JoinToken, "0.0.0.0:2377")
 	common.CheckErr(err, "[onJoinReqToken] Couldn't join swarm.")
 
-	log.Printf("Swarm result: %t\n", result)
-	if result {
-		log.Printf("%s: Sending joined successfully message to: %s....", p.p2pHost.ID(), data.MessageData.Id)
-		resp := &api.JoinResponse{MessageData: NewMessageData(data.MessageData.Id, false, p.p2pHost),
-			Message: api.MessageType_JoinResOK}
-
-		key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
-		resp.MessageData.Sign = signProtoMsg(resp, key)
-
-		// send the response
-		if sendMsg(p.p2pHost, s.Conn().RemotePeer(), resp, protocol.ID(joinResJoined)) {
-			log.Printf("%s: Join swarm response to %s sent.", s.Conn().LocalPeer().String(), s.Conn().RemotePeer().String())
-		}
+	log.Printf("Join Swarm Result: %t\n", joinSwarmResult)
+	if joinSwarmResult {
+		p.createSendResponse(s.Conn().RemotePeer(), api.MessageType_JoinRes, protocol.ID(joinResJoined))
 	}
+}
+
+// Create and send a response to the toPeer note
+func (p *JoinSwarmProtocol) createSendResponse(toPeer peer.ID, messageType api.MessageType, protoID protocol.ID) bool {
+	// generate response message
+	log.Printf("%s: Sending join swarm response to %s.", p.p2pHost.ID(), toPeer)
+
+	resp := &api.JoinResponse{MessageData: NewMessageData(uuid.Must(uuid.NewV4(), nil).String(), false, p.p2pHost),
+		Message: messageType}
+
+	// sign the data
+	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
+	resp.MessageData.Sign = signProtoMsg(resp, key)
+
+	// send the response
+	sentOK := sendMsg(p.p2pHost, toPeer, resp, protoID)
+	if sentOK {
+		log.Printf("%s: Join swarm response to %s sent.", p.p2pHost.ID(), toPeer)
+	}
+	return sentOK
 }
 
 // Getting a sesponse from a node that they joined the swarm successfully
