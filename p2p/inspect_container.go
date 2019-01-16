@@ -68,25 +68,29 @@ func (p *InspectContainerProtocol) onInspectRequest(s inet.Stream) {
 	rawInspection, err := inspectContainerRaw(data.ContainerID)
 	common.CheckErr(err, "[onInspectRequest] Could not inspect container.")
 
-	// Sending the response back to the sender of the msg
+	p.createSendResponse(s.Conn().RemotePeer(), string(rawInspection))
+}
 
+func inspectContainerRaw(containerID string) ([]byte, error) {
+	log.Println("Inspecting this container: ", containerID)
+	getSize := true
+	inspection, rawData, err := manager.GetInstance().InspectContainerRaw(containerID, getSize)
+	log.Printf("Result inspection the container %t\n", inspection.State.Running)
+	return rawData, err
+}
+
+// Create and send a response to the Init note
+func (p *InspectContainerProtocol) createSendResponse(toPeer peer.ID, response string) bool {
+	// Sending the response back to the sender of the msg
 	resp := &api.InspectContResponse{InspectContMsgData: NewInspectContMsgData(uuid.Must(uuid.NewV4(), nil).String(), false, p.p2pHost),
-		Inspection: string(rawInspection)}
+		Inspection: response}
 
 	// sign the data
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
 	resp.InspectContMsgData.MessageData.Sign = signProtoMsg(resp, key)
 
 	// send the response
-	sendMsg(p.p2pHost, s.Conn().RemotePeer(), resp, protocol.ID(inspectContainerResponse))
-}
-
-func inspectContainerRaw(containerId string) ([]byte, error) {
-	log.Println("Inspecting this container: ", containerId)
-	getSize := true
-	inspection, rawData, err := manager.GetInstance().InspectContainerRaw(containerId, getSize)
-	log.Printf("Result inspection the container %t\n", inspection.State.Running)
-	return rawData, err
+	return sendMsg(p.p2pHost, toPeer, resp, protocol.ID(inspectContainerResponse))
 }
 
 func (p *InspectContainerProtocol) onInspectResponse(s inet.Stream) {
