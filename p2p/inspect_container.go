@@ -79,7 +79,7 @@ func inspectContainerRaw(containerID string) ([]byte, error) {
 	return rawData, err
 }
 
-// Create and send a response to the Init note
+// Create and send a response to the toPeer note
 func (p *InspectContainerProtocol) createSendResponse(toPeer peer.ID, response string) bool {
 	// Sending the response back to the sender of the msg
 	resp := &api.InspectContResponse{InspectContMsgData: NewInspectContMsgData(uuid.Must(uuid.NewV4(), nil).String(), false, p.p2pHost),

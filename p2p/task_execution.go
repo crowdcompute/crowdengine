@@ -37,19 +37,18 @@ import (
 const runRequest = "/task/availreq/0.0.1"
 const runResponse = "/task/availresp/0.0.1"
 
-// This struct implements the Notifier interface
-// TaskProtocol type
+// TaskProtocol implements the Notifier interface
 type TaskProtocol struct {
 	p2pHost           host.Host // local host
 	ContainerID       chan string
-	runningContainers []string
+	runningContainers map[string]struct{} // The running containers of the node
 	taskObservers     map[Observer]struct{}
 }
 
 func NewTaskProtocol(p2pHost host.Host) *TaskProtocol {
 	p := &TaskProtocol{p2pHost: p2pHost,
 		ContainerID:       make(chan string, 1),
-		runningContainers: make([]string, 0),
+		runningContainers: map[string]struct{}{},
 		taskObservers:     map[Observer]struct{}{},
 	}
 	p2pHost.SetStreamHandler(runRequest, p.onRunRequest)
@@ -94,44 +93,43 @@ func (p *TaskProtocol) RunImage(hostID peer.ID, imageID string) bool {
 
 // remote peer requests handler
 func (p *TaskProtocol) onRunRequest(s inet.Stream) {
+	log.Printf("%s: Received run container request from %s.", s.Conn().LocalPeer(), s.Conn().RemotePeer())
 	// get request data
 	data := &api.RunRequest{}
 	decodeProtoMessage(data, s)
 
-	log.Printf("%s: Received avail request from %s.", s.Conn().LocalPeer(), s.Conn().RemotePeer())
-
-	valid := authenticateProtoMsg(data, data.RunImageMsgData.MessageData)
-
-	if !valid {
+	if valid := authenticateProtoMsg(data, data.RunImageMsgData.MessageData); !valid {
 		log.Println("Failed to authenticate message")
 		return
 	}
-
 	containerID := createRunContainer(data.ImageID)
 
-	// generate response message
-	log.Printf("%s: Sending run image response to %s. Message id: %s...", s.Conn().LocalPeer(), s.Conn().RemotePeer(), data.RunImageMsgData.MessageData.Id)
+	p.createSendResponse(s.Conn().RemotePeer(), containerID)
 
-	resp := &api.RunResponse{RunImageMsgData: NewRunImageMsgData(data.RunImageMsgData.MessageData.Id, false, p.p2pHost),
-		ContainerID: containerID}
+	p.runningContainers[containerID] = struct{}{}
+	log.Println("Start tracking job's status...")
+	go p.waitForJobToFinish(containerID)
+}
+
+// Create and send a response to the toPeer note
+func (p *TaskProtocol) createSendResponse(toPeer peer.ID, response string) bool {
+	log.Printf("%s: Sending run image response to %s.", p.p2pHost.ID(), toPeer)
+
+	resp := &api.RunResponse{RunImageMsgData: NewRunImageMsgData(uuid.Must(uuid.NewV4(), nil).String(), false, p.p2pHost),
+		ContainerID: response}
 
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
 	resp.RunImageMsgData.MessageData.Sign = signProtoMsg(resp, key)
 
 	// send the response
-	if sendMsg(p.p2pHost, s.Conn().RemotePeer(), resp, protocol.ID(runResponse)) {
-		log.Printf("%s: Run image response to %s sent.", s.Conn().LocalPeer().String(), s.Conn().RemotePeer().String())
+	sentOK := sendMsg(p.p2pHost, toPeer, resp, protocol.ID(runResponse))
+	if sentOK {
+		log.Printf("%s: Run image response to %s was sent.", p.p2pHost.ID(), toPeer)
 	}
-
-	p.runningContainers = append(p.runningContainers, containerID)
-	log.Println("Start tracking job's status...")
-	// Start tracking jobs' status
-	// Wait here for the job to finish.
-	// TODO: We shouldn't wait here, we should have a switch
-	go p.waitForJobToFinish(containerID)
+	return sentOK
 }
 
-// Running until job's done
+// Start tracking jobs' status
 func (p *TaskProtocol) waitForJobToFinish(containerID string) {
 	log.Println("start task status tracking")
 	// TODO: Time has to be a const somewhere
@@ -143,25 +141,13 @@ func (p *TaskProtocol) waitForJobToFinish(containerID string) {
 		case <-ticker.C:
 			log.Println("Checking if job's done...")
 			if !containerRunning(containerID) {
-				deleteValFromSlice(p.runningContainers, containerID)
+				delete(p.runningContainers, containerID)
 				log.Println("Job's done checking pending requests...")
 				p.Notify()
 				return
 			}
 		}
 	}
-}
-
-func deleteValFromSlice(slice []string, val string) []string {
-	var newSlice []string
-	for _, v := range slice {
-		if v == val {
-			continue
-		} else {
-			newSlice = append(newSlice, v)
-		}
-	}
-	return newSlice
 }
 
 func createRunContainer(imageID string) string {

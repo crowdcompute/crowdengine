@@ -115,9 +115,7 @@ func (p *JoinSwarmProtocol) onJoinRequest(s net.Stream) {
 
 	log.Printf("%s: Received join swarm request from %s. Message: %s", s.Conn().LocalPeer(), s.Conn().RemotePeer(), data.Message)
 
-	valid := authenticateProtoMsg(data, data.MessageData)
-
-	if !valid {
+	if valid := authenticateProtoMsg(data, data.MessageData); !valid {
 		log.Println("Failed to authenticate message")
 		return
 	}

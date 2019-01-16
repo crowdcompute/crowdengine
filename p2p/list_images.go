@@ -127,7 +127,7 @@ func (p *ListImagesProtocol) listImages(publicKey string) ([]types.ImageSummary,
 	return imgSummaries, nil
 }
 
-// Create and send a response to the Init note
+// Create and send a response to the toPeer note
 func (p *ListImagesProtocol) createSendResponse(toPeer peer.ID, response string) bool {
 	// Sending the response back to the sender of the msg
 	resp := &api.ListImagesResponse{ListImagesMsgData: NewListImagesMsgData(uuid.Must(uuid.NewV4(), nil).String(), false, p.p2pHost),
