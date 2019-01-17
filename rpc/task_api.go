@@ -48,7 +48,6 @@ func NewImageManagerAPI(h *p2p.Host) *ImageManagerAPI {
 
 // PushImage is the API call to push an image to the remote peer
 func (api *ImageManagerAPI) PushImage(ctx context.Context, nodePID string, imageFilePath string) (string, error) {
-
 	file, err := os.Open(imageFilePath)
 	common.CheckErr(err, "[PushImage] Couldn't open file.")
 	defer file.Close()
@@ -60,7 +59,7 @@ func (api *ImageManagerAPI) PushImage(ctx context.Context, nodePID string, image
 	common.CheckErr(err, "[PushImage] Couldn't find stats.")
 
 	// Hash image
-	hash := crypto.HashImagePath(imageFilePath)
+	hash := crypto.HashFile(imageFilePath)
 	hashString := hex.EncodeToString(hash)
 	signature := api.images[hashString]
 	signatureString := hex.EncodeToString(signature)
@@ -75,7 +74,7 @@ func (api *ImageManagerAPI) PushImage(ctx context.Context, nodePID string, image
 	filledSignature := fillString(signatureString, 150)
 	// TODO: Not sure what number to give here. Need to see the range
 	filledHash := fillString(hashString, 100)
-	log.Println("Sending filename and filesize!")
+	log.Println("Sending all data in chunks!")
 	log.Println("fileSize: ", fileSize)
 	log.Println("fileName: ", fileName)
 	log.Println("filledSignature: ", filledSignature)
@@ -130,15 +129,13 @@ func (api *ImageManagerAPI) InspectContainer(ctx context.Context, nodePID string
 }
 
 // Uploading an image to the current node
-// TODO: Upload an image to the supernode instead of passing the file path
+// TODO: This will change in the future and authorization + token will be used instead of privaty key passed
 func (api *ImageManagerAPI) UploadImage(ctx context.Context, imageFilePath string, privateKey string) (string, error) {
 	privByte, _ := hex.DecodeString(privateKey)
 	priv, err := crypto.RestorePrivateKey(privByte)
 
 	// Hash image
-	// TODO: bytes will be received straight away, not from a path
-	hash := crypto.HashImagePath(imageFilePath)
-	// content, _ := ioutil.ReadFile(imageFilePath)
+	hash := crypto.HashFile(imageFilePath)
 	sign, err := priv.Sign(hash)
 	common.CheckErr(err, "[UploadImage] Failed to sign image.")
 	api.images[hex.EncodeToString(hash)] = sign

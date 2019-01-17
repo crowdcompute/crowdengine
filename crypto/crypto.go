@@ -52,9 +52,9 @@ func HashProtoMsg(data proto.Message) []byte {
 }
 
 // TODO: This has to be in a common folder.
-func HashImagePath(imageFilePath string) []byte {
+func HashFile(imageFilePath string) []byte {
 	f, err := os.Open(imageFilePath)
-	common.CheckErr(err, "[HashImagePath] Couldn't read file.")
+	common.CheckErr(err, "[HashFile] Couldn't read file.")
 	defer f.Close()
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {

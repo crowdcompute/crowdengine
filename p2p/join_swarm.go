@@ -41,9 +41,8 @@ const joinResJoined = "/swarm/joinresjoined/0.0.1"
 
 // JoinSwarmProtocol type
 type JoinSwarmProtocol struct {
-	p2pHost      host.Host                   // local host
-	requests     map[string]*api.JoinRequest // used to access request data from response handlers
-	done         chan bool                   // only for demo purposes to stop main from terminating
+	p2pHost      host.Host // local host
+	done         chan bool // only for demo purposes to stop main from terminating
 	WorkerToken  string
 	ManagerToken string
 	managerIP    string
@@ -52,7 +51,6 @@ type JoinSwarmProtocol struct {
 func NewJoinSwarmProtocol(p2pHost host.Host, managerIP string) *JoinSwarmProtocol {
 	p := &JoinSwarmProtocol{
 		p2pHost:   p2pHost,
-		requests:  make(map[string]*api.JoinRequest),
 		managerIP: managerIP,
 		done:      make(chan bool, 1),
 	}
@@ -94,8 +92,6 @@ func (p *JoinSwarmProtocol) Join(hostID peer.ID) bool {
 
 	sendMsg(p.p2pHost, hostID, req, protocol.ID(joinReq))
 
-	// store ref request so response handler has access to it
-	p.requests[req.MessageData.Id] = req
 	log.Printf("%s: Join swarm to: %s was sent. Message Id: %s, Message: %s", p.p2pHost.ID(), peer.ID(hostID), req.MessageData.Id, req.Message)
 	return true
 }
@@ -117,7 +113,7 @@ func (p *JoinSwarmProtocol) onJoinRequest(s net.Stream) {
 	busy, err := nodePartOfSwarm()
 	common.CheckErr(err, "[onJoinRequest] CheckIfNodeBusy couldn't get info for the swarm.")
 
-	log.Printf("I am already part of a swarm: %t", busy)
+	log.Printf("Am I already part of a swarm: %t", busy)
 
 	// If this node is not busy with another task then it sends a Join OK response to
 	// the node that wants to create a Swarm (manager) so that this node can get another message
@@ -146,15 +142,6 @@ func (p *JoinSwarmProtocol) onJoinResponseOK(s net.Stream) {
 
 	if !valid {
 		log.Println("Failed to authenticate message")
-		return
-	}
-
-	// locate request data and remove it if found
-	if _, ok := p.requests[data.MessageData.Id]; ok {
-		// remove request from map as we have processed it here
-		delete(p.requests, data.MessageData.Id)
-	} else {
-		log.Println("Failed to locate request data object for response")
 		return
 	}
 

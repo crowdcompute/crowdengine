@@ -50,14 +50,14 @@ func (s *ServiceAPI) Run(ctx context.Context, task string) error {
 
 	// Initialize a docker Swarm
 	_, err := manager.GetInstance().InitSwarm(s.host.IP, "0.0.0.0:2377")
-	common.CheckErr(err, "[onUploadResponse] Couldn't initialize swarm.")
+	common.CheckErr(err, "[Run] Couldn't initialize swarm.")
 
 	if swarmInspect, err := manager.GetInstance().SwarmInspect(); err == nil {
 		// TODO: Check if user wants a Manager or Worker. Some nodes might be managers
 		s.host.WorkerToken = swarmInspect.JoinTokens.Worker
 		s.host.ManagerToken = swarmInspect.JoinTokens.Manager
 	} else {
-		log.Printf("Error doing Swarm Inspect: %v", err)
+		log.Printf("Error running Swarm Inspect: %v", err)
 		return err
 	}
 
