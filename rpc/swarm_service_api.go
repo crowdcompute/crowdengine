@@ -29,53 +29,58 @@ import (
 	"github.com/docker/docker/api/types/swarm"
 )
 
-type ServiceAPI struct {
+type SwarmServiceAPI struct {
 	host *p2p.Host
 }
 
-type Task struct {
+type SwarmTask struct {
 	Name     string `json:"name"`
 	Image    string `json:"image"`
 	Replicas int    `json:"replicas"`
 }
 
-func NewServiceAPI(h *p2p.Host) *ServiceAPI {
-	return &ServiceAPI{host: h}
+// NewSwarmServiceAPI creates a new RPC service with methods specific for creating a swarm service.
+func NewSwarmServiceAPI(h *p2p.Host) *SwarmServiceAPI {
+	return &SwarmServiceAPI{host: h}
 }
 
-func (s *ServiceAPI) Run(ctx context.Context, task string) error {
-	t := Task{}
+func (api *SwarmServiceAPI) Run(ctx context.Context, task string) error {
+	t := SwarmTask{}
 	json.Unmarshal([]byte(task), &t)
 	log.Println("I got this task:", t)
 
-	// Initialize a docker Swarm
-	_, err := manager.GetInstance().InitSwarm(s.host.IP, "0.0.0.0:2377")
-	common.CheckErr(err, "[Run] Couldn't initialize swarm.")
-
-	if swarmInspect, err := manager.GetInstance().SwarmInspect(); err == nil {
-		// TODO: Check if user wants a Manager or Worker. Some nodes might be managers
-		s.host.WorkerToken = swarmInspect.JoinTokens.Worker
-		s.host.ManagerToken = swarmInspect.JoinTokens.Manager
-	} else {
-		log.Printf("Error running Swarm Inspect: %v", err)
+	if err := api.initSwarm(); err != nil {
 		return err
 	}
+	api.host.SendJoinToPeersAndWait(t.Replicas)
 
-	// Send Join request to node's bootnodes
-	s.host.SendJoinToNeighbours(t.Replicas)
-	service, err := s.createService(&t)
-
+	serviceID, err := createService(&t)
 	if err != nil {
 		log.Printf("Cannot create service. Error: %s", err)
 		return err
 	}
-
-	log.Printf("Service created successfully! %s\n", service)
-
+	log.Printf("Service created successfully! %s\n", serviceID)
 	return nil
 }
 
-func (s *ServiceAPI) createService(task *Task) (string, error) {
+// initSwarm initializes a docker Swarm and stores the swarm's worker & manager
+// tokens in memory
+func (api *SwarmServiceAPI) initSwarm() error {
+	_, err := manager.GetInstance().InitSwarm(api.host.IP, "0.0.0.0:2377")
+	common.CheckErr(err, "[Run] Couldn't initialize swarm.")
+
+	if swarmInspect, errInspect := manager.GetInstance().SwarmInspect(); errInspect == nil {
+		// TODO: Check if user has to be a Manager or Worker. Some nodes might be managers
+		api.host.WorkerToken = swarmInspect.JoinTokens.Worker
+		api.host.ManagerToken = swarmInspect.JoinTokens.Manager
+	} else {
+		log.Printf("Error running Swarm Inspect: %v", errInspect)
+		return errInspect
+	}
+	return err
+}
+
+func createService(task *SwarmTask) (string, error) {
 	serviceSpec := swarm.ServiceSpec{
 		Annotations: swarm.Annotations{
 			Name: task.Name,
@@ -83,7 +88,6 @@ func (s *ServiceAPI) createService(task *Task) (string, error) {
 				"key1": "",
 			},
 		},
-
 		TaskTemplate: swarm.TaskSpec{
 			ContainerSpec: swarm.ContainerSpec{
 				Image: task.Image,
@@ -91,12 +95,10 @@ func (s *ServiceAPI) createService(task *Task) (string, error) {
 		},
 		// Mode: swarm.ServiceMode{},
 	}
-	serviceCreate, err := manager.GetInstance().ServiceCreate(serviceSpec, types.ServiceCreateOptions{})
-
+	serviceCreateRes, err := manager.GetInstance().ServiceCreate(serviceSpec, types.ServiceCreateOptions{})
 	if err != nil {
 		log.Printf("Cannot create service. Error: %s", err)
 		return "", err
 	}
-
-	return serviceCreate.ID, nil
+	return serviceCreateRes.ID, nil
 }

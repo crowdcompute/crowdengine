@@ -61,8 +61,9 @@ func NewJoinSwarmProtocol(p2pHost host.Host, managerIP string) *JoinSwarmProtoco
 	return p
 }
 
-// SendJoinToNeighbours sends a join swarm message to this nodes' bootnodes
-func (p *JoinSwarmProtocol) SendJoinToNeighbours(taskReplicas int) {
+// SendJoinToPeersAndWait sends a join swarm request to it's peers
+// And waits until taskReplicas nodes are connected
+func (p *JoinSwarmProtocol) SendJoinToPeersAndWait(taskReplicas int) {
 	log.Println("Sending Join to my connected peers")
 	peers := p.p2pHost.Peerstore().Peers()
 
@@ -150,7 +151,7 @@ func (p *JoinSwarmProtocol) onJoinResponseOK(s net.Stream) {
 	if data.Message == api.MessageType_JoinResOK {
 		log.Printf("%s: Sending join token to: %s....", p.p2pHost.ID(), data.MessageData.Id)
 
-		// I will need to test this :p.p2pHost.Addrs[0], i used to be node.config.IP
+		// TODO: User might need some nodes to be Managers and some others Workers. Now all are Workers
 		req := &api.JoinRequest{MessageData: NewMessageData(uuid.Must(uuid.NewV4(), nil).String(), false, p.p2pHost),
 			Message: api.MessageType_JoinReqToken, JoinToken: p.WorkerToken, JoinMasterAddr: fmt.Sprintf("%s:%s", p.managerIP, "2377")}
 
