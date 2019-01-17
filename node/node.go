@@ -19,6 +19,7 @@ package node
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"net/http"
 	"sync"
 
@@ -39,9 +40,7 @@ import (
 var (
 	errNodeStarted      = errors.New("node: already started")
 	errImageStoreExists = errors.New("Unable to create a new Image Store")
-	httpAddr            = flag.String("httpAddr", "localhost:8081", "http service address")
-	addrWS              = flag.String("addrWS", "localhost:8082", "web socket service address")
-	httpFileServerAddr  = flag.String("httpFileServerAddr", "localhost:8082", "http file server address")
+	httpFileServerAddr  = flag.String("httpFileServerAddr", "localhost:8081", "http file server address")
 )
 
 // Node represents a node
@@ -134,11 +133,11 @@ func (n *Node) StartHTTP() {
 		err := server.RegisterName(api.Namespace, api.Service)
 		common.CheckErr(err, "[StartHTTP] Ethereum RPC could not register name.")
 	}
-
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("/", server.ServeHTTP)
 
-	log.Fatal(http.ListenAndServe(*httpAddr, serveMux))
+	httpAddr := fmt.Sprintf("%s:%d", n.cfg.RPC.HTTP.ListenAddress, n.cfg.RPC.HTTP.ListenPort)
+	log.Fatal(http.ListenAndServe(httpAddr, serveMux))
 }
 
 // StartWebSocket starts a websocket server
@@ -151,7 +150,8 @@ func (n *Node) StartWebSocket() {
 	serveMux := http.NewServeMux()
 	serveMux.Handle("/", server.WebsocketHandler([]string{"*"}))
 
-	log.Fatal(http.ListenAndServe(*addrWS, serveMux))
+	addrWS := fmt.Sprintf("%s:%d", n.cfg.RPC.Websocket.ListenAddress, n.cfg.RPC.Websocket.ListenPort)
+	log.Fatal(http.ListenAndServe(addrWS, serveMux))
 }
 
 // StartFileServer starts a file server
