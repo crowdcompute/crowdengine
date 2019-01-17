@@ -23,6 +23,7 @@ import (
 	peer "github.com/libp2p/go-libp2p-peer"
 )
 
+// BootnodesAPI ...
 type BootnodesAPI struct {
 	host *p2p.Host
 }

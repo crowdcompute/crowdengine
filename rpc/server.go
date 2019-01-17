@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	addrHttp = flag.String("addrHTTP", "localhost:8080", "http service address")
+	addrHTTP = flag.String("addrHTTP", "localhost:8080", "http service address")
 	addrWS   = flag.String("addr", "localhost:8088", "websocket service address")
 )
 
@@ -53,7 +53,7 @@ func StartHTTP() {
 	serveMux.HandleFunc("/", server.ServeHTTP)
 	serveMux.HandleFunc("/upload", fileserver.ServeHTTP)
 
-	log.Fatal(http.ListenAndServe(*addrHttp, serveMux))
+	log.Fatal(http.ListenAndServe(*addrHTTP, serveMux))
 }
 
 // StartWebSocket build a jsonrpc server

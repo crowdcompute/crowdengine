@@ -29,11 +29,12 @@ import (
 	"github.com/docker/docker/api/types/swarm"
 )
 
+// SwarmServiceAPI ...
 type SwarmServiceAPI struct {
 	host *p2p.Host
 }
 
-type SwarmTask struct {
+type swarmTask struct {
 	Name     string `json:"name"`
 	Image    string `json:"image"`
 	Replicas int    `json:"replicas"`
@@ -44,8 +45,9 @@ func NewSwarmServiceAPI(h *p2p.Host) *SwarmServiceAPI {
 	return &SwarmServiceAPI{host: h}
 }
 
+// Run initializes a swarm, makes nodes to join it, and creates a swarm service
 func (api *SwarmServiceAPI) Run(ctx context.Context, task string) error {
-	t := SwarmTask{}
+	t := swarmTask{}
 	json.Unmarshal([]byte(task), &t)
 	log.Println("I got this task:", t)
 
@@ -80,7 +82,8 @@ func (api *SwarmServiceAPI) initSwarm() error {
 	return err
 }
 
-func createService(task *SwarmTask) (string, error) {
+// createService creates and starts a swarm service
+func createService(task *swarmTask) (string, error) {
 	serviceSpec := swarm.ServiceSpec{
 		Annotations: swarm.Annotations{
 			Name: task.Name,

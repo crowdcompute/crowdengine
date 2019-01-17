@@ -64,7 +64,7 @@ func (s *SwarmService) Inspect(ctx context.Context) (swarm.Swarm, error) {
 	return swrm, nil
 }
 
-// Inspect the swarm
+// ServiceCreate creates a swarm service
 func (s *SwarmService) ServiceCreate(ctx context.Context, service swarm.ServiceSpec, options types.ServiceCreateOptions) (types.ServiceCreateResponse, error) {
 	resp, err := manager.GetInstance().ServiceCreate(service, options)
 	if err != nil {

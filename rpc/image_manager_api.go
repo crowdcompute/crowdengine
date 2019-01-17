@@ -61,7 +61,6 @@ func (api *ImageManagerAPI) UploadImage(ctx context.Context, imageFilePath strin
 }
 
 // PushImage is the API call to push an image to the peer peerID
-
 func (api *ImageManagerAPI) PushImage(ctx context.Context, peerID string, imageFilePath string) (string, error) {
 	file, fileSize, fileName, signature, hash := api.getFileData(imageFilePath)
 	defer file.Close()
@@ -135,6 +134,7 @@ func (api *ImageManagerAPI) RunImage(ctx context.Context, peerID string, imageID
 	return containerID
 }
 
+// InspectContainer inspects a container containerID from the peer peerID
 func (api *ImageManagerAPI) InspectContainer(ctx context.Context, peerID string, containerID string) (string, error) {
 	toNodeID, _ := peer.IDB58Decode(peerID)
 	log.Println("About to inspect a container...")
@@ -143,7 +143,7 @@ func (api *ImageManagerAPI) InspectContainer(ctx context.Context, peerID string,
 	return <-api.host.InspectChan, nil
 }
 
-// Getting the list of images specific to the publicKey
+// ListImages gets a list of images from the peer peerID using the user's publicKey
 func (api *ImageManagerAPI) ListImages(ctx context.Context, peerID string, publicKey string) (string, error) {
 	toNodeID, _ := peer.IDB58Decode(peerID)
 	api.host.InitiateListRequest(toNodeID, publicKey)
