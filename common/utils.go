@@ -38,3 +38,16 @@ func RandomString(strlen int) string {
 	}
 	return result
 }
+
+// FillString fills the value string with toFill string for up to upToLength
+func FillString(value string, toFill string, upToLength int) string {
+	for {
+		currLen := len(value)
+		if currLen < upToLength {
+			value = value + toFill
+			continue
+		}
+		break
+	}
+	return value
+}

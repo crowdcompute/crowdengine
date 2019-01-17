@@ -54,7 +54,6 @@ type DiscoveryProtocol struct {
 }
 
 func NewDiscoveryProtocol(p2pHost host.Host, dht *dht.IpfsDHT) *DiscoveryProtocol {
-	log.Println("initializing discovery proto")
 	p := &DiscoveryProtocol{
 		p2pHost:       p2pHost,
 		dht:           dht,
