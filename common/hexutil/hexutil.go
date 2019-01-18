@@ -19,6 +19,7 @@ package hexutil
 import "encoding/hex"
 
 // EncodeWithPrefix encodes b as a hex string with 0x prefix.
+// TODO: Remove probably. Not being used by anyone
 func EncodeWithPrefix(src []byte) string {
 	dst := make([]byte, len(src)*2+2)
 	copy(dst, "0x")
