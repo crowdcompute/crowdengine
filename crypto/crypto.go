@@ -32,35 +32,42 @@ import (
 	gosha3 "golang.org/x/crypto/sha3"
 )
 
+// KeyPair represents private/public keys and the public address
 type KeyPair struct {
 	Private string
 	Public  string
 	Address string
 }
 
+// Sha256Hash hashes data with the sha256
 func Sha256Hash(data []byte) hash.Hash {
 	d := gosha3.New256()
 	d.Write(data)
 	return d
 }
 
-func HashProtoMsg(data proto.Message) []byte {
-	bin, err := proto.Marshal(data)
-	common.CheckErr(err, "[HashProtoMsg] Failed to marshal pb message.")
-
+// HashProtoMsg marshals the proto message and returns a sha256 hash
+func HashProtoMsg(message proto.Message) []byte {
+	bin, err := proto.Marshal(message)
+	common.CheckErr(err, "[HashProtoMsg] Failed to marshal protobuf message.")
 	return Sha256Hash(bin).Sum(nil)
 }
 
-// TODO: This has to be in a common folder.
-func HashFile(imageFilePath string) []byte {
-	f, err := os.Open(imageFilePath)
-	common.CheckErr(err, "[HashFile] Couldn't read file.")
-	defer f.Close()
+// HashFile hashes the file with the sha256
+func HashFile(file *os.File) []byte {
 	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
+	if _, err := io.Copy(h, file); err != nil {
 		log.Fatal(err)
 	}
 	return h.Sum(nil)
+}
+
+// HashFilePath opens the file in filePath and hashes it's contents with the sha256
+func HashFilePath(filePath string) []byte {
+	f, err := os.Open(filePath)
+	defer f.Close()
+	common.CheckErr(err, "[HashFilePath] Couldn't read file.")
+	return HashFile(f)
 }
 
 // GenerateKeyPair generates a private, public, and address keys
@@ -87,17 +94,19 @@ func GenerateKeyPair() (KeyPair, error) {
 	return KeyPair{Private: hex.EncodeToString(privateBytes), Public: hex.EncodeToString(publicBytes), Address: PublicToAddress(publicBytes)}, nil
 }
 
+// RestorePrivateKey unmarshals the privateKey
 func RestorePrivateKey(privateKey []byte) (crypto.PrivKey, error) {
 	return crypto.UnmarshalSecp256k1PrivateKey(privateKey)
 }
 
+// RestorePubKey unmarshals the pubKey
 func RestorePubKey(pubKey []byte) (crypto.PubKey, error) {
 	return crypto.UnmarshalSecp256k1PublicKey(pubKey)
 }
 
-// RestorePrivateToKeyPair gets a private key and return a keypair
+// RestorePrivateToKeyPair unmarshals the privateKey and returns a the priv as well the pub keys
 func RestorePrivateToKeyPair(privateKey []byte) (crypto.PrivKey, crypto.PubKey, error) {
-	priv, err := crypto.UnmarshalSecp256k1PrivateKey(privateKey)
+	priv, err := RestorePrivateKey(privateKey)
 	pub := priv.GetPublic()
 	if err != nil {
 		return priv, pub, err

@@ -69,8 +69,10 @@ func NewSwarmProtocol(p2pHost host.Host, managerIP string) *SwarmProtocol {
 // And waits until taskReplicas nodes are connected
 func (p *SwarmProtocol) SendJoinToPeersAndWait(taskReplicas int) {
 	log.Println("Sending Join to my connected peers")
+	// TODO: Change the logic for sending Join requests to peers
+	//       Need to pass the libp2p IDs as parameters (a discovery has to happen first)
+	//       instead of neighbours
 	peers := p.p2pHost.Peerstore().Peers()
-
 	for _, nodeAddr := range peers {
 		if p.p2pHost.ID() != nodeAddr {
 			p.Join(nodeAddr)
@@ -235,8 +237,10 @@ func (p *SwarmProtocol) onJoinResJoined(s net.Stream) {
 // And waits until taskReplicas nodes are connected
 func (p *SwarmProtocol) SendLeaveToPeersAndWait(taskReplicas int) {
 	log.Println("Sending Leave to my connected peers")
+	// TODO: Change the logic for sending Leave requests to peers
+	//       Need to pass the libp2p IDs as parameters (a discovery has to happen first)
+	//       instead of neighbours
 	peers := p.p2pHost.Peerstore().Peers()
-
 	for _, nodeAddr := range peers {
 		if p.p2pHost.ID() != nodeAddr {
 			p.Leave(nodeAddr)
