@@ -53,7 +53,7 @@ func (api *ImageManagerAPI) UploadImage(ctx context.Context, imageFilePath strin
 	priv, err := crypto.RestorePrivateKey(privByte)
 
 	// Hash image
-	hash := crypto.HashFile(imageFilePath)
+	hash := crypto.HashFilePath(imageFilePath)
 	sign, err := priv.Sign(hash)
 	common.CheckErr(err, "[UploadImage] Failed to sign image.")
 	api.images[hex.EncodeToString(hash)] = sign
@@ -87,7 +87,7 @@ func (api *ImageManagerAPI) getFileData(imageFilePath string) (*os.File, string,
 	log.Println("fileSize: ", fileSizeFilled)
 	log.Println("fileName: ", fileNameFilled)
 
-	hash := hex.EncodeToString(crypto.HashFile(imageFilePath))
+	hash := hex.EncodeToString(crypto.HashFilePath(imageFilePath))
 	signature := hex.EncodeToString(api.images[hash])
 	// TODO: Not sure what number to give here. Need to see the range
 	signatureFilled := common.FillString(signature, "", 150)

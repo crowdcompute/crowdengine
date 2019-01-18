@@ -18,8 +18,8 @@ package hexutil
 
 import "encoding/hex"
 
-// Encode encodes b as a hex string with 0x prefix.
-func Encode(src []byte) string {
+// EncodeWithPrefix encodes b as a hex string with 0x prefix.
+func EncodeWithPrefix(src []byte) string {
 	dst := make([]byte, len(src)*2+2)
 	copy(dst, "0x")
 	hex.Encode(dst[2:], src)

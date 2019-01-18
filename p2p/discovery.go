@@ -18,12 +18,12 @@ package p2p
 
 import (
 	"context"
+	"encoding/hex"
 	"time"
 
 	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/common"
-	"github.com/crowdcompute/crowdengine/common/hexutil"
 	"github.com/crowdcompute/crowdengine/crypto"
 	"github.com/crowdcompute/crowdengine/manager"
 	"github.com/docker/docker/api/types"
@@ -97,7 +97,7 @@ func (p *DiscoveryProtocol) GetInitialDiscoveryReq(initNodeID string) *api.Disco
 		Message: api.DiscoveryMessage_DiscoveryReq}
 
 	req.DiscoveryMsgData.InitNodeID = initNodeID
-	req.DiscoveryMsgData.InitHash = hexutil.Encode(crypto.HashProtoMsg(req))
+	req.DiscoveryMsgData.InitHash = hex.EncodeToString(crypto.HashProtoMsg(req))
 
 	p.setTTLForDiscReq(req, common.TTLmsg)
 	return req

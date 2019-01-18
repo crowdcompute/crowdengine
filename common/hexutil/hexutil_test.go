@@ -33,7 +33,7 @@ var (
 
 func TestEncode(t *testing.T) {
 	for _, test := range encodeBytesToHexTests {
-		enc := Encode(test.input.([]byte))
+		enc := EncodeWithPrefix(test.input.([]byte))
 		if enc != test.expect {
 			t.Errorf("Input %x: Wrong hex encoding %s", test.input, enc)
 		}
