@@ -53,6 +53,7 @@ type DiscoveryProtocol struct {
 	NodeIDchan    chan peer.ID                       // a way to return the Node ID to the main form
 }
 
+// NewDiscoveryProtocol sets the protocol's stream handlers and returns a new DiscoveryProtocol
 func NewDiscoveryProtocol(p2pHost host.Host, dht *dht.IpfsDHT) *DiscoveryProtocol {
 	p := &DiscoveryProtocol{
 		p2pHost:       p2pHost,
@@ -68,8 +69,7 @@ func NewDiscoveryProtocol(p2pHost host.Host, dht *dht.IpfsDHT) *DiscoveryProtoco
 	return p
 }
 
-// Start tracking pending requests we received while we were busy
-// Sending a reponse back to the requests that I got earlier
+// onNotify checks pendingReq map and sends a response back to the sender
 func (p *DiscoveryProtocol) onNotify() {
 	log.Println(" pending requests: ", p.pendingReq)
 	for req := range p.pendingReq {
@@ -129,6 +129,7 @@ func (p *DiscoveryProtocol) copyNewDiscoveryRequest(request *api.DiscoveryReques
 	return req
 }
 
+// sendMsgToPeers sends a discovery request message to all of its peers except itself and the peer peerWhoSentMsg
 func (p *DiscoveryProtocol) sendMsgToPeers(req *api.DiscoveryRequest, peerWhoSentMsg peer.ID) {
 	// Excluded peers from sending a message
 	excludedPeers := map[peer.ID]struct{}{}
@@ -145,7 +146,7 @@ func (p *DiscoveryProtocol) sendMsgToPeers(req *api.DiscoveryRequest, peerWhoSen
 	}
 }
 
-// remote peer requests handler
+// onDiscoveryRequest represents a handler
 func (p *DiscoveryProtocol) onDiscoveryRequest(s inet.Stream) {
 	// get request data
 	data := &api.DiscoveryRequest{}
@@ -196,9 +197,9 @@ func (p *DiscoveryProtocol) onDiscoveryRequest(s inet.Stream) {
 	p.createSendResponse(data)
 }
 
+// NodeBusy checks if there is at least one running container then it returns true
 // This function removes finished containers as well.
 // TODO : this has to be revised
-// If there is at least one running container then it returns true
 func NodeBusy() bool {
 	containers, err := manager.GetInstance().ListContainers()
 	common.CheckErr(err, "Error listing containers.")
@@ -208,14 +209,15 @@ func NodeBusy() bool {
 		// If at least one is running then state that I am busy
 		if containerRunning(container.ID) {
 			return true
-		} else { // If finished or whatever delete it
-			manager.GetInstance().RemoveContainer(container.ID, types.ContainerRemoveOptions{})
 		}
+		// If finished container remove it from docker
+		manager.GetInstance().RemoveContainer(container.ID, types.ContainerRemoveOptions{})
+		break
 	}
 	return false
 }
 
-// Create and send a response to the Init note
+// createSendResponse creates and sends a response back to the peer who initialized the request
 func (p *DiscoveryProtocol) createSendResponse(data *api.DiscoveryRequest) bool {
 	// Get the init node ID
 	initPeerID, _ := peer.IDB58Decode(data.DiscoveryMsgData.InitNodeID)
@@ -234,9 +236,9 @@ func (p *DiscoveryProtocol) createSendResponse(data *api.DiscoveryRequest) bool 
 	return sendMsg(p.p2pHost, initPeerID, resp, protocol.ID(discoveryResponse))
 }
 
+// requestExpired checks if a request req expired
 func (p *DiscoveryProtocol) requestExpired(req *api.DiscoveryRequest) bool {
 	now := uint32(time.Now().Unix())
-
 	if req.DiscoveryMsgData.Expiry < now {
 		log.Printf("Now: %d, expiry: %d", now, req.DiscoveryMsgData.Expiry)
 		log.Println("Message Expired. Dropping message... ")
@@ -246,6 +248,7 @@ func (p *DiscoveryProtocol) requestExpired(req *api.DiscoveryRequest) bool {
 	return false
 }
 
+// checkMsgReceived checks if request req exists in the receivedMsg slice
 func (p *DiscoveryProtocol) checkMsgReceived(req *api.DiscoveryRequest) bool {
 	if _, ok := p.receivedMsg[req.DiscoveryMsgData.InitHash]; ok {
 		log.Println("Already received this message. Dropping message!")
@@ -254,6 +257,7 @@ func (p *DiscoveryProtocol) checkMsgReceived(req *api.DiscoveryRequest) bool {
 	return false
 }
 
+// dhtFindAddrAndStore finds a peer from the DHT and stores it to the node's peerstore
 func (p *DiscoveryProtocol) dhtFindAddrAndStore(initPeerID peer.ID) {
 	ctx := context.Background()
 	initPeerInfo, err := p.dht.FindPeer(ctx, initPeerID)
@@ -264,7 +268,7 @@ func (p *DiscoveryProtocol) dhtFindAddrAndStore(initPeerID peer.ID) {
 	p.p2pHost.Peerstore().AddAddrs(p.p2pHost.ID(), initPeerInfo.Addrs, ps.PermanentAddrTTL)
 }
 
-// Init node gets all responses from its peers
+// onDiscoveryResponse is a discovery response stream handler
 func (p *DiscoveryProtocol) onDiscoveryResponse(s inet.Stream) {
 	data := &api.DiscoveryResponse{}
 	decodeProtoMessage(data, s)
@@ -281,7 +285,7 @@ func (p *DiscoveryProtocol) onDiscoveryResponse(s inet.Stream) {
 	p.NodeIDchan <- discoveryPeer
 }
 
-// Runs forever or until the node's done
+// DeleteDiscoveryMsgs checks for expired received messages
 func (p *DiscoveryProtocol) DeleteDiscoveryMsgs(quit <-chan struct{}) {
 	// Start a ticker to check for expirations
 	ticker := time.NewTicker(expirationCycle)
@@ -292,15 +296,14 @@ func (p *DiscoveryProtocol) DeleteDiscoveryMsgs(quit <-chan struct{}) {
 		select {
 		case <-ticker.C:
 			p.deleteExpiredMsgs()
-
 		case <-quit:
 			return
 		}
 	}
 }
 
-// expire iterates over all the expiration timestamps, removing all stale
-// messages from the map.
+// deleteExpiredMsgs iterates over all the receivedMsg map
+// removing all expired messages
 func (p *DiscoveryProtocol) deleteExpiredMsgs() {
 	now := uint32(time.Now().Unix())
 	for hash, expiry := range p.receivedMsg {

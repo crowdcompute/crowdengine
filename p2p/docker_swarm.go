@@ -50,6 +50,7 @@ type SwarmProtocol struct {
 	managerIP    string
 }
 
+// NewSwarmProtocol sets the protocol's stream handlers and returns a new SwarmProtocol
 func NewSwarmProtocol(p2pHost host.Host, managerIP string) *SwarmProtocol {
 	p := &SwarmProtocol{
 		p2pHost:   p2pHost,
@@ -269,7 +270,7 @@ func (p *SwarmProtocol) Leave(hostID peer.ID) bool {
 	return true
 }
 
-// onLeaveRequest receives a Leave Request, decodes, validates it
+// onLeaveRequest stream handler receives a Leave Request, decodes, validates it
 // and sends a response if it's ok with leaving the Swarm
 func (p *SwarmProtocol) onLeaveRequest(s net.Stream) {
 	log.Printf("%s: Received leave swarm request from %s.", s.Conn().LocalPeer(), s.Conn().RemotePeer())
@@ -305,7 +306,7 @@ func (p *SwarmProtocol) onLeaveRequest(s net.Stream) {
 	}
 }
 
-// Getting a sesponse from a node that they leaved the swarm successfully
+// onLeaveResponseOK is a leave response stream handler
 func (p *SwarmProtocol) onLeaveResponseOK(s net.Stream) {
 	data := &api.LeaveResponse{}
 	decodeProtoMessage(data, s)

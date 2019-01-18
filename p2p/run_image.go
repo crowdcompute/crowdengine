@@ -45,6 +45,7 @@ type TaskProtocol struct {
 	taskObservers     map[Observer]struct{}
 }
 
+// NewTaskProtocol sets the protocol's stream handlers and returns a new TaskProtocol
 func NewTaskProtocol(p2pHost host.Host) *TaskProtocol {
 	p := &TaskProtocol{p2pHost: p2pHost,
 		ContainerID:       make(chan string, 1),

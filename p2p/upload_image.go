@@ -52,6 +52,7 @@ type UploadImageProtocol struct {
 	ImageIDchan chan string
 }
 
+// NewUploadImageProtocol sets the protocol's stream handlers and returns a new UploadImageProtocol
 func NewUploadImageProtocol(p2pHost host.Host) *UploadImageProtocol {
 	p := &UploadImageProtocol{p2pHost: p2pHost,
 		ImageIDchan: make(chan string, 1),
@@ -61,15 +62,16 @@ func NewUploadImageProtocol(p2pHost host.Host) *UploadImageProtocol {
 	return p
 }
 
+// SetConsistentStream sets a new stream to accept data
 func (p *UploadImageProtocol) SetConsistentStream(hostID peer.ID) bool {
 	log.Printf("%s: Uploading image. Sending request to: %s....", p.p2pHost.ID(), hostID)
 	stream, err := p.p2pHost.NewStream(context.Background(), hostID, imageUploadRequest)
 	p.stream = stream
 	common.CheckErr(err, "[SetConsistentStream] Couldn't set a new stream.")
-
 	return true
 }
 
+// UploadChunk writes the chunk of bytes to the stream
 func (p *UploadImageProtocol) UploadChunk(chunk []byte) bool {
 	if _, err := p.stream.Write(chunk); err != nil {
 		log.Println("Error writting to stream", err)
@@ -85,9 +87,9 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 
 	log.Println("Start receiving the file name and file size")
 
-	fileSize, fileName, signature, hash := extractDataFromStream(s)
+	fileSize, fileName, signature, hash := readsMetadataFromStream(s)
 	filePath := common.ImagesDest + fileName
-	createNewFileFromStream(s, filePath, fileSize)
+	readFileFromStream(s, filePath, fileSize)
 
 	imageID, err := loadImageToDocker(filePath)
 	if errRemove := removeFile(filePath); errRemove != nil {
@@ -106,7 +108,8 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 	p.createSendResponse(s.Conn().RemotePeer(), imageID)
 }
 
-func extractDataFromStream(s inet.Stream) (int64, string, string, string) {
+// readsMetadataFromStream reads the metadata from the stream s
+func readsMetadataFromStream(s inet.Stream) (int64, string, string, string) {
 	// TODO: all those numbers should go as constants
 	bufferFileName := make([]byte, 64)
 	bufferFileSize := make([]byte, 10)
@@ -130,7 +133,8 @@ func extractDataFromStream(s inet.Stream) (int64, string, string, string) {
 	return fileSize, fileName, signature, hash
 }
 
-func createNewFileFromStream(s inet.Stream, toFilePath string, fileSize int64) {
+// readFileFromStream reads a file's data from the stream s
+func readFileFromStream(s inet.Stream, toFilePath string, fileSize int64) {
 	newFile, err := os.Create(toFilePath)
 	common.CheckErr(err, "[onUploadRequest] Couldn't create a new file.")
 	defer newFile.Close()
@@ -183,6 +187,7 @@ func getImageID(loadImageResp string) (string, bool) {
 	return "", false
 }
 
+// getImageSummaryFromTag returns ImageSummaries from images using a tag
 func getImageSummaryFromTag(tag string) types.ImageSummary {
 	log.Println(tag)
 	fargs := filters.NewArgs()
@@ -197,7 +202,7 @@ func getImageSummaryFromTag(tag string) types.ImageSummary {
 	return res[0] // we know that docker tag is unique thus returning only one summary
 }
 
-// removeImageFile removes the imgFilePath file from the machine
+// removeFile removes the imgFilePath file from the machine
 func removeFile(filePath string) error {
 	err := os.Remove(filePath)
 	if err != nil {
@@ -208,13 +213,13 @@ func removeFile(filePath string) error {
 	return nil
 }
 
-// storeNewImageToDB stores the new image's data to our level DB
+// storeImgDataToDB stores the new image's data to our level DB
 func (p *UploadImageProtocol) storeImgDataToDB(imageID string, hash string, signature string) {
 	image := database.ImageLvlDB{Hash: hash, Signature: signature, CreatedTime: time.Now().Unix()}
 	database.GetDB().Model(image).Put([]byte(imageID))
 }
 
-// Create and send a response to the toPeer note
+// createSendResponse creates and sends a response to the toPeer note
 func (p *UploadImageProtocol) createSendResponse(toPeer peer.ID, response string) bool {
 	resp := &api.UploadImageResponse{UploadImageMsgData: NewUploadImageMsgData(uuid.Must(uuid.NewV4(), nil).String(), false, p.p2pHost),
 		ImageID: response}
@@ -227,6 +232,7 @@ func (p *UploadImageProtocol) createSendResponse(toPeer peer.ID, response string
 	return sendMsg(p.p2pHost, toPeer, resp, protocol.ID(imageUploadResponse))
 }
 
+// onUploadResponse is an upload response stream handler
 func (p *UploadImageProtocol) onUploadResponse(s inet.Stream) {
 	data := &api.UploadImageResponse{}
 	decodeProtoMessage(data, s)

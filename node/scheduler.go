@@ -27,19 +27,6 @@ import (
 	"github.com/docker/docker/api/types"
 )
 
-func containerRunning(containerID string) bool {
-	cjson, err := manager.GetInstance().InspectContainer(containerID)
-	if err != nil {
-		log.Println("Error inspecting container. ID : \n", containerID)
-		return false
-	}
-	// If at least one is running then state that I am busy
-	if cjson.State.Running {
-		return true
-	}
-	return false
-}
-
 // PruneImages checks if there are any images to be removed based on a time interval
 // Running for ever, or until node dies
 func PruneImages(quit <-chan struct{}) {

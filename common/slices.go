@@ -35,7 +35,9 @@ func SliceExists(slice interface{}, item interface{}) bool {
 	return false
 }
 
-func deleteValFromSlice(slice []interface{}, item string) []interface{} {
+// DeleteItemFromSlice takes a slice of interfaces and an item and
+// returns a new slice of interfaces without the item
+func DeleteItemFromSlice(slice []interface{}, item interface{}) []interface{} {
 	var newSlice []interface{}
 	s := reflect.ValueOf(slice)
 	if s.Kind() != reflect.Slice {

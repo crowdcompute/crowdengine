@@ -32,13 +32,14 @@ import (
 const inspectContainerRequest = "/image/inspectreq/0.0.1"
 const inspectContainerResponse = "/image/inspectresp/0.0.1"
 
-// UploadImageProtocol type
+// InspectContainerProtocol type
 type InspectContainerProtocol struct {
 	p2pHost     host.Host // local host
 	stream      inet.Stream
 	InspectChan chan string
 }
 
+// NewInspectContainerProtocol sets the protocol's stream handlers and returns a new InspectContainerProtocol
 func NewInspectContainerProtocol(p2pHost host.Host) *InspectContainerProtocol {
 	p := &InspectContainerProtocol{p2pHost: p2pHost, InspectChan: make(chan string, 1)}
 	p2pHost.SetStreamHandler(inspectContainerRequest, p.onInspectRequest)

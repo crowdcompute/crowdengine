@@ -43,6 +43,7 @@ const (
 	clientVersion   = "go-p2p-node/0.0.1"
 )
 
+// containerRunning returns true if the container containerID is in running mode
 func containerRunning(containerID string) bool {
 	cjson, err := manager.GetInstance().InspectContainer(containerID)
 	if err != nil {
@@ -100,7 +101,7 @@ func authenticateProtoMsg(message proto.Message, data *api.MessageData) bool {
 	return verifyData(bin, []byte(sign), peerID, data.NodePubKey)
 }
 
-// Verify incoming p2p message data integrity
+// verifyData verifies incoming p2p message data integrity
 // data: data to verify
 // signature: author signature provided in the message payload
 // peerID: author peer id from the message payload
@@ -142,6 +143,7 @@ func decodeProtoMessage(message proto.Message, s inet.Stream) {
 	common.CheckErr(err, "[onInspectRequest] Could not decode data.")
 }
 
+// sendMsg sends a message msg from fromHost to peer toID using the protocol
 func sendMsg(fromHost host.Host, toID peer.ID, msg proto.Message, protocol protocol.ID) bool {
 	s, err := fromHost.NewStream(context.Background(), toID, protocol)
 	if err != nil {
@@ -158,7 +160,7 @@ func sendMsg(fromHost host.Host, toID peer.ID, msg proto.Message, protocol proto
 	return true
 }
 
-// helper method - writes a protobuf go data object to a network stream
+// sendProtoMessage writes a protobuf go data object to a network stream
 // data: reference of protobuf go data object to send (not the object itself)
 // s: network stream to write the data to
 func sendProtoMessage(data proto.Message, s net.Stream) bool {
@@ -173,10 +175,9 @@ func sendProtoMessage(data proto.Message, s net.Stream) bool {
 	return true
 }
 
-// NewMessageData ...
-// helper method - generate message data shared between all node's p2p protocols
-// messageId: unique for requests, copied from request for responses
-func NewMessageData(messageId string, gossip bool, p2pHost host.Host) *api.MessageData {
+// NewMessageData generates message data shared between all node's p2p protocols
+// messageID: unique for requests, copied from request for responses
+func NewMessageData(messageID string, gossip bool, p2pHost host.Host) *api.MessageData {
 	// Add protobufs bin data for message author public key
 	// this is useful for authenticating  messages forwarded by a node authored by another node
 	nodePubKey, err := p2pHost.Peerstore().PubKey(p2pHost.ID()).Bytes()
@@ -186,38 +187,42 @@ func NewMessageData(messageId string, gossip bool, p2pHost host.Host) *api.Messa
 		NodeId:     peer.IDB58Encode(p2pHost.ID()),
 		NodePubKey: nodePubKey,
 		Timestamp:  time.Now().Unix(),
-		Id:         messageId,
+		Id:         messageID,
 		Gossip:     gossip}
 }
 
-// helper method - generate message data shared between all node's p2p protocols
-// messageId: unique for requests, copied from request for responses
-func NewDiscoveryMsgData(messageId string, gossip bool, p2pHost host.Host) *api.DiscoveryMsgData {
+// NewDiscoveryMsgData generates message data shared between all node's p2p protocols
+// messageID: unique for requests, copied from request for responses
+func NewDiscoveryMsgData(messageID string, gossip bool, p2pHost host.Host) *api.DiscoveryMsgData {
 	return &api.DiscoveryMsgData{
-		MessageData: NewMessageData(messageId, gossip, p2pHost),
+		MessageData: NewMessageData(messageID, gossip, p2pHost),
 	}
 }
 
-func NewRunImageMsgData(messageId string, gossip bool, p2pHost host.Host) *api.RunImageMsgData {
+// NewRunImageMsgData generates message data shared between all node's p2p protocols
+func NewRunImageMsgData(messageID string, gossip bool, p2pHost host.Host) *api.RunImageMsgData {
 	return &api.RunImageMsgData{
-		MessageData: NewMessageData(messageId, gossip, p2pHost),
+		MessageData: NewMessageData(messageID, gossip, p2pHost),
 	}
 }
 
-func NewUploadImageMsgData(messageId string, gossip bool, p2pHost host.Host) *api.UploadImageMsgData {
+// NewUploadImageMsgData generates message data shared between all node's p2p protocols
+func NewUploadImageMsgData(messageID string, gossip bool, p2pHost host.Host) *api.UploadImageMsgData {
 	return &api.UploadImageMsgData{
-		MessageData: NewMessageData(messageId, gossip, p2pHost),
+		MessageData: NewMessageData(messageID, gossip, p2pHost),
 	}
 }
 
-func NewInspectContMsgData(messageId string, gossip bool, p2pHost host.Host) *api.InspectContMsgData {
+// NewInspectContMsgData generates message data shared between all node's p2p protocols
+func NewInspectContMsgData(messageID string, gossip bool, p2pHost host.Host) *api.InspectContMsgData {
 	return &api.InspectContMsgData{
-		MessageData: NewMessageData(messageId, gossip, p2pHost),
+		MessageData: NewMessageData(messageID, gossip, p2pHost),
 	}
 }
 
-func NewListImagesMsgData(messageId string, gossip bool, p2pHost host.Host) *api.ListImagesMsgData {
+// NewListImagesMsgData generates message data shared between all node's p2p protocols
+func NewListImagesMsgData(messageID string, gossip bool, p2pHost host.Host) *api.ListImagesMsgData {
 	return &api.ListImagesMsgData{
-		MessageData: NewMessageData(messageId, gossip, p2pHost),
+		MessageData: NewMessageData(messageID, gossip, p2pHost),
 	}
 }

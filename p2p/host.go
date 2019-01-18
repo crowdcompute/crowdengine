@@ -35,6 +35,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
+// Host represents a libp2p host
 type Host struct {
 	P2PHost  host.Host
 	dht      *dht.IpfsDHT
@@ -64,7 +65,7 @@ func NewHost(port int, IP string, bootnodes []string) *Host {
 	return host
 }
 
-// Registering all Protocols
+// registerProtocols registers all protocols for the node
 func (h *Host) registerProtocols() {
 	// TODO: PATH has to be in a config
 	h.SwarmProtocol = NewSwarmProtocol(h.P2PHost, h.IP)
@@ -143,6 +144,7 @@ func (h *Host) addAddrToPeerstore(addr string) peer.ID {
 	return peerid
 }
 
+// PeerCount returns the number of peers in the node's peerstore
 func (h *Host) PeerCount() int {
-	return 0
+	return h.P2PHost.Peerstore().Peers().Len()
 }

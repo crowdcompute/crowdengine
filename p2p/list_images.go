@@ -46,6 +46,7 @@ type ListImagesProtocol struct {
 	ListChan chan string
 }
 
+// NewListImagesProtocol sets the protocol's stream handlers and returns a new ListImagesProtocol
 func NewListImagesProtocol(p2pHost host.Host) *ListImagesProtocol {
 	p := &ListImagesProtocol{
 		p2pHost:  p2pHost,

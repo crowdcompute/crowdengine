@@ -76,6 +76,7 @@ func (api *ImageManagerAPI) PushImage(ctx context.Context, peerID string, imageF
 	return <-api.host.ImageIDchan, nil
 }
 
+// getFileData gets the file's handler, size, name, hash and signature
 func (api *ImageManagerAPI) getFileData(imageFilePath string) (*os.File, string, string, string, string) {
 	file, err := os.Open(imageFilePath)
 	common.CheckErr(err, "[getData] Couldn't open file.")
@@ -99,6 +100,7 @@ func (api *ImageManagerAPI) getFileData(imageFilePath string) (*os.File, string,
 	return file, fileSizeFilled, fileNameFilled, signatureFilled, hashFilled
 }
 
+// sendFileMetadata sends the size, name, hash and signature to the peer through the opened stream
 func (api *ImageManagerAPI) sendFileMetadata(fileSize, fileName, signature, hash string) {
 	// Start sending the metadata first
 	api.host.UploadChunk([]byte(fileSize))
@@ -107,6 +109,7 @@ func (api *ImageManagerAPI) sendFileMetadata(fileSize, fileName, signature, hash
 	api.host.UploadChunk([]byte(hash))
 }
 
+// sendFile sends the file's data to the peer through the opened stream
 func (api *ImageManagerAPI) sendFile(file *os.File) error {
 	sendBuffer := make([]byte, common.FileChunk)
 	log.Println("Start sending file!")
