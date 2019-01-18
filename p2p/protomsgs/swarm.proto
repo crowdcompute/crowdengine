@@ -1,7 +1,7 @@
 syntax = "proto3";
  
 package protomsgs;
-import "node/protocols/protomsgs/common.proto";
+import "common.proto";
 
 // a protocol define a set of reuqest and responses
 message JoinRequest {
@@ -19,6 +19,14 @@ message JoinResponse {
 
     // response specific data
     MessageType message = 2;
+}
+
+message LeaveRequest {
+    MessageData messageData = 1;
+}
+
+message LeaveResponse {
+    MessageData messageData = 1;
 }
 
 enum MessageType {
