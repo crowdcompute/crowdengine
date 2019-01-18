@@ -4,9 +4,9 @@ require (
 	github.com/Microsoft/go-winio v0.4.11 // indirect
 	github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20181220211322-0ca71131d8f7 // indirect
+	github.com/bshuster-repo/logrus-logstash-hook v0.4.1
 	github.com/btcsuite/btcd v0.0.0-20181130015935-7d2daa5bfef2 // indirect
 	github.com/coreos/go-semver v0.2.0 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/docker/distribution v2.7.0+incompatible // indirect
 	github.com/docker/docker v1.13.1
@@ -98,9 +98,9 @@ require (
 	github.com/pborman/uuid v1.2.0
 	github.com/peterh/liner v1.1.0
 	github.com/pkg/errors v0.8.0 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rs/cors v1.6.0 // indirect
 	github.com/satori/go.uuid v1.2.0
+	github.com/sirupsen/logrus v1.3.0
 	github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72 // indirect
 	github.com/stretchr/testify v1.2.2
 	github.com/syndtr/goleveldb v0.0.0-20181128100959-b001fa50d6b2
