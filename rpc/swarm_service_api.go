@@ -105,3 +105,12 @@ func createService(task *swarmTask) (string, error) {
 	}
 	return serviceCreateRes.ID, nil
 }
+
+// Stop stops a swarm,
+func (api *SwarmServiceAPI) Stop(ctx context.Context) error {
+	if _, err := manager.GetInstance().LeaveSwarm(); err != nil {
+		return err
+	}
+	api.host.SendLeaveToPeersAndWait(1)
+	return nil
+}

@@ -41,7 +41,7 @@ type Host struct {
 	IP       string
 	FullAddr string
 
-	*JoinSwarmProtocol
+	*SwarmProtocol
 	*TaskProtocol
 	*DiscoveryProtocol
 	*UploadImageProtocol
@@ -67,7 +67,7 @@ func NewHost(port int, IP string, bootnodes []string) *Host {
 // Registering all Protocols
 func (h *Host) registerProtocols() {
 	// TODO: PATH has to be in a config
-	h.JoinSwarmProtocol = NewJoinSwarmProtocol(h.P2PHost, h.IP)
+	h.SwarmProtocol = NewSwarmProtocol(h.P2PHost, h.IP)
 	h.DiscoveryProtocol = NewDiscoveryProtocol(h.P2PHost, h.dht)
 	h.TaskProtocol = NewTaskProtocol(h.P2PHost)
 	// Registering the Observer that wants to get notified when the task is done.

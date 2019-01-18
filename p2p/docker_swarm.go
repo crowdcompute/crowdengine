@@ -38,9 +38,11 @@ const joinReq = "/swarm/joinreq/0.0.1"
 const joinResOK = "/swarm/joinrespOK/0.0.1"
 const joinReqToken = "/swarm/joinreqtoken/0.0.1"
 const joinResJoined = "/swarm/joinresjoined/0.0.1"
+const leaveReq = "/swarm/leavereq/0.0.1"
+const leaveResOK = "/swarm/leaveres/0.0.1"
 
-// JoinSwarmProtocol type
-type JoinSwarmProtocol struct {
+// SwarmProtocol type
+type SwarmProtocol struct {
 	p2pHost      host.Host // local host
 	done         chan bool // only for demo purposes to stop main from terminating
 	WorkerToken  string
@@ -48,8 +50,8 @@ type JoinSwarmProtocol struct {
 	managerIP    string
 }
 
-func NewJoinSwarmProtocol(p2pHost host.Host, managerIP string) *JoinSwarmProtocol {
-	p := &JoinSwarmProtocol{
+func NewSwarmProtocol(p2pHost host.Host, managerIP string) *SwarmProtocol {
+	p := &SwarmProtocol{
 		p2pHost:   p2pHost,
 		managerIP: managerIP,
 		done:      make(chan bool, 1),
@@ -58,12 +60,14 @@ func NewJoinSwarmProtocol(p2pHost host.Host, managerIP string) *JoinSwarmProtoco
 	p2pHost.SetStreamHandler(joinResOK, p.onJoinResponseOK)
 	p2pHost.SetStreamHandler(joinReqToken, p.onJoinReqToken)
 	p2pHost.SetStreamHandler(joinResJoined, p.onJoinResJoined)
+	p2pHost.SetStreamHandler(leaveReq, p.onLeaveRequest)
+	p2pHost.SetStreamHandler(leaveResOK, p.onLeaveResponseOK)
 	return p
 }
 
 // SendJoinToPeersAndWait sends a join swarm request to it's peers
 // And waits until taskReplicas nodes are connected
-func (p *JoinSwarmProtocol) SendJoinToPeersAndWait(taskReplicas int) {
+func (p *SwarmProtocol) SendJoinToPeersAndWait(taskReplicas int) {
 	log.Println("Sending Join to my connected peers")
 	peers := p.p2pHost.Peerstore().Peers()
 
@@ -81,7 +85,7 @@ func (p *JoinSwarmProtocol) SendJoinToPeersAndWait(taskReplicas int) {
 
 // Join sends a join Request to a specific <hostID>
 // This is the initiation of a Join communication.
-func (p *JoinSwarmProtocol) Join(hostID peer.ID) bool {
+func (p *SwarmProtocol) Join(hostID peer.ID) bool {
 	log.Printf("%s: Sending join swarm request to: %s....", p.p2pHost.ID(), hostID)
 
 	// create message data
@@ -97,14 +101,13 @@ func (p *JoinSwarmProtocol) Join(hostID peer.ID) bool {
 	return true
 }
 
-// The nodes receives a Join Request, decodes, validates it
+// onJoinRequest receives a Join Request, decodes, validates it
 // and sends a response if it's ok with joining the Swarm
-func (p *JoinSwarmProtocol) onJoinRequest(s net.Stream) {
+func (p *SwarmProtocol) onJoinRequest(s net.Stream) {
+	log.Printf("%s: Received join swarm request from %s.", s.Conn().LocalPeer(), s.Conn().RemotePeer())
+
 	data := &api.JoinRequest{}
 	decodeProtoMessage(data, s)
-
-	log.Printf("%s: Received join swarm request from %s. Message: %s", s.Conn().LocalPeer(), s.Conn().RemotePeer(), data.Message)
-
 	if valid := authenticateProtoMsg(data, data.MessageData); !valid {
 		log.Println("Failed to authenticate message")
 		return
@@ -135,12 +138,10 @@ func nodePartOfSwarm() (bool, error) {
 
 // Node receives a Join Ok Response decodes, validates it
 // and sends the Join token and address back to the node
-func (p *JoinSwarmProtocol) onJoinResponseOK(s net.Stream) {
+func (p *SwarmProtocol) onJoinResponseOK(s net.Stream) {
 	data := &api.JoinResponse{}
 	decodeProtoMessage(data, s)
-
 	valid := authenticateProtoMsg(data, data.MessageData)
-
 	if !valid {
 		log.Println("Failed to authenticate message")
 		return
@@ -168,14 +169,12 @@ func (p *JoinSwarmProtocol) onJoinResponseOK(s net.Stream) {
 
 // Node receives a Join Token & address message, decodes, validates it
 // and joins the Swarm
-func (p *JoinSwarmProtocol) onJoinReqToken(s net.Stream) {
+func (p *SwarmProtocol) onJoinReqToken(s net.Stream) {
+	log.Printf("%s: Received join request with Token from %s.", s.Conn().LocalPeer(), s.Conn().RemotePeer())
+
 	data := &api.JoinRequest{}
 	decodeProtoMessage(data, s)
-
-	log.Printf("%s: Received join request with Token from %s. Message: %s", s.Conn().LocalPeer(), s.Conn().RemotePeer(), data.Message)
-
 	valid := authenticateProtoMsg(data, data.MessageData)
-
 	if !valid {
 		log.Println("Failed to authenticate message")
 		return
@@ -198,9 +197,9 @@ func (p *JoinSwarmProtocol) onJoinReqToken(s net.Stream) {
 }
 
 // Create and send a response to the toPeer note
-func (p *JoinSwarmProtocol) createSendResponse(toPeer peer.ID, messageType api.MessageType, protoID protocol.ID) bool {
+func (p *SwarmProtocol) createSendResponse(toPeer peer.ID, messageType api.MessageType, protoID protocol.ID) bool {
 	// generate response message
-	log.Printf("%s: Sending join swarm response to %s.", p.p2pHost.ID(), toPeer)
+	log.Printf("%s: Sending swarm response to %s.", p.p2pHost.ID(), toPeer)
 
 	resp := &api.JoinResponse{MessageData: NewMessageData(uuid.Must(uuid.NewV4(), nil).String(), false, p.p2pHost),
 		Message: messageType}
@@ -212,13 +211,13 @@ func (p *JoinSwarmProtocol) createSendResponse(toPeer peer.ID, messageType api.M
 	// send the response
 	sentOK := sendMsg(p.p2pHost, toPeer, resp, protoID)
 	if sentOK {
-		log.Printf("%s: Join swarm response to %s sent.", p.p2pHost.ID(), toPeer)
+		log.Printf("%s: Swarm response to %s sent.", p.p2pHost.ID(), toPeer)
 	}
 	return sentOK
 }
 
 // Getting a sesponse from a node that they joined the swarm successfully
-func (p *JoinSwarmProtocol) onJoinResJoined(s net.Stream) {
+func (p *SwarmProtocol) onJoinResJoined(s net.Stream) {
 	data := &api.JoinResponse{}
 	decodeProtoMessage(data, s)
 
@@ -229,5 +228,80 @@ func (p *JoinSwarmProtocol) onJoinResJoined(s net.Stream) {
 		return
 	}
 	log.Printf("%s: %s Node just joined the swarm.", s.Conn().LocalPeer().String(), s.Conn().RemotePeer().String())
+	p.done <- true
+}
+
+// SendLeaveToPeersAndWait sends a leave swarm request to it's peers
+// And waits until taskReplicas nodes are connected
+func (p *SwarmProtocol) SendLeaveToPeersAndWait(taskReplicas int) {
+	log.Println("Sending Leave to my connected peers")
+	peers := p.p2pHost.Peerstore().Peers()
+
+	for _, nodeAddr := range peers {
+		if p.p2pHost.ID() != nodeAddr {
+			p.Leave(nodeAddr)
+		}
+	}
+	for i := 0; i < taskReplicas; i++ {
+		<-p.done
+		log.Print("One node left just now!")
+	}
+	log.Print("ALL NODES LEFT THE SWARM!")
+}
+
+// Leave sends a leave Request to a specific <hostID>
+func (p *SwarmProtocol) Leave(hostID peer.ID) bool {
+	log.Printf("%s: Sending leave swarm request to: %s....", p.p2pHost.ID(), hostID)
+
+	// create message data
+	req := &api.JoinRequest{MessageData: NewMessageData(uuid.Must(uuid.NewV4(), nil).String(), true, p.p2pHost),
+		Message: api.MessageType_JoinReq}
+
+	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
+	req.MessageData.Sign = signProtoMsg(req, key)
+
+	sendMsg(p.p2pHost, hostID, req, protocol.ID(leaveReq))
+
+	log.Printf("%s: Leave swarm to: %s was sent. Message Id: %s, Message: %s", p.p2pHost.ID(), peer.ID(hostID), req.MessageData.Id, req.Message)
+	return true
+}
+
+// onLeaveRequest receives a Leave Request, decodes, validates it
+// and sends a response if it's ok with leaving the Swarm
+func (p *SwarmProtocol) onLeaveRequest(s net.Stream) {
+	log.Printf("%s: Received leave swarm request from %s.", s.Conn().LocalPeer(), s.Conn().RemotePeer())
+
+	data := &api.JoinRequest{}
+	decodeProtoMessage(data, s)
+	if valid := authenticateProtoMsg(data, data.MessageData); !valid {
+		log.Println("Failed to authenticate message")
+		return
+	}
+
+	//Check if already part of a swarm
+	partOfSwarm, err := nodePartOfSwarm()
+	common.CheckErr(err, "[onLeaveRequest] CheckIfNodeBusy couldn't get info for the swarm.")
+
+	log.Printf("Am I already part of a swarm: %t", partOfSwarm)
+
+	// If this node is part of a swarm then it can leave the swarm
+	if partOfSwarm {
+		if _, err := manager.GetInstance().LeaveSwarm(); err != nil {
+			return
+		}
+		p.createSendResponse(s.Conn().RemotePeer(), api.MessageType_JoinResOK, protocol.ID(leaveResOK))
+	}
+}
+
+// Getting a sesponse from a node that they leaved the swarm successfully
+func (p *SwarmProtocol) onLeaveResponseOK(s net.Stream) {
+	data := &api.JoinResponse{}
+	decodeProtoMessage(data, s)
+	valid := authenticateProtoMsg(data, data.MessageData)
+	if !valid {
+		log.Println("Failed to authenticate message")
+		return
+	}
+	log.Printf("%s: %s Node just left the swarm.", s.Conn().LocalPeer().String(), s.Conn().RemotePeer().String())
 	p.done <- true
 }
