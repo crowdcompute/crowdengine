@@ -148,7 +148,7 @@ func (n *Node) StartWebSocket() {
 		common.CheckErr(err, "[StartHTTP] Ethereum RPC could not register name.")
 	}
 	serveMux := http.NewServeMux()
-	serveMux.Handle("/", server.WebsocketHandler([]string{"*"}))
+	serveMux.Handle("/", server.WebsocketHandler([]string{n.cfg.RPC.Websocket.CrossOriginValue}))
 
 	addrWS := fmt.Sprintf("%s:%d", n.cfg.RPC.Websocket.ListenAddress, n.cfg.RPC.Websocket.ListenPort)
 	log.Fatal(http.ListenAndServe(addrWS, serveMux))
