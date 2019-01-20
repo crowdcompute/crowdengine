@@ -48,47 +48,54 @@ func NewImageManagerAPI(h *p2p.Host) *ImageManagerAPI {
 
 // UploadImage hashes an image and stores its signature on the hash
 // TODO: This will change in the future and authorization + token will be used instead of privaty key passed
-func (api *ImageManagerAPI) UploadImage(ctx context.Context, imageFilePath string, privateKey string) (string, error) {
+func (api *ImageManagerAPI) UploadImage(ctx context.Context, imageFilePath string, privateKey string) error {
 	privByte, _ := hex.DecodeString(privateKey)
 	priv, err := crypto.RestorePrivateKey(privByte)
 
 	// Hash image
-	hash := crypto.HashFilePath(imageFilePath)
+	file, err := os.Open(imageFilePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	hash := crypto.HashFile(file)
 	sign, err := priv.Sign(hash)
-	common.CheckErr(err, "[UploadImage] Failed to sign image.")
 	api.images[hex.EncodeToString(hash)] = sign
-	return "", nil
+	return err
 }
 
 // PushImage is the API call to push an image to the peer peerID
-func (api *ImageManagerAPI) PushImage(ctx context.Context, peerID string, imageFilePath string) (string, error) {
-	file, fileSize, fileName, signature, hash := api.getFileData(imageFilePath)
+func (api *ImageManagerAPI) PushImage(ctx context.Context, peerID string, imageFilePath string) string {
+	file, fileSize, fileName, signature, hash, err := api.getFileData(imageFilePath)
+	common.FatalIfErr(err, "")
 	defer file.Close()
 
 	pID, err := peer.IDB58Decode(peerID)
-	common.CheckErr(err, "[PushImage] Couldn't IDB58Decode peerID.")
-	api.host.SetConsistentStream(pID) // Starting a new stream to with peerID
-
+	common.FatalIfErr(err, "Error decoding the peerID")
+	common.FatalIfErr(api.host.SetConsistentStream(pID), "Error setting a consistent steam with the remote peer")
 	api.sendFileMetadata(fileSize, fileName, signature, hash)
-	if err := api.sendFile(file); err != nil {
-		return "", err
-	}
-	return <-api.host.ImageIDchan, nil
+	common.FatalIfErr(api.sendFile(file), "Error sending the file to the remote peer")
+
+	return <-api.host.ImageIDchan
 }
 
 // getFileData gets the file's handler, size, name, hash and signature
-func (api *ImageManagerAPI) getFileData(imageFilePath string) (*os.File, string, string, string, string) {
+func (api *ImageManagerAPI) getFileData(imageFilePath string) (*os.File, string, string, string, string, error) {
 	file, err := os.Open(imageFilePath)
-	common.CheckErr(err, "[getData] Couldn't open file.")
+	if err != nil {
+		return nil, "", "", "", "", err
+	}
 	fileInfo, err := file.Stat()
-	common.CheckErr(err, "[getData] Couldn't find stats.")
+	if err != nil {
+		return nil, "", "", "", "", err
+	}
 	// TODO: all those numbers should go as constants
 	fileSizeFilled := common.FillString(strconv.FormatInt(fileInfo.Size(), 10), "", 10)
 	fileNameFilled := common.FillString(fileInfo.Name(), "", 64)
 	log.Println("fileSize: ", fileSizeFilled)
 	log.Println("fileName: ", fileNameFilled)
 
-	hash := hex.EncodeToString(crypto.HashFilePath(imageFilePath))
+	hash := hex.EncodeToString(crypto.HashFile(file))
 	signature := hex.EncodeToString(api.images[hash])
 	// TODO: Not sure what number to give here. Need to see the range
 	signatureFilled := common.FillString(signature, "", 150)
@@ -97,7 +104,7 @@ func (api *ImageManagerAPI) getFileData(imageFilePath string) (*os.File, string,
 	log.Println("filledSignature: ", signatureFilled)
 	log.Println("filledHash: ", hashFilled)
 
-	return file, fileSizeFilled, fileNameFilled, signatureFilled, hashFilled
+	return file, fileSizeFilled, fileNameFilled, signatureFilled, hashFilled, err
 }
 
 // sendFileMetadata sends the size, name, hash and signature to the peer through the opened stream

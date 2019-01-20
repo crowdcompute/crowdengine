@@ -19,11 +19,11 @@ package p2p
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/crowdcompute/crowdengine/log"
 
-	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/crypto"
 	"github.com/crowdcompute/crowdengine/database"
 	"github.com/crowdcompute/crowdengine/manager"
@@ -76,7 +76,10 @@ func (p *ListImagesProtocol) onListRequest(s inet.Stream) {
 	}
 
 	imgSummaries, err := p.listImages(data.PubKey)
-	common.CheckErr(err, "[onListRequest] Could not List images.")
+	if err != nil {
+		log.Printf("Could not List images. Error : ", err)
+		return
+	}
 	imgSummariesBytes, err := json.Marshal(imgSummaries)
 	if err != nil {
 		log.Println(err, "Error marshaling image summaries")
@@ -89,8 +92,9 @@ func (p *ListImagesProtocol) onListRequest(s inet.Stream) {
 func (p *ListImagesProtocol) listImages(publicKey string) ([]types.ImageSummary, error) {
 	imgSummaries := make([]types.ImageSummary, 0)
 	summaries, err := manager.GetInstance().ListImages(types.ImageListOptions{All: true})
-	common.CheckErr(err, "[ListImages] Failed to List images")
-
+	if err != nil {
+		return nil, fmt.Errorf("Error listing images. Error: %v", err)
+	}
 	pubKey, _ := hex.DecodeString(publicKey)
 	pub, err := crypto.RestorePubKey(pubKey)
 

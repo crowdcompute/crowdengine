@@ -59,8 +59,9 @@ func NewNode(cfg *config.GlobalConfig) (*Node, error) {
 		cfg:  cfg,
 		quit: make(chan struct{}),
 	}
-	n.host = p2p.NewHost(cfg.P2P.ListenPort, cfg.P2P.ListenAddress, cfg.P2P.Bootstraper.Nodes)
-	return n, nil
+	host, err := p2p.NewHost(cfg.P2P.ListenPort, cfg.P2P.ListenAddress, cfg.P2P.Bootstraper.Nodes)
+	n.host = host
+	return n, err
 }
 
 // Start starts a node instance & listens to RPC calls if the flag is set
@@ -131,7 +132,7 @@ func (n *Node) StartHTTP() {
 	server := rpc.NewServer()
 	for _, api := range n.apis() {
 		err := server.RegisterName(api.Namespace, api.Service)
-		common.CheckErr(err, "[StartHTTP] Ethereum RPC could not register name.")
+		common.FatalIfErr(err, "Ethereum RPC could not register name.")
 	}
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("/", server.ServeHTTP)
@@ -145,7 +146,7 @@ func (n *Node) StartWebSocket() {
 	server := rpc.NewServer()
 	for _, api := range n.apis() {
 		err := server.RegisterName(api.Namespace, api.Service)
-		common.CheckErr(err, "[StartHTTP] Ethereum RPC could not register name.")
+		common.FatalIfErr(err, "Ethereum RPC could not register name.")
 	}
 	serveMux := http.NewServeMux()
 	serveMux.Handle("/", server.WebsocketHandler([]string{n.cfg.RPC.Websocket.CrossOriginValue}))

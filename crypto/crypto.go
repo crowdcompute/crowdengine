@@ -25,7 +25,6 @@ import (
 
 	"github.com/crowdcompute/crowdengine/log"
 
-	"github.com/crowdcompute/crowdengine/common"
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/gogo/protobuf/proto"
 	crypto "github.com/libp2p/go-libp2p-crypto"
@@ -47,10 +46,9 @@ func Sha256Hash(data []byte) hash.Hash {
 }
 
 // HashProtoMsg marshals the proto message and returns a sha256 hash
-func HashProtoMsg(message proto.Message) []byte {
+func HashProtoMsg(message proto.Message) ([]byte, error) {
 	bin, err := proto.Marshal(message)
-	common.CheckErr(err, "[HashProtoMsg] Failed to marshal protobuf message.")
-	return Sha256Hash(bin).Sum(nil)
+	return Sha256Hash(bin).Sum(nil), err
 }
 
 // HashFile hashes the file with the sha256
@@ -60,14 +58,6 @@ func HashFile(file *os.File) []byte {
 		log.Fatal(err)
 	}
 	return h.Sum(nil)
-}
-
-// HashFilePath opens the file in filePath and hashes it's contents with the sha256
-func HashFilePath(filePath string) []byte {
-	f, err := os.Open(filePath)
-	defer f.Close()
-	common.CheckErr(err, "[HashFilePath] Couldn't read file.")
-	return HashFile(f)
 }
 
 // GenerateKeyPair generates a private, public, and address keys

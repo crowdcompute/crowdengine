@@ -137,10 +137,10 @@ func verifyData(data []byte, signature []byte, peerID peer.ID, pubKeyData []byte
 }
 
 // decodeProtoMessage receives a pointer to a proto.Message and decodes it's data
-func decodeProtoMessage(message proto.Message, s inet.Stream) {
+func decodeProtoMessage(message proto.Message, s inet.Stream) error {
 	decoder := protobufCodec.Multicodec(nil).Decoder(bufio.NewReader(s))
 	err := decoder.Decode(message)
-	common.CheckErr(err, "[onInspectRequest] Could not decode data.")
+	return err
 }
 
 // sendMsg sends a message msg from fromHost to peer toID using the protocol
@@ -181,7 +181,7 @@ func NewMessageData(messageID string, gossip bool, p2pHost host.Host) *api.Messa
 	// Add protobufs bin data for message author public key
 	// this is useful for authenticating  messages forwarded by a node authored by another node
 	nodePubKey, err := p2pHost.Peerstore().PubKey(p2pHost.ID()).Bytes()
-	common.CheckErr(err, "[NewMessageData] Failed to get public key for sender from local peer store.")
+	common.FatalIfErr(err, "Failed to get public key for sender from local peer store.")
 
 	return &api.MessageData{ClientVersion: clientVersion,
 		NodeId:     peer.IDB58Encode(p2pHost.ID()),

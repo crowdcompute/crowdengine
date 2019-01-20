@@ -40,13 +40,11 @@ var (
 
 // DecryptKey decrypts the private key given a json keystore file
 func DecryptKey(password string, data string) (string, error) {
-
 	encjson := encryptedKeyJSON{}
 	err := json.Unmarshal([]byte(data), &encjson)
 	if err != nil {
 		return "", err
 	}
-
 	if encjson.Version != ksVersion {
 		return "", errors.New("Version Mismatch")
 	}

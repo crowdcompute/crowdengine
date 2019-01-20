@@ -17,12 +17,12 @@
 package p2p
 
 import (
-	"fmt"
 	"time"
+
+	"github.com/crowdcompute/crowdengine/common"
 
 	"github.com/crowdcompute/crowdengine/log"
 
-	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/manager"
 	api "github.com/crowdcompute/crowdengine/p2p/protomsgs"
 
@@ -103,7 +103,8 @@ func (p *TaskProtocol) onRunRequest(s inet.Stream) {
 		log.Println("Failed to authenticate message")
 		return
 	}
-	containerID := createRunContainer(data.ImageID)
+	containerID, err := createRunContainer(data.ImageID)
+	common.FatalIfErr(err, "Error crating a container")
 
 	p.createSendResponse(s.Conn().RemotePeer(), containerID)
 
@@ -112,11 +113,10 @@ func (p *TaskProtocol) onRunRequest(s inet.Stream) {
 	go p.waitForJobToFinish(containerID)
 }
 
-func createRunContainer(imageID string) string {
+func createRunContainer(imageID string) (string, error) {
 	container, err := manager.GetInstance().CreateContainer(imageID)
 	_, err = manager.GetInstance().RunContainer(container.ID)
-	common.CheckErr(err, fmt.Sprintf("Error running the container %s: %s", imageID, err))
-	return container.ID
+	return container.ID, err
 }
 
 // Create and send a response to the toPeer note

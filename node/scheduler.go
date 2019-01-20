@@ -48,9 +48,13 @@ func PruneImages(quit <-chan struct{}) {
 }
 
 // RemoveImages removes all images
+// This is a goroutine
 func RemoveImages() {
 	summaries, err := manager.GetInstance().ListImages(types.ImageListOptions{All: true})
-	common.CheckErr(err, "[RemoveImages] Failed to List images")
+	if err == nil {
+		log.Println("Stopped checking for expired images... Error : ", err)
+		return
+	}
 	now := time.Now().Unix()
 	for _, img := range summaries {
 		image := database.ImageLvlDB{}

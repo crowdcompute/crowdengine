@@ -63,21 +63,19 @@ func NewUploadImageProtocol(p2pHost host.Host) *UploadImageProtocol {
 }
 
 // SetConsistentStream sets a new stream to accept data
-func (p *UploadImageProtocol) SetConsistentStream(hostID peer.ID) bool {
+func (p *UploadImageProtocol) SetConsistentStream(hostID peer.ID) error {
 	log.Printf("%s: Uploading image. Sending request to: %s....", p.p2pHost.ID(), hostID)
 	stream, err := p.p2pHost.NewStream(context.Background(), hostID, imageUploadRequest)
 	p.stream = stream
-	common.CheckErr(err, "[SetConsistentStream] Couldn't set a new stream.")
-	return true
+	return err
 }
 
 // UploadChunk writes the chunk of bytes to the stream
-func (p *UploadImageProtocol) UploadChunk(chunk []byte) bool {
+func (p *UploadImageProtocol) UploadChunk(chunk []byte) error {
 	if _, err := p.stream.Write(chunk); err != nil {
-		log.Println("Error writting to stream", err)
-		return false
+		return err
 	}
-	return true
+	return nil
 }
 
 // remote peer requests handler
@@ -89,7 +87,8 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 
 	fileSize, fileName, signature, hash := readsMetadataFromStream(s)
 	filePath := common.ImagesDest + fileName
-	readFileFromStream(s, filePath, fileSize)
+	err := readFileFromStream(s, filePath, fileSize)
+	common.FatalIfErr(err, "Couldn't read from stream when uploading a file")
 
 	imageID, err := loadImageToDocker(filePath)
 	if errRemove := removeFile(filePath); errRemove != nil {
@@ -134,9 +133,11 @@ func readsMetadataFromStream(s inet.Stream) (int64, string, string, string) {
 }
 
 // readFileFromStream reads a file's data from the stream s
-func readFileFromStream(s inet.Stream, toFilePath string, fileSize int64) {
+func readFileFromStream(s inet.Stream, toFilePath string, fileSize int64) error {
 	newFile, err := os.Create(toFilePath)
-	common.CheckErr(err, "[onUploadRequest] Couldn't create a new file.")
+	if err != nil {
+		return err
+	}
 	defer newFile.Close()
 
 	var receivedBytes int64
@@ -153,6 +154,7 @@ func readFileFromStream(s inet.Stream, toFilePath string, fileSize int64) {
 		receivedBytes += common.FileChunk
 	}
 	log.Println("File received completely!")
+	return nil
 }
 
 // loadImageToDocker takes a path to an image file and loads it to the docker daemon

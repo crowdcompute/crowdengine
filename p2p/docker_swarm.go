@@ -118,7 +118,7 @@ func (p *SwarmProtocol) onJoinRequest(s net.Stream) {
 
 	//Check if already part of a swarm
 	busy, err := nodePartOfSwarm()
-	common.CheckErr(err, "[onJoinRequest] CheckIfNodeBusy couldn't get info for the swarm.")
+	common.FatalIfErr(err, "[onJoinRequest] CheckIfNodeBusy couldn't get info for the swarm.")
 
 	log.Printf("Am I already part of a swarm: %t", busy)
 
@@ -191,7 +191,10 @@ func (p *SwarmProtocol) onJoinReqToken(s net.Stream) {
 	// I will need to test this :p.p2pHost.Addrs[0], it used to be node.config.IP
 	// TODO: port here should go on config
 	joinSwarmResult, err := manager.GetInstance().SwarmJoin(p.managerIP, "", remoteAddrs, data.JoinToken, "0.0.0.0:2377")
-	common.CheckErr(err, "[onJoinReqToken] Couldn't join swarm.")
+	if err != nil {
+		log.Printf("Couldn't join swarm. Error : ", err)
+		return
+	}
 
 	log.Printf("Join Swarm Result: %t\n", joinSwarmResult)
 	if joinSwarmResult {
@@ -284,7 +287,7 @@ func (p *SwarmProtocol) onLeaveRequest(s net.Stream) {
 
 	//Check if already part of a swarm
 	partOfSwarm, err := nodePartOfSwarm()
-	common.CheckErr(err, "[onLeaveRequest] CheckIfNodeBusy couldn't get info for the swarm.")
+	common.FatalIfErr(err, "CheckIfNodeBusy couldn't get info for the swarm.")
 
 	log.Printf("Am I already part of a swarm: %t", partOfSwarm)
 

@@ -19,7 +19,6 @@ package p2p
 import (
 	"github.com/crowdcompute/crowdengine/log"
 
-	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/manager"
 	api "github.com/crowdcompute/crowdengine/p2p/protomsgs"
 	host "github.com/libp2p/go-libp2p-host"
@@ -67,7 +66,10 @@ func (p *InspectContainerProtocol) onInspectRequest(s inet.Stream) {
 		return
 	}
 	rawInspection, err := inspectContainerRaw(data.ContainerID)
-	common.CheckErr(err, "[onInspectRequest] Could not inspect container.")
+	if err != nil {
+		log.Printf("Could not inspect container. Error : ", err)
+		return
+	}
 
 	p.createSendResponse(s.Conn().RemotePeer(), string(rawInspection))
 }

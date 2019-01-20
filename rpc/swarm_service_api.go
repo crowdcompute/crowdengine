@@ -22,7 +22,6 @@ import (
 
 	"github.com/crowdcompute/crowdengine/log"
 
-	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/manager"
 	"github.com/crowdcompute/crowdengine/p2p"
 	"github.com/docker/docker/api/types"
@@ -69,8 +68,9 @@ func (api *SwarmServiceAPI) Run(ctx context.Context, task string) error {
 // tokens in memory
 func (api *SwarmServiceAPI) initSwarm() error {
 	_, err := manager.GetInstance().InitSwarm(api.host.IP, "0.0.0.0:2377")
-	common.CheckErr(err, "[Run] Couldn't initialize swarm.")
-
+	if err != nil {
+		return err
+	}
 	if swarmInspect, errInspect := manager.GetInstance().SwarmInspect(); errInspect == nil {
 		// TODO: Check if user has to be a Manager or Worker. Some nodes might be managers
 		api.host.WorkerToken = swarmInspect.JoinTokens.Worker

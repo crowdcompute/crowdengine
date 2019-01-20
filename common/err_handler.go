@@ -18,10 +18,9 @@ package common
 
 import "github.com/crowdcompute/crowdengine/log"
 
-// CheckErr checks if an error is nil and logs and fatals it
-func CheckErr(err error, message string) {
+// FatalIfErr checks if an error is nil and logs and fatals it
+func FatalIfErr(err error, message string) {
 	if err != nil {
-		log.Println(message)
-		log.Fatal("ERROR:", err)
+		log.Fatalf("%s. ERROR: %v", message, err)
 	}
 }

@@ -42,7 +42,10 @@ func (api *DiscoveryAPI) Discover(ctx context.Context, numberOfNodes int) ([]str
 
 	peerID := api.host.P2PHost.ID().Pretty()
 	api.host.InitializeReturnChan(numberOfNodes)
-	initialRequest := api.host.GetInitialDiscoveryReq(peerID)
+	initialRequest, err := api.host.GetInitialDiscoveryReq(peerID)
+	if err != nil {
+		return nil, err
+	}
 	// No neighbour sent me this message, that's why the empty string as a second parameter
 	api.host.ForwardMsgToPeers(initialRequest, "")
 	// TODO: this channel has to have a TIMEOUT.

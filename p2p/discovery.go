@@ -92,15 +92,18 @@ func (p *DiscoveryProtocol) InitializeReturnChan(numberOfNodes int) {
 // Sets the ID of the node that initiated the discovery request
 // Sets the unique hash of the msg request
 // Sets the TTL & expiry time of the msg request
-func (p *DiscoveryProtocol) GetInitialDiscoveryReq(initNodeID string) *api.DiscoveryRequest {
+func (p *DiscoveryProtocol) GetInitialDiscoveryReq(initNodeID string) (*api.DiscoveryRequest, error) {
 	req := &api.DiscoveryRequest{DiscoveryMsgData: NewDiscoveryMsgData(uuid.Must(uuid.NewV4(), nil).String(), true, p.p2pHost),
 		Message: api.DiscoveryMessage_DiscoveryReq}
 
 	req.DiscoveryMsgData.InitNodeID = initNodeID
-	req.DiscoveryMsgData.InitHash = hex.EncodeToString(crypto.HashProtoMsg(req))
-
+	hash, err := crypto.HashProtoMsg(req)
+	if err != nil {
+		return nil, err
+	}
+	req.DiscoveryMsgData.InitHash = hex.EncodeToString(hash)
 	p.setTTLForDiscReq(req, common.TTLmsg)
-	return req
+	return req, err
 }
 
 func (p *DiscoveryProtocol) setTTLForDiscReq(req *api.DiscoveryRequest, ttl time.Duration) {
@@ -183,9 +186,9 @@ func (p *DiscoveryProtocol) onDiscoveryRequest(s inet.Stream) {
 		p.dhtFindAddrAndStore(initPeerID)
 	}
 
-	//if I am not available for the task, store the request for a later process.
-	// Maximum pending jobs
-	if NodeBusy() {
+	busy, err := NodeBusy()
+	common.FatalIfErr(err, "Error on checking if node is busy")
+	if busy {
 		// Cache the request for a later time
 		if uint16(len(p.pendingReq)) < p.maxPendingReq {
 			p.pendingReq[data] = struct{}{}
@@ -200,21 +203,20 @@ func (p *DiscoveryProtocol) onDiscoveryRequest(s inet.Stream) {
 // NodeBusy checks if there is at least one running container then it returns true
 // This function removes finished containers as well.
 // TODO : this has to be revised
-func NodeBusy() bool {
+func NodeBusy() (bool, error) {
 	containers, err := manager.GetInstance().ListContainers()
-	common.CheckErr(err, "Error listing containers.")
 
 	// TODO: This logic to be changed...
 	for _, container := range containers {
 		// If at least one is running then state that I am busy
 		if containerRunning(container.ID) {
-			return true
+			return false, err
 		}
 		// If finished container remove it from docker
 		manager.GetInstance().RemoveContainer(container.ID, types.ContainerRemoveOptions{})
 		break
 	}
-	return false
+	return false, err
 }
 
 // createSendResponse creates and sends a response back to the peer who initialized the request
@@ -258,14 +260,17 @@ func (p *DiscoveryProtocol) checkMsgReceived(req *api.DiscoveryRequest) bool {
 }
 
 // dhtFindAddrAndStore finds a peer from the DHT and stores it to the node's peerstore
-func (p *DiscoveryProtocol) dhtFindAddrAndStore(initPeerID peer.ID) {
+func (p *DiscoveryProtocol) dhtFindAddrAndStore(initPeerID peer.ID) error {
 	ctx := context.Background()
 	initPeerInfo, err := p.dht.FindPeer(ctx, initPeerID)
-	common.CheckErr(err, "[DHT] Error finding this address.")
+	if err != nil {
+		return err
+	}
 	log.Println("[DHT] Found this init addresses: ")
 	log.Println(initPeerInfo.Addrs)
 	log.Println("Adding init node to my neighbours:")
 	p.p2pHost.Peerstore().AddAddrs(p.p2pHost.ID(), initPeerInfo.Addrs, ps.PermanentAddrTTL)
+	return nil
 }
 
 // onDiscoveryResponse is a discovery response stream handler

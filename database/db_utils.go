@@ -34,7 +34,7 @@ var ErrNotFound = errors.New("ErrorNotFound")
 func GetDB() *DB {
 	once.Do(func() {
 		lvldb, err := leveldb.OpenFile("gocc_data", nil)
-		common.CheckErr(err, "[GetDB] Couldn't create a new Level DB")
+		common.FatalIfErr(err, "Couldn't create a new Level DB")
 		db = &DB{levelDB: lvldb}
 	})
 	return db
