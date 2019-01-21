@@ -40,11 +40,11 @@ func RandomString(strlen int) string {
 }
 
 // FillString fills the value string with toFill string for up to upToLength
-func FillString(value string, toFill string, upToLength int) string {
+func FillString(value string, upToLength int) string {
 	for {
 		currLen := len(value)
 		if currLen < upToLength {
-			value = value + toFill
+			value = value + FillChar
 			continue
 		}
 		break

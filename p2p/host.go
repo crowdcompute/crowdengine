@@ -68,7 +68,6 @@ func NewHost(port int, IP string, bootnodes []string) (*Host, error) {
 
 // registerProtocols registers all protocols for the node
 func (h *Host) registerProtocols() {
-	// TODO: PATH has to be in a config
 	h.SwarmProtocol = NewSwarmProtocol(h.P2PHost, h.IP)
 	h.DiscoveryProtocol = NewDiscoveryProtocol(h.P2PHost, h.dht)
 	h.TaskProtocol = NewTaskProtocol(h.P2PHost)
