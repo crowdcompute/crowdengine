@@ -30,7 +30,6 @@ import (
 // PruneImages checks if there are any images to be removed based on a time interval
 // Running for ever, or until node dies
 func PruneImages(quit <-chan struct{}) {
-	log.Println("start prunning images")
 	// TODO: Time has to be a const somewhere
 	ticker := time.NewTicker(time.Second * 10)
 	defer ticker.Stop()
@@ -51,8 +50,8 @@ func PruneImages(quit <-chan struct{}) {
 // This is a goroutine
 func RemoveImages() {
 	summaries, err := manager.GetInstance().ListImages(types.ImageListOptions{All: true})
-	if err == nil {
-		log.Println("Stopped checking for expired images... Error : ", err)
+	if err != nil {
+		log.Println("There is an error listing images. Stopped checking for expired images... Error : ", err)
 		return
 	}
 	now := time.Now().Unix()
@@ -61,16 +60,12 @@ func RemoveImages() {
 		imgID := strings.Replace(img.ID, "sha256:", "", -1)
 
 		i, err := database.GetDB().Model(image).Get([]byte(imgID))
-		image, ok := i.(database.ImageLvlDB)
-		if !ok {
-			continue
-		}
-		// If the image was found into the DB
-		if err == nil {
+		if image, ok := i.(database.ImageLvlDB); err == nil && ok {
 			if time.Unix(image.CreatedTime, 0).Add(common.TenDays).Unix() <= now {
 				log.Println("Removing image: ", img.ID)
 				manager.GetInstance().RemoveImage(img.ID, types.ImageRemoveOptions{Force: true, PruneChildren: true})
 			}
 		}
+
 	}
 }

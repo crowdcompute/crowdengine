@@ -90,17 +90,17 @@ func (api *ImageManagerAPI) getFileData(imageFilePath string) (*os.File, string,
 		return nil, "", "", "", "", err
 	}
 	// TODO: all those numbers should go as constants
-	fileSizeFilled := common.FillString(strconv.FormatInt(fileInfo.Size(), 10), "", 10)
-	fileNameFilled := common.FillString(fileInfo.Name(), "", 64)
+	fileSizeFilled := common.FillString(strconv.FormatInt(fileInfo.Size(), 10), 10)
+	fileNameFilled := common.FillString(fileInfo.Name(), 64)
 	log.Println("fileSize: ", fileSizeFilled)
 	log.Println("fileName: ", fileNameFilled)
 
 	hash := hex.EncodeToString(crypto.HashFile(file))
 	signature := hex.EncodeToString(api.images[hash])
 	// TODO: Not sure what number to give here. Need to see the range
-	signatureFilled := common.FillString(signature, "", 150)
+	signatureFilled := common.FillString(signature, 150)
 	// TODO: Not sure what number to give here. Need to see the range
-	hashFilled := common.FillString(hash, "", 100)
+	hashFilled := common.FillString(hash, 100)
 	log.Println("filledSignature: ", signatureFilled)
 	log.Println("filledHash: ", hashFilled)
 
