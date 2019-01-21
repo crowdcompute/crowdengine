@@ -48,14 +48,30 @@ const imageUploadResponse = "/image/uploadresp/0.0.1"
 // UploadImageProtocol type
 type UploadImageProtocol struct {
 	p2pHost     host.Host // local host
-	stream      inet.Stream
 	ImageIDchan chan string
+	sWriter     *binStreamWriter // libp2p stream writter
+}
+
+// binStreamWriter represents the libp2p stream writter
+// along with the error occuring when writting to the stream
+type binStreamWriter struct {
+	s   inet.Stream
+	err error
+}
+
+// Write writes a chunck to the stream.
+func (w *binStreamWriter) write(chunk []byte) {
+	if w.err != nil {
+		return
+	}
+	_, w.err = w.s.Write(chunk)
 }
 
 // NewUploadImageProtocol sets the protocol's stream handlers and returns a new UploadImageProtocol
 func NewUploadImageProtocol(p2pHost host.Host) *UploadImageProtocol {
 	p := &UploadImageProtocol{p2pHost: p2pHost,
 		ImageIDchan: make(chan string, 1),
+		sWriter:     &binStreamWriter{},
 	}
 	p2pHost.SetStreamHandler(imageUploadRequest, p.onUploadRequest)
 	p2pHost.SetStreamHandler(imageUploadResponse, p.onUploadResponse)
@@ -66,16 +82,20 @@ func NewUploadImageProtocol(p2pHost host.Host) *UploadImageProtocol {
 func (p *UploadImageProtocol) SetConsistentStream(hostID peer.ID) error {
 	log.Printf("%s: Uploading image. Sending request to: %s....", p.p2pHost.ID(), hostID)
 	stream, err := p.p2pHost.NewStream(context.Background(), hostID, imageUploadRequest)
-	p.stream = stream
+	p.sWriter.s = stream
 	return err
 }
 
-// UploadChunk writes the chunk of bytes to the stream
-func (p *UploadImageProtocol) UploadChunk(chunk []byte) error {
-	if _, err := p.stream.Write(chunk); err != nil {
-		return err
-	}
-	return nil
+// WriteChunk writes the chunk of bytes to the stream
+// You can call this function multiple times without worrying about handling the error throughout the uploads
+// Call GetWriterError() at the end to get the error
+func (p *UploadImageProtocol) WriteChunk(chunk []byte) {
+	p.sWriter.write(chunk)
+}
+
+// GetWriterError returns the error of the binary Stream Writer
+func (p *UploadImageProtocol) GetWriterError() error {
+	return p.sWriter.err
 }
 
 // remote peer requests handler

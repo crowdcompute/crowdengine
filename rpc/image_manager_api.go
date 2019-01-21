@@ -108,12 +108,13 @@ func (api *ImageManagerAPI) getFileData(imageFilePath string) (*os.File, string,
 }
 
 // sendFileMetadata sends the size, name, hash and signature to the peer through the opened stream
-func (api *ImageManagerAPI) sendFileMetadata(fileSize, fileName, signature, hash string) {
+func (api *ImageManagerAPI) sendFileMetadata(fileSize, fileName, signature, hash string) error {
 	// Start sending the metadata first
-	api.host.UploadChunk([]byte(fileSize))
-	api.host.UploadChunk([]byte(fileName))
-	api.host.UploadChunk([]byte(signature))
-	api.host.UploadChunk([]byte(hash))
+	api.host.WriteChunk([]byte(fileSize))
+	api.host.WriteChunk([]byte(fileName))
+	api.host.WriteChunk([]byte(signature))
+	api.host.WriteChunk([]byte(hash))
+	return api.host.GetWriterError()
 }
 
 // sendFile sends the file's data to the peer through the opened stream
@@ -127,10 +128,10 @@ func (api *ImageManagerAPI) sendFile(file *os.File) error {
 		} else if err != nil {
 			return err
 		}
-		api.host.UploadChunk(sendBuffer)
+		api.host.WriteChunk(sendBuffer)
 	}
 	log.Println("File has been sent, closing connection!")
-	return nil
+	return api.host.GetWriterError()
 }
 
 // RunImage is the API call to run an imageID to the peerID node
