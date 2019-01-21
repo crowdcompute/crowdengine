@@ -105,9 +105,9 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 
 	log.Println("Start receiving the file name and file size")
 
-	fileSize, fileName, signature, hash := readsMetadataFromStream(s)
+	fileSize, fileName, signature, hash := readMetadataFromStream(s)
 	filePath := common.ImagesDest + fileName
-	err := readFileFromStream(s, filePath, fileSize)
+	err := createFileFromStream(s, filePath, fileSize)
 	common.FatalIfErr(err, "Couldn't read from stream when uploading a file")
 
 	imageID, err := loadImageToDocker(filePath)
@@ -127,8 +127,8 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 	p.createSendResponse(s.Conn().RemotePeer(), imageID)
 }
 
-// readsMetadataFromStream reads the metadata from the stream s
-func readsMetadataFromStream(s inet.Stream) (int64, string, string, string) {
+// readMetadataFromStream reads the metadata from the stream s
+func readMetadataFromStream(s inet.Stream) (int64, string, string, string) {
 	// TODO: all those numbers should go as constants
 	bufferFileName := make([]byte, 64)
 	bufferFileSize := make([]byte, 10)
@@ -152,16 +152,14 @@ func readsMetadataFromStream(s inet.Stream) (int64, string, string, string) {
 	return fileSize, fileName, signature, hash
 }
 
-// readFileFromStream reads a file's data from the stream s
-func readFileFromStream(s inet.Stream, toFilePath string, fileSize int64) error {
+// createFileFromStream reads a file's data from the stream s
+func createFileFromStream(s inet.Stream, toFilePath string, fileSize int64) error {
 	newFile, err := os.Create(toFilePath)
 	if err != nil {
 		return err
 	}
 	defer newFile.Close()
-
 	var receivedBytes int64
-
 	for {
 		// If the file size is smaller than the chunk size or
 		// if it's the final chunk then copy it over and break
