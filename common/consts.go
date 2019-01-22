@@ -41,7 +41,9 @@ const FileSizeLength int = 10
 const FileNameLength int = 64
 
 // SignatureLength represents the total length of the buffer whenever sending the signature to a peer
+// TODO: Not sure what number to give here. Need to see the range
 const SignatureLength int = 150
 
 // HashLength represents the total length of the buffer whenever sending the hash to a peer
+// TODO: Not sure what number to give here. Need to see the range
 const HashLength int = 100

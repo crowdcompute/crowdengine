@@ -129,7 +129,6 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 
 // readMetadataFromStream reads the metadata from the stream s
 func readMetadataFromStream(s inet.Stream) (int64, string, string, string) {
-	// TODO: all those numbers should go as constants
 	bufferFileName := make([]byte, common.FileNameLength)
 	bufferFileSize := make([]byte, common.FileSizeLength)
 	bufferSignature := make([]byte, common.SignatureLength)

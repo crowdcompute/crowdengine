@@ -67,7 +67,7 @@ func (api *ImageManagerAPI) UploadImage(ctx context.Context, imageFilePath strin
 // PushImage is the API call to push an image to the peer peerID
 func (api *ImageManagerAPI) PushImage(ctx context.Context, peerID string, imageFilePath string) string {
 	file, fileSize, fileName, signature, hash, err := api.getFileData(imageFilePath)
-	common.FatalIfErr(err, "")
+	common.FatalIfErr(err, "Error getting file data")
 	defer file.Close()
 
 	pID, err := peer.IDB58Decode(peerID)
@@ -89,7 +89,6 @@ func (api *ImageManagerAPI) getFileData(imageFilePath string) (*os.File, string,
 	if err != nil {
 		return nil, "", "", "", "", err
 	}
-	// TODO: all those numbers should go as constants
 	fileSizeFilled := common.FillString(strconv.FormatInt(fileInfo.Size(), 10), common.FileSizeLength)
 	fileNameFilled := common.FillString(fileInfo.Name(), common.FileNameLength)
 	log.Println("fileSize: ", fileSizeFilled)
@@ -97,9 +96,7 @@ func (api *ImageManagerAPI) getFileData(imageFilePath string) (*os.File, string,
 	hashedFile, _ := crypto.HashFilePath(imageFilePath)
 	hash := hex.EncodeToString(hashedFile)
 	signature := hex.EncodeToString(api.images[hash])
-	// TODO: Not sure what number to give here. Need to see the range
 	signatureFilled := common.FillString(signature, common.SignatureLength)
-	// TODO: Not sure what number to give here. Need to see the range
 	hashFilled := common.FillString(hash, common.HashLength)
 	log.Println("filledSignature: ", signatureFilled)
 	log.Println("filledHash: ", hashFilled)
