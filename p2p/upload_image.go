@@ -111,7 +111,7 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 	common.FatalIfErr(err, "Couldn't read from stream when uploading a file")
 
 	imageID, err := loadImageToDocker(filePath)
-	if errRemove := removeFile(filePath); errRemove != nil {
+	if errRemove := common.RemoveFile(filePath); errRemove != nil {
 		p.ImageIDchan <- errRemove.Error()
 		return
 	}
@@ -130,10 +130,10 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 // readMetadataFromStream reads the metadata from the stream s
 func readMetadataFromStream(s inet.Stream) (int64, string, string, string) {
 	// TODO: all those numbers should go as constants
-	bufferFileName := make([]byte, 64)
-	bufferFileSize := make([]byte, 10)
-	bufferSignature := make([]byte, 150)
-	bufferHash := make([]byte, 100)
+	bufferFileName := make([]byte, common.FileNameLength)
+	bufferFileSize := make([]byte, common.FileSizeLength)
+	bufferSignature := make([]byte, common.SignatureLength)
+	bufferHash := make([]byte, common.HashLength)
 
 	s.Read(bufferFileSize)
 	fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), ":"), 10, 64)
@@ -220,17 +220,6 @@ func getImageSummaryFromTag(tag string) types.ImageSummary {
 		log.Println("error: ", err)
 	}
 	return res[0] // we know that docker tag is unique thus returning only one summary
-}
-
-// removeFile removes the imgFilePath file from the machine
-func removeFile(filePath string) error {
-	err := os.Remove(filePath)
-	if err != nil {
-		errmsg := fmt.Sprintf("There was an error removing the file. Error: %s\n", err)
-		log.Printf(errmsg)
-		return fmt.Errorf(errmsg)
-	}
-	return nil
 }
 
 // storeImgDataToDB stores the new image's data to our level DB

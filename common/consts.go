@@ -33,3 +33,15 @@ const TTLmsg time.Duration = time.Second * 15
 // FillChar is a character that fills a chunck of bytes
 // ':' it's an illegal character for file names under windows and linux
 const FillChar string = ":"
+
+// FileSizeLength represents the total length of the buffer whenever sending the file size to a peer
+const FileSizeLength int = 10
+
+// FileNameLength represents the total length of the buffer whenever sending the file name to a peer
+const FileNameLength int = 64
+
+// SignatureLength represents the total length of the buffer whenever sending the signature to a peer
+const SignatureLength int = 150
+
+// HashLength represents the total length of the buffer whenever sending the hash to a peer
+const HashLength int = 100

@@ -17,7 +17,9 @@
 package common
 
 import (
+	"fmt"
 	"math/rand"
+	"os"
 	"time"
 )
 
@@ -50,4 +52,13 @@ func FillString(value string, upToLength int) string {
 		break
 	}
 	return value
+}
+
+// RemoveFile removes the filePath file from the os
+func RemoveFile(filePath string) error {
+	err := os.Remove(filePath)
+	if err != nil {
+		return fmt.Errorf("There was an error removing the file %s. Error: %s", filePath, err)
+	}
+	return nil
 }
