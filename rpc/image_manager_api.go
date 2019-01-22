@@ -94,8 +94,8 @@ func (api *ImageManagerAPI) getFileData(imageFilePath string) (*os.File, string,
 	fileNameFilled := common.FillString(fileInfo.Name(), common.FileNameLength)
 	log.Println("fileSize: ", fileSizeFilled)
 	log.Println("fileName: ", fileNameFilled)
-
-	hash := hex.EncodeToString(crypto.HashFile(file))
+	hashedFile, _ := crypto.HashFilePath(imageFilePath)
+	hash := hex.EncodeToString(hashedFile)
 	signature := hex.EncodeToString(api.images[hash])
 	// TODO: Not sure what number to give here. Need to see the range
 	signatureFilled := common.FillString(signature, common.SignatureLength)

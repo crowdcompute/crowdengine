@@ -60,6 +60,16 @@ func HashFile(file *os.File) []byte {
 	return h.Sum(nil)
 }
 
+// HashFilePath hashes the file with the sha256
+func HashFilePath(filePath string) ([]byte, error) {
+	if file, err := os.Open(filePath); err == nil {
+		defer file.Close()
+		return HashFile(file), nil
+	} else {
+		return nil, err
+	}
+}
+
 // GenerateKeyPair generates a private, public, and address keys
 func GenerateKeyPair() (KeyPair, error) {
 	priv, pub, err := crypto.GenerateKeyPair(crypto.Secp256k1, 256)
