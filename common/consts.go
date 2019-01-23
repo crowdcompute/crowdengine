@@ -47,3 +47,6 @@ const SignatureLength int = 150
 // HashLength represents the total length of the buffer whenever sending the hash to a peer
 // TODO: Not sure what number to give here. Need to see the range
 const HashLength int = 100
+
+// RemoveImagesInterval represents the time interval to check for removing images
+const RemoveImagesInterval time.Duration = time.Second * 10
