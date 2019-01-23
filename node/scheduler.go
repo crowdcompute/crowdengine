@@ -36,7 +36,6 @@ func PruneImages(quit <-chan struct{}) {
 	for {
 		select {
 		case <-ticker.C:
-			log.Println("Checking if there are images to be removed...")
 			RemoveImages()
 		case <-quit:
 			ticker.Stop()
@@ -48,6 +47,7 @@ func PruneImages(quit <-chan struct{}) {
 // RemoveImages removes all images that got expired
 // This is a goroutine
 func RemoveImages() {
+	log.Println("Checking if there are images to be removed...")
 	summaries, err := manager.GetInstance().ListImages(types.ImageListOptions{All: true})
 	if err != nil {
 		log.Println("There is an error listing images. Stopped checking for expired images... Error : ", err)
@@ -69,11 +69,13 @@ func extractImgID(imgSummary types.ImageSummary) string {
 	return strings.Replace(imgSummary.ID, "sha256:", "", -1)
 }
 
-func getImageFromDB(imgID string) (database.ImageLvlDB, bool) {
-	image := database.ImageLvlDB{}
+func getImageFromDB(imgID string) (*database.ImageLvlDB, bool) {
+	image := &database.ImageLvlDB{}
 	i, err := database.GetDB().Model(image).Get([]byte(imgID))
-	common.FatalIfErr(err, "There was an error getting the image from lvldb")
-	image, ok := i.(database.ImageLvlDB)
+	if err != nil && err != database.ErrNotFound {
+		common.FatalIfErr(err, "There was an error getting the image from lvldb")
+	}
+	image, ok := i.(*database.ImageLvlDB)
 	return image, ok
 }
 
@@ -92,6 +94,6 @@ func removeImageFromDocker(imgID string) {
 }
 
 func removeImageFromDB(imgID string) {
-	err := database.GetDB().Model(database.ImageLvlDB{}).Delete([]byte(imgID))
+	err := database.GetDB().Model(&database.ImageLvlDB{}).Delete([]byte(imgID))
 	common.FatalIfErr(err, "There was an error deleting the image from lvldb")
 }

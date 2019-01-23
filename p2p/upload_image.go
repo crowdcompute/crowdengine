@@ -123,7 +123,7 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 		return
 	}
 
-	p.storeImgDataToDB(imageID, hash, signature)
+	p.storeImageToDB(imageID, hash, signature)
 	p.createSendResponse(s.Conn().RemotePeer(), imageID)
 }
 
@@ -136,11 +136,9 @@ func readMetadataFromStream(s inet.Stream) (int64, string, string, string) {
 
 	s.Read(bufferFileSize)
 	fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), ":"), 10, 64)
-	log.Println(fileSize)
 
 	s.Read(bufferFileName)
 	fileName := strings.Trim(string(bufferFileName), ":")
-	log.Println(fileName)
 
 	s.Read(bufferSignature)
 	signature := strings.Trim(string(bufferSignature), ":")
@@ -221,9 +219,9 @@ func getImageSummaryFromTag(tag string) types.ImageSummary {
 	return res[0] // we know that docker tag is unique thus returning only one summary
 }
 
-// storeImgDataToDB stores the new image's data to our level DB
-func (p *UploadImageProtocol) storeImgDataToDB(imageID string, hash string, signature string) {
-	image := database.ImageLvlDB{Hash: hash, Signature: signature, CreatedTime: time.Now().Unix()}
+// storeImageToDB stores the new image's data to our level DB
+func (p *UploadImageProtocol) storeImageToDB(imageID string, hash string, signature string) {
+	image := &database.ImageLvlDB{Hash: hash, Signature: signature, CreatedTime: time.Now().Unix()}
 	database.GetDB().Model(image).Put([]byte(imageID))
 }
 

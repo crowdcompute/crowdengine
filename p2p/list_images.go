@@ -99,11 +99,11 @@ func (p *ListImagesProtocol) listImages(publicKey string) ([]types.ImageSummary,
 	pub, err := crypto.RestorePubKey(pubKey)
 
 	for _, img := range summaries {
-		image := database.ImageLvlDB{}
+		image := &database.ImageLvlDB{}
 		imgID := strings.Replace(img.ID, "sha256:", "", -1)
 		i, err := database.GetDB().Model(image).Get([]byte(imgID))
 
-		image, ok := i.(database.ImageLvlDB)
+		image, ok := i.(*database.ImageLvlDB)
 		if !ok {
 			continue
 		}
