@@ -50,3 +50,6 @@ const HashLength int = 100
 
 // RemoveImagesInterval represents the time interval to check for removing images
 const RemoveImagesInterval time.Duration = time.Second * 10
+
+// ContainerRunInterval represents the time interval to check whether a container has finished running
+const ContainerRunInterval time.Duration = time.Second * 3

@@ -22,13 +22,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/crowdcompute/crowdengine/crypto"
 	"github.com/crowdcompute/crowdengine/log"
 
-	"github.com/crowdcompute/crowdengine/crypto"
 	"github.com/crowdcompute/crowdengine/database"
 	"github.com/crowdcompute/crowdengine/manager"
 	api "github.com/crowdcompute/crowdengine/p2p/protomsgs"
 	"github.com/docker/docker/api/types"
+	libp2pcrypto "github.com/libp2p/go-libp2p-crypto"
 	host "github.com/libp2p/go-libp2p-host"
 	inet "github.com/libp2p/go-libp2p-net"
 	peer "github.com/libp2p/go-libp2p-peer"
@@ -75,7 +76,7 @@ func (p *ListImagesProtocol) onListRequest(s inet.Stream) {
 		return
 	}
 
-	imgSummaries, err := p.listImages(data.PubKey)
+	imgSummaries, err := p.listImagesForUser(data.PubKey)
 	if err != nil {
 		log.Printf("Could not List images. Error : ", err)
 		return
@@ -89,47 +90,72 @@ func (p *ListImagesProtocol) onListRequest(s inet.Stream) {
 	p.createSendResponse(s.Conn().RemotePeer(), string(imgSummariesBytes))
 }
 
-func (p *ListImagesProtocol) listImages(publicKey string) ([]types.ImageSummary, error) {
+// listImagesForUser list images for the user with the specific publicKey
+func (p *ListImagesProtocol) listImagesForUser(publicKey string) ([]types.ImageSummary, error) {
 	imgSummaries := make([]types.ImageSummary, 0)
-	summaries, err := manager.GetInstance().ListImages(types.ImageListOptions{All: true})
+	allSummaries, err := manager.GetInstance().ListImages(types.ImageListOptions{All: true})
 	if err != nil {
 		return nil, fmt.Errorf("Error listing images. Error: %v", err)
 	}
-	pubKey, _ := hex.DecodeString(publicKey)
-	pub, err := crypto.RestorePubKey(pubKey)
 
-	for _, img := range summaries {
-		image := &database.ImageLvlDB{}
-		imgID := strings.Replace(img.ID, "sha256:", "", -1)
-		i, err := database.GetDB().Model(image).Get([]byte(imgID))
-
-		image, ok := i.(*database.ImageLvlDB)
-		if !ok {
-			continue
+	for _, imgSummary := range allSummaries {
+		hash, signature, err := extractImgData(imgSummary)
+		if err != nil {
+			return nil, err
 		}
-		// If the image was found
-		if err == nil {
-			hashBytes, err := hex.DecodeString(image.Hash)
-			if err != nil {
-				log.Println(err, "Error decoding hash")
-				return nil, err
-			}
-			signedBytes, err := hex.DecodeString(image.Signature)
-			if err != nil {
-				log.Println(err, "Error decoding signature")
-				return nil, err
-			}
-			verification, err := pub.Verify(hashBytes, signedBytes)
-			if err != nil {
-				log.Println(err, "Error authenticating data")
-				return nil, err
-			}
-			if verification {
-				imgSummaries = append(imgSummaries, img)
-			}
+		if ok, err := verifyUser(publicKey, hash, signature); ok && err != nil {
+			imgSummaries = append(imgSummaries, imgSummary)
+		} else if err != nil {
+			return nil, err
 		}
 	}
 	return imgSummaries, nil
+}
+
+func extractImgData(imgSummary types.ImageSummary) ([]byte, []byte, error) {
+	imgID := strings.Replace(imgSummary.ID, "sha256:", "", -1)
+	if image, err := getImageFromDB(imgID); err == nil {
+		hashBytes, err := hex.DecodeString(image.Hash)
+		if err != nil {
+			return nil, nil, err
+		}
+		signedBytes, err := hex.DecodeString(image.Signature)
+		if err != nil {
+			return nil, nil, err
+		}
+		return hashBytes, signedBytes, err
+	} else {
+		return nil, nil, err
+	}
+}
+
+func getImageFromDB(imgID string) (*database.ImageLvlDB, error) {
+	image := &database.ImageLvlDB{}
+	i, err := database.GetDB().Model(image).Get([]byte(imgID))
+	if err != nil && err != database.ErrNotFound {
+		return nil, fmt.Errorf("There was an error getting the image from lvldb")
+	}
+	image = i.(*database.ImageLvlDB)
+	return image, nil
+}
+func verifyUser(publicKey string, hash []byte, signature []byte) (bool, error) {
+	pub, err := getPubKey(publicKey)
+	if err != nil {
+		return false, err
+	}
+	verification, err := pub.Verify(hash, signature)
+	if err != nil {
+		return verification, err
+	}
+	return verification, err
+}
+
+func getPubKey(publicKey string) (libp2pcrypto.PubKey, error) {
+	pubKey, err := hex.DecodeString(publicKey)
+	if err != nil {
+		return nil, err
+	}
+	return crypto.RestorePubKey(pubKey)
 }
 
 // Create and send a response to the toPeer note
