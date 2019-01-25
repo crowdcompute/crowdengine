@@ -139,9 +139,7 @@ func (p *TaskProtocol) createSendResponse(toPeer peer.ID, response string) bool 
 
 // Start tracking jobs' status
 func (p *TaskProtocol) waitForJobToFinish(containerID string) {
-	log.Println("start task status tracking")
-	// TODO: Time has to be a const somewhere
-	ticker := time.NewTicker(common.ContainerRunInterval)
+	ticker := time.NewTicker(common.ContainerCheckInterval)
 	defer ticker.Stop()
 
 	for {
