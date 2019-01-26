@@ -66,24 +66,26 @@ func NewSwarmProtocol(p2pHost host.Host, managerIP string) *SwarmProtocol {
 	return p
 }
 
-// SendJoinToPeersAndWait sends a join swarm request to it's peers
-// And waits until taskReplicas nodes are connected
-func (p *SwarmProtocol) SendJoinToPeersAndWait(taskReplicas int) {
-	log.Println("Sending Join to my connected peers")
-	// TODO: Change the logic for sending Join requests to peers
-	//       Need to pass the libp2p IDs as parameters (a discovery has to happen first)
-	//       instead of neighbours
-	peers := p.p2pHost.Peerstore().Peers()
-	for _, nodeAddr := range peers {
-		if p.p2pHost.ID() != nodeAddr {
-			p.Join(nodeAddr)
+// SendJoinToPeersAndWait sends a join swarm request to <nodes>
+// And waits until <len(nodes)> nodes are connected
+func (p *SwarmProtocol) SendJoinToPeersAndWait(nodes []string) {
+	log.Println("Sending Join to the given peers...")
+	for _, peerID := range nodes {
+		if pID := libp2pID(peerID); p.p2pHost.ID() != pID { // exclude current node's ID
+			p.Join(pID)
 		}
 	}
-	for i := 0; i < taskReplicas; i++ {
+	for i := 0; i < len(nodes); i++ {
 		<-p.done
 		log.Print("One node joined just now!")
 	}
 	log.Print("SWARM READY!")
+}
+
+func libp2pID(peerID string) peer.ID {
+	pID, err := peer.IDB58Decode(peerID)
+	common.FatalIfErr(err, fmt.Sprintln("Could not decode this peer ID : ", peerID))
+	return pID
 }
 
 // Join sends a join Request to a specific <hostID>
@@ -239,18 +241,14 @@ func (p *SwarmProtocol) onJoinResJoined(s net.Stream) {
 
 // SendLeaveToPeersAndWait sends a leave swarm request to it's peers
 // And waits until taskReplicas nodes are connected
-func (p *SwarmProtocol) SendLeaveToPeersAndWait(taskReplicas int) {
-	log.Println("Sending Leave to my connected peers")
-	// TODO: Change the logic for sending Leave requests to peers
-	//       Need to pass the libp2p IDs as parameters (a discovery has to happen first)
-	//       instead of neighbours
-	peers := p.p2pHost.Peerstore().Peers()
-	for _, nodeAddr := range peers {
-		if p.p2pHost.ID() != nodeAddr {
-			p.Leave(nodeAddr)
+func (p *SwarmProtocol) SendLeaveToPeersAndWait(nodes []string) {
+	log.Println("Sending Leave Request to the given peers...")
+	for _, peerID := range nodes {
+		if pID := libp2pID(peerID); p.p2pHost.ID() != pID { // exclude current node's ID
+			p.Join(pID)
 		}
 	}
-	for i := 0; i < taskReplicas; i++ {
+	for i := 0; i < len(nodes); i++ {
 		<-p.done
 		log.Print("One node left just now!")
 	}

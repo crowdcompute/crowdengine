@@ -34,9 +34,8 @@ type SwarmServiceAPI struct {
 }
 
 type swarmTask struct {
-	Name     string `json:"name"`
-	Image    string `json:"image"`
-	Replicas int    `json:"replicas"`
+	Name  string `json:"name"`
+	Image string `json:"image"`
 }
 
 // NewSwarmServiceAPI creates a new RPC service with methods specific for creating a swarm service.
@@ -45,7 +44,7 @@ func NewSwarmServiceAPI(h *p2p.Host) *SwarmServiceAPI {
 }
 
 // Run initializes a swarm, makes nodes to join it, and creates a swarm service
-func (api *SwarmServiceAPI) Run(ctx context.Context, task string) error {
+func (api *SwarmServiceAPI) Run(ctx context.Context, task string, nodes []string) error {
 	t := swarmTask{}
 	json.Unmarshal([]byte(task), &t)
 	log.Println("I got this task:", t)
@@ -53,7 +52,7 @@ func (api *SwarmServiceAPI) Run(ctx context.Context, task string) error {
 	if err := api.initSwarm(); err != nil {
 		return err
 	}
-	api.host.SendJoinToPeersAndWait(t.Replicas)
+	api.host.SendJoinToPeersAndWait(nodes)
 
 	serviceID, err := createService(&t)
 	if err != nil {
@@ -106,11 +105,11 @@ func createService(task *swarmTask) (string, error) {
 	return serviceCreateRes.ID, nil
 }
 
-// Stop stops a swarm,
-func (api *SwarmServiceAPI) Stop(ctx context.Context) error {
+// Stop makes all nodes involved to leave the swarm
+func (api *SwarmServiceAPI) Stop(ctx context.Context, nodes []string) error {
 	if _, err := manager.GetInstance().LeaveSwarm(); err != nil {
 		return err
 	}
-	api.host.SendLeaveToPeersAndWait(1)
+	api.host.SendLeaveToPeersAndWait(nodes)
 	return nil
 }
