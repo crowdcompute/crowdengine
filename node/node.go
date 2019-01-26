@@ -25,8 +25,6 @@ import (
 
 	"github.com/crowdcompute/crowdengine/log"
 
-	"github.com/crowdcompute/crowdengine/fileserver"
-
 	"github.com/crowdcompute/crowdengine/cmd/gocc/config"
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/database"
@@ -77,7 +75,6 @@ func (n *Node) Start(ctx *cli.Context) error {
 	if n.cfg.RPC.Enabled {
 		if n.cfg.RPC.HTTP.Enabled {
 			go n.StartHTTP()
-			go n.StartFileServer()
 		}
 		if n.cfg.RPC.Websocket.Enabled {
 			n.StartWebSocket()
@@ -136,6 +133,7 @@ func (n *Node) StartHTTP() {
 	}
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("/", server.ServeHTTP)
+	serveMux.HandleFunc("/upload", ccrpc.ServeHTTP)
 
 	httpAddr := fmt.Sprintf("%s:%d", n.cfg.RPC.HTTP.ListenAddress, n.cfg.RPC.HTTP.ListenPort)
 	log.Fatal(http.ListenAndServe(httpAddr, serveMux))
@@ -153,12 +151,4 @@ func (n *Node) StartWebSocket() {
 
 	addrWS := fmt.Sprintf("%s:%d", n.cfg.RPC.Websocket.ListenAddress, n.cfg.RPC.Websocket.ListenPort)
 	log.Fatal(http.ListenAndServe(addrWS, serveMux))
-}
-
-// StartFileServer starts a file server
-func (n *Node) StartFileServer() {
-	serveMux := http.NewServeMux()
-	log.Printf("Starting upload file server...\n")
-	serveMux.HandleFunc("/upload", fileserver.ServeHTTP)
-	log.Fatal(http.ListenAndServe(*httpFileServerAddr, serveMux))
 }
