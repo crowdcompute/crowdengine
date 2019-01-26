@@ -51,6 +51,10 @@ func (api *DiscoveryAPI) Discover(ctx context.Context, numberOfNodes int) ([]str
 		select {
 		case nodeID := <-api.host.NodeIDchan:
 			nodeIDs = append(nodeIDs, nodeID.Pretty())
+			log.Println("Found all requested nodes: ", nodeIDs)
+			if len(nodeIDs) == numberOfNodes {
+				return nodeIDs, nil
+			}
 		case <-time.After(common.DiscoveryTimeout):
 			log.Printf("Discovery timed out. Found %d nodes.", len(nodeIDs))
 			log.Println("Found only these nodes: ", nodeIDs)

@@ -83,7 +83,6 @@ func (p *DiscoveryProtocol) onNotify() {
 }
 
 // InitializeReturnChan initializes the channel
-// TODO: change return data logic maybe?
 func (p *DiscoveryProtocol) InitializeReturnChan(numberOfNodes int) {
 	p.NodeIDchan = make(chan peer.ID, numberOfNodes)
 }
@@ -173,6 +172,7 @@ func (p *DiscoveryProtocol) onDiscoveryRequest(s inet.Stream) {
 	}
 
 	// Pass this message to my neighbours
+	// TODO: need to find a way to stop the discovery forwarding if the nodes request were received!
 	p.ForwardMsgToPeers(data, s.Conn().RemotePeer())
 
 	// Even if there is possibility that we never send a reply to this Node (because of being busy),
@@ -202,11 +202,10 @@ func (p *DiscoveryProtocol) onDiscoveryRequest(s inet.Stream) {
 
 // NodeBusy checks if there is at least one running container then it returns true
 // This function removes finished containers as well.
-// TODO : this has to be revised
+// TODO : the logic of a busy node doesn't have to be this way
 func NodeBusy() (bool, error) {
 	containers, err := manager.GetInstance().ListContainers()
 
-	// TODO: This logic to be changed...
 	for _, container := range containers {
 		// If at least one is running then state that I am busy
 		if containerRunning(container.ID) {
@@ -285,7 +284,6 @@ func (p *DiscoveryProtocol) onDiscoveryResponse(s inet.Stream) {
 	}
 
 	discoveryPeer := s.Conn().RemotePeer()
-
 	log.Printf("%s: Received discovery response from %s. Message id:%s. Message: %s.", s.Conn().LocalPeer(), discoveryPeer, data.DiscoveryMsgData.MessageData.Id, data.Message)
 	p.NodeIDchan <- discoveryPeer
 }
