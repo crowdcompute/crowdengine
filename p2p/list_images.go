@@ -138,6 +138,7 @@ func getImageFromDB(imgID string) (*database.ImageLvlDB, error) {
 	image = i.(*database.ImageLvlDB)
 	return image, nil
 }
+
 func verifyUser(publicKey string, hash []byte, signature []byte) (bool, error) {
 	pub, err := getPubKey(publicKey)
 	if err != nil {

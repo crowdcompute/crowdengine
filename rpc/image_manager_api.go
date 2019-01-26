@@ -19,10 +19,13 @@ package rpc
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"os"
 	"strconv"
+	"time"
 
+	"github.com/crowdcompute/crowdengine/database"
 	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/common"
@@ -33,18 +36,17 @@ import (
 
 // ImageManagerAPI represents the image manager RPC API
 type ImageManagerAPI struct {
-	host   *p2p.Host
-	images map[string][]byte // image hash -> signature
+	host *p2p.Host
 }
 
 // NewImageManagerAPI creates a new RPC service with methods specific for managing docker images & containers.
 func NewImageManagerAPI(h *p2p.Host) *ImageManagerAPI {
 	return &ImageManagerAPI{
 		host: h,
-		// TODO: NOT SURE IF THIS IS A GOOD IDEA
-		images: make(map[string][]byte),
 	}
 }
+
+// TODO: THIS WHOLE LOGIC OF UPLOADING IMAGES NEEDS FURTHER CONSIDERATION
 
 // UploadImage hashes an image and stores its signature on the hash
 // TODO: This will change in the future and authorization + token will be used instead of privaty key passed
@@ -60,8 +62,15 @@ func (api *ImageManagerAPI) UploadImage(ctx context.Context, imageFilePath strin
 	defer file.Close()
 	hash := crypto.HashFile(file)
 	sign, err := priv.Sign(hash)
-	api.images[hex.EncodeToString(hash)] = sign
+
+	storeImageToDB(hex.EncodeToString(hash), hex.EncodeToString(sign))
 	return err
+}
+
+// storeImageToDB stores the new image's data to our level DB
+func storeImageToDB(hash string, signature string) {
+	image := &database.ImageAccount{Signature: signature, CreatedTime: time.Now().Unix()}
+	database.GetDB().Model(image).Put([]byte(hash))
 }
 
 // PushImage is the API call to push an image to the peer peerID
@@ -93,15 +102,27 @@ func (api *ImageManagerAPI) getFileData(imageFilePath string) (*os.File, string,
 	fileNameFilled := common.FillString(fileInfo.Name(), common.FileNameLength)
 	log.Println("fileSize: ", fileSizeFilled)
 	log.Println("fileName: ", fileNameFilled)
+
 	hashedFile, _ := crypto.HashFilePath(imageFilePath)
 	hash := hex.EncodeToString(hashedFile)
-	signature := hex.EncodeToString(api.images[hash])
-	signatureFilled := common.FillString(signature, common.SignatureLength)
+	img, err := getImageFromDB(hash)
+
+	signatureFilled := common.FillString(img.Signature, common.SignatureLength)
 	hashFilled := common.FillString(hash, common.HashLength)
 	log.Println("filledSignature: ", signatureFilled)
 	log.Println("filledHash: ", hashFilled)
 
 	return file, fileSizeFilled, fileNameFilled, signatureFilled, hashFilled, err
+}
+
+func getImageFromDB(hash string) (*database.ImageAccount, error) {
+	image := &database.ImageAccount{}
+	i, err := database.GetDB().Model(image).Get([]byte(hash))
+	if err != nil && err != database.ErrNotFound {
+		return nil, fmt.Errorf("There was an error getting the image from lvldb")
+	}
+	image = i.(*database.ImageAccount)
+	return image, nil
 }
 
 // sendFileMetadata sends the size, name, hash and signature to the peer through the opened stream
