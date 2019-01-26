@@ -17,8 +17,6 @@
 package node
 
 import (
-	"errors"
-	"flag"
 	"fmt"
 	"net/http"
 	"sync"
@@ -33,12 +31,6 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/ethereum/go-ethereum/rpc"
-)
-
-var (
-	errNodeStarted      = errors.New("node: already started")
-	errImageStoreExists = errors.New("Unable to create a new Image Store")
-	httpFileServerAddr  = flag.String("httpFileServerAddr", "localhost:8081", "http file server address")
 )
 
 // Node represents a node
