@@ -47,7 +47,6 @@ func PruneImages(quit <-chan struct{}) {
 // RemoveImages removes all images that got expired
 // This is a goroutine
 func RemoveImages() {
-	log.Println("Checking if there are images to be removed...")
 	summaries, err := manager.GetInstance().ListImages(types.ImageListOptions{All: true})
 	if err != nil {
 		log.Println("There is an error listing images. Stopped checking for expired images... Error : ", err)
