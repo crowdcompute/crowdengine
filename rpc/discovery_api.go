@@ -38,7 +38,7 @@ func NewDiscoveryAPI(h *p2p.Host) *DiscoveryAPI {
 // Discover returns a slice of node IDs in the number of the given numberOfNodes
 func (api *DiscoveryAPI) Discover(ctx context.Context, numberOfNodes int) ([]string, error) {
 	peerID := api.host.P2PHost.ID().Pretty()
-	api.host.InitializeReturnChan(numberOfNodes)
+	api.host.InitializeDiscovery(numberOfNodes)
 	initialRequest, err := api.host.GetInitialDiscoveryReq(peerID)
 	if err != nil {
 		return nil, err
@@ -51,13 +51,15 @@ func (api *DiscoveryAPI) Discover(ctx context.Context, numberOfNodes int) ([]str
 		select {
 		case nodeID := <-api.host.NodeIDchan:
 			nodeIDs = append(nodeIDs, nodeID.Pretty())
-			log.Println("Found all requested nodes: ", nodeIDs)
 			if len(nodeIDs) == numberOfNodes {
+				log.Println("Found all requested nodes: ", nodeIDs)
+				api.host.TerminateDiscovery = true
 				return nodeIDs, nil
 			}
 		case <-time.After(common.DiscoveryTimeout):
 			log.Printf("Discovery timed out. Found %d nodes.", len(nodeIDs))
 			log.Println("Found only these nodes: ", nodeIDs)
+			api.host.TerminateDiscovery = true
 			return nodeIDs, nil
 		}
 	}

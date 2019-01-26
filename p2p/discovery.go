@@ -19,6 +19,7 @@ package p2p
 import (
 	"context"
 	"encoding/hex"
+	"sync"
 	"time"
 
 	"github.com/crowdcompute/crowdengine/log"
@@ -45,22 +46,25 @@ const discoveryResponse = "/Discovery/discoveryresp/0.0.1"
 
 // DiscoveryProtocol implements Observer interface
 type DiscoveryProtocol struct {
-	p2pHost       host.Host                          // local host
-	dht           *dht.IpfsDHT                       // local host
-	receivedMsg   map[string]uint32                  // Store all received msgs, so that we do not re-send them when received again
-	pendingReq    map[*api.DiscoveryRequest]struct{} // Store all requests that were unable to be fullfiled at the time the node was busy
-	maxPendingReq uint16                             // The maximum requests the node stores for later process
-	NodeIDchan    chan peer.ID                       // a way to return the Node ID to the main form
+	p2pHost            host.Host                          // local host
+	dht                *dht.IpfsDHT                       // local host
+	receivedMsg        map[string]uint32                  // Store all received msgs, so that we do not re-send them when received again
+	pendingReq         map[*api.DiscoveryRequest]struct{} // Store all requests that were unable to be fullfiled at the time the node was busy
+	maxPendingReq      uint16                             // The maximum requests the node stores for later process
+	NodeIDchan         chan peer.ID                       // a way to return the Node ID to the main form
+	DiscoveryCompleted bool                               // manages if the discovery was completed or not
+	mu                 sync.Mutex
 }
 
 // NewDiscoveryProtocol sets the protocol's stream handlers and returns a new DiscoveryProtocol
 func NewDiscoveryProtocol(p2pHost host.Host, dht *dht.IpfsDHT) *DiscoveryProtocol {
 	p := &DiscoveryProtocol{
-		p2pHost:       p2pHost,
-		dht:           dht,
-		receivedMsg:   make(map[string]uint32),
-		maxPendingReq: 5,
-		NodeIDchan:    nil,
+		p2pHost:            p2pHost,
+		dht:                dht,
+		receivedMsg:        make(map[string]uint32),
+		maxPendingReq:      5,
+		NodeIDchan:         nil,
+		DiscoveryCompleted: false,
 	}
 	p.pendingReq = map[*api.DiscoveryRequest]struct{}{} //p.maxPendingReq
 	// Set the handlers the node will be listening to
@@ -82,8 +86,11 @@ func (p *DiscoveryProtocol) onNotify() {
 	}
 }
 
-// InitializeReturnChan initializes the channel
-func (p *DiscoveryProtocol) InitializeReturnChan(numberOfNodes int) {
+// InitializeDiscovery initializes the channel
+func (p *DiscoveryProtocol) InitializeDiscovery(numberOfNodes int) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.DiscoveryCompleted = false
 	p.NodeIDchan = make(chan peer.ID, numberOfNodes)
 }
 
@@ -171,9 +178,10 @@ func (p *DiscoveryProtocol) onDiscoveryRequest(s inet.Stream) {
 		return
 	}
 
-	// Pass this message to my neighbours
-	// TODO: need to find a way to stop the discovery forwarding if the nodes request were received!
-	p.ForwardMsgToPeers(data, s.Conn().RemotePeer())
+	if !p.DiscoveryCompleted {
+		// Pass this message to my neighbours
+		p.ForwardMsgToPeers(data, s.Conn().RemotePeer())
+	}
 
 	// Even if there is possibility that we never send a reply to this Node (because of being busy),
 	// we still store it our our Peerstore, because there is high possibility to
@@ -274,6 +282,12 @@ func (p *DiscoveryProtocol) dhtFindAddrAndStore(initPeerID peer.ID) error {
 
 // onDiscoveryResponse is a discovery response stream handler
 func (p *DiscoveryProtocol) onDiscoveryResponse(s inet.Stream) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	// If discovery request was completed discard all responses
+	if p.DiscoveryCompleted {
+		return
+	}
 	data := &api.DiscoveryResponse{}
 	decodeProtoMessage(data, s)
 
