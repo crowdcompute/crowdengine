@@ -18,10 +18,7 @@ package rpc
 
 import (
 	"context"
-	"time"
 
-	"github.com/crowdcompute/crowdengine/common"
-	"github.com/crowdcompute/crowdengine/log"
 	"github.com/crowdcompute/crowdengine/p2p"
 )
 
@@ -36,28 +33,15 @@ func NewDiscoveryAPI(h *p2p.Host) *DiscoveryAPI {
 }
 
 // Discover returns a slice of node IDs in the number of the given numberOfNodes
-func (api *DiscoveryAPI) Discover(ctx context.Context, numberOfNodes int) ([]string, error) {
-	api.host.InitializeDiscovery(numberOfNodes)
+func (api *DiscoveryAPI) Discover(ctx context.Context, numberOfNodes int) (string, error) {
 	initialRequest, err := api.host.GetInitialDiscoveryReq()
 	if err != nil {
-		return nil, err
+		return "There was an error", err
 	}
+	// TODO: InitHash is a temporary solution for the public key.
+	api.host.InitializeDiscovery(initialRequest.DiscoveryMsgData.InitHash, numberOfNodes)
 	// No neighbour sent me this message, that's why the empty string as a second parameter
 	api.host.ForwardMsgToPeers(initialRequest, "")
 
-	nodeIDs := make([]string, 0)
-	for {
-		select {
-		case nodeID := <-api.host.NodeIDchan:
-			nodeIDs = append(nodeIDs, nodeID.Pretty())
-			if len(nodeIDs) == numberOfNodes {
-				log.Println("Found all requested nodes: ", nodeIDs)
-				return nodeIDs, nil
-			}
-		case <-time.After(common.DiscoveryTimeout):
-			log.Printf("Discovery timed out. Found %d nodes.", len(nodeIDs))
-			log.Println("Found only these nodes: ", nodeIDs)
-			return nodeIDs, nil
-		}
-	}
+	return "Discovering nodes...", nil
 }

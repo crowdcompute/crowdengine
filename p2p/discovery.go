@@ -51,7 +51,7 @@ type DiscoveryProtocol struct {
 	receivedMsg   map[string]uint32                  // Store all received msgs, so that we do not re-send them when received again
 	pendingReq    map[*api.DiscoveryRequest]struct{} // Store all requests that were unable to be fullfiled at the time the node was busy
 	maxPendingReq uint16                             // The maximum requests the node stores for later process
-	NodeIDchan    chan peer.ID                       // a way to return the Node ID to the main form
+	NodeIDs       map[string][]string                // Stores the Node IDs of each public Key account
 	mu            sync.Mutex
 }
 
@@ -62,7 +62,7 @@ func NewDiscoveryProtocol(p2pHost host.Host, dht *dht.IpfsDHT) *DiscoveryProtoco
 		dht:           dht,
 		receivedMsg:   make(map[string]uint32),
 		maxPendingReq: 5,
-		NodeIDchan:    nil,
+		NodeIDs:       make(map[string][]string),
 	}
 	p.pendingReq = map[*api.DiscoveryRequest]struct{}{} //p.maxPendingReq
 	// Set the handlers the node will be listening to
@@ -84,11 +84,11 @@ func (p *DiscoveryProtocol) onNotify() {
 	}
 }
 
-// InitializeDiscovery initializes the channel
-func (p *DiscoveryProtocol) InitializeDiscovery(numberOfNodes int) {
+// InitializeDiscovery initializes the discovery.
+func (p *DiscoveryProtocol) InitializeDiscovery(pubKey string, numberOfNodes int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.NodeIDchan = make(chan peer.ID, numberOfNodes)
+	p.NodeIDs[pubKey] = make([]string, numberOfNodes)
 }
 
 // GetInitialDiscoveryReq initializes the msg request that will be forwarded along the network
@@ -106,10 +106,12 @@ func (p *DiscoveryProtocol) GetInitialDiscoveryReq() (*api.DiscoveryRequest, err
 		return nil, err
 	}
 	req.DiscoveryMsgData.InitHash = hex.EncodeToString(hash)
+	log.Println("req.DiscoveryMsgData.InitHash: ", req.DiscoveryMsgData.InitHash)
 	p.setTTLForDiscReq(req, common.TTLmsg)
 	return req, err
 }
 
+// setTTLForDiscReq is setting the discovery request's TTL. This is when the message will get expired
 func (p *DiscoveryProtocol) setTTLForDiscReq(req *api.DiscoveryRequest, ttl time.Duration) {
 	req.DiscoveryMsgData.TTL = uint32(ttl)
 	req.DiscoveryMsgData.Expiry = uint32(time.Now().Add(ttl).Unix())
@@ -130,6 +132,7 @@ func (p *DiscoveryProtocol) copyNewDiscoveryRequest(request *api.DiscoveryReques
 	req.DiscoveryMsgData.TTL = request.DiscoveryMsgData.TTL
 	req.DiscoveryMsgData.Expiry = request.DiscoveryMsgData.Expiry
 	req.DiscoveryMsgData.InitHash = request.DiscoveryMsgData.InitHash
+	log.Println("COPYING: ", req.DiscoveryMsgData.InitHash)
 
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
 	req.DiscoveryMsgData.MessageData.Sign = signProtoMsg(req, key)
@@ -230,6 +233,7 @@ func (p *DiscoveryProtocol) createSendResponse(data *api.DiscoveryRequest) bool 
 	resp := &api.DiscoveryResponse{DiscoveryMsgData: NewDiscoveryMsgData(data.DiscoveryMsgData.MessageData.Id, false, p.p2pHost),
 		Message: api.DiscoveryMessage_DiscoveryRes}
 
+	resp.DiscoveryMsgData.InitHash = data.DiscoveryMsgData.InitHash
 	// sign the data
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
 	resp.DiscoveryMsgData.MessageData.Sign = signProtoMsg(resp, key)
@@ -278,8 +282,6 @@ func (p *DiscoveryProtocol) dhtFindAddrAndStore(initPeerID peer.ID) error {
 
 // onDiscoveryResponse is a discovery response stream handler
 func (p *DiscoveryProtocol) onDiscoveryResponse(s inet.Stream) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
 	data := &api.DiscoveryResponse{}
 	decodeProtoMessage(data, s)
 
@@ -290,8 +292,13 @@ func (p *DiscoveryProtocol) onDiscoveryResponse(s inet.Stream) {
 	}
 
 	discoveryPeer := s.Conn().RemotePeer()
+	pubKey := data.DiscoveryMsgData.InitHash // TODO: InitHash is a temporary solution for the public key.
+	log.Println("pubKey: ", pubKey)
+	p.mu.Lock()
+	p.NodeIDs[pubKey] = append(p.NodeIDs[pubKey], discoveryPeer.Pretty())
+	p.mu.Unlock()
+
 	log.Printf("%s: Received discovery response from %s. Message id:%s. Message: %s.", s.Conn().LocalPeer(), discoveryPeer, data.DiscoveryMsgData.MessageData.Id, data.Message)
-	p.NodeIDchan <- discoveryPeer
 }
 
 // DeleteDiscoveryMsgs checks for expired received messages
