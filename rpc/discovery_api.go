@@ -38,7 +38,7 @@ func (api *DiscoveryAPI) Discover(ctx context.Context, numberOfNodes int) (strin
 	if err != nil {
 		return "There was an error", err
 	}
-	// TODO: InitHash is a temporary solution for the public key.
+	// TODO: InitHash is a temporary solution. Should be the public key instead.
 	api.host.InitializeDiscovery(initialRequest.DiscoveryMsgData.InitHash, numberOfNodes)
 	// No neighbour sent me this message, that's why the empty string as a second parameter
 	api.host.ForwardMsgToPeers(initialRequest, "")

@@ -87,8 +87,8 @@ func (p *DiscoveryProtocol) onNotify() {
 // InitializeDiscovery initializes the discovery.
 func (p *DiscoveryProtocol) InitializeDiscovery(pubKey string, numberOfNodes int) {
 	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.NodeIDs[pubKey] = make([]string, numberOfNodes)
+	p.NodeIDs[pubKey] = make([]string, 0, numberOfNodes)
+	p.mu.Unlock()
 }
 
 // GetInitialDiscoveryReq initializes the msg request that will be forwarded along the network
@@ -296,6 +296,10 @@ func (p *DiscoveryProtocol) onDiscoveryResponse(s inet.Stream) {
 	log.Println("pubKey: ", pubKey)
 	p.mu.Lock()
 	p.NodeIDs[pubKey] = append(p.NodeIDs[pubKey], discoveryPeer.Pretty())
+	if len(p.NodeIDs[pubKey]) == cap(p.NodeIDs[pubKey]) {
+		// TODO: Return the nodes as an event here
+		// TODO: Remove the key of this map
+	}
 	p.mu.Unlock()
 
 	log.Printf("%s: Received discovery response from %s. Message id:%s. Message: %s.", s.Conn().LocalPeer(), discoveryPeer, data.DiscoveryMsgData.MessageData.Id, data.Message)
