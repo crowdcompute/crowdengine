@@ -37,9 +37,8 @@ func NewDiscoveryAPI(h *p2p.Host) *DiscoveryAPI {
 
 // Discover returns a slice of node IDs in the number of the given numberOfNodes
 func (api *DiscoveryAPI) Discover(ctx context.Context, numberOfNodes int) ([]string, error) {
-	peerID := api.host.P2PHost.ID().Pretty()
 	api.host.InitializeDiscovery(numberOfNodes)
-	initialRequest, err := api.host.GetInitialDiscoveryReq(peerID)
+	initialRequest, err := api.host.GetInitialDiscoveryReq()
 	if err != nil {
 		return nil, err
 	}

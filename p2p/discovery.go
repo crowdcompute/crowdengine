@@ -98,11 +98,12 @@ func (p *DiscoveryProtocol) InitializeDiscovery(numberOfNodes int) {
 // Sets the ID of the node that initiated the discovery request
 // Sets the unique hash of the msg request
 // Sets the TTL & expiry time of the msg request
-func (p *DiscoveryProtocol) GetInitialDiscoveryReq(initNodeID string) (*api.DiscoveryRequest, error) {
+func (p *DiscoveryProtocol) GetInitialDiscoveryReq() (*api.DiscoveryRequest, error) {
 	req := &api.DiscoveryRequest{DiscoveryMsgData: NewDiscoveryMsgData(uuid.Must(uuid.NewV4(), nil).String(), true, p.p2pHost),
 		Message: api.DiscoveryMessage_DiscoveryReq}
 
-	req.DiscoveryMsgData.InitNodeID = initNodeID
+	// The node initilizing this request is the init Node
+	req.DiscoveryMsgData.InitNodeID = p.p2pHost.ID().Pretty()
 	hash, err := crypto.HashProtoMsg(req)
 	if err != nil {
 		return nil, err
