@@ -53,3 +53,6 @@ const RemoveImagesInterval time.Duration = time.Second * 10
 
 // ContainerCheckInterval represents the time interval to check whether a container has finished running
 const ContainerCheckInterval time.Duration = time.Second * 3
+
+// DiscoveryTimeout represents the time to wait for
+const DiscoveryTimeout time.Duration = time.Second * 10
