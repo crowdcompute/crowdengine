@@ -49,19 +49,17 @@ func NewNode(cfg *config.GlobalConfig) (*Node, error) {
 		cfg:  cfg,
 		quit: make(chan struct{}),
 	}
-	host, err := p2p.NewHost(cfg.P2P.ListenPort, cfg.P2P.ListenAddress, cfg.P2P.Bootstraper.Nodes)
+	host, err := p2p.NewHost(cfg)
 	n.host = host
 	return n, err
 }
 
 // Start starts a node instance & listens to RPC calls if the flag is set
 func (n *Node) Start(ctx *cli.Context) error {
-	err := errNodeStarted
 	n.startOnce.Do(func() {
 		// TODO: Only if worker node run these two
 		go n.host.DeleteDiscoveryMsgs(n.quit)
 		go PruneImages(n.quit)
-		err = nil // clear error above, only once.
 	})
 
 	if n.cfg.RPC.Enabled {
@@ -74,8 +72,6 @@ func (n *Node) Start(ctx *cli.Context) error {
 	}
 
 	select {}
-
-	return err
 }
 
 // Stop is closing down everything that the node started
@@ -104,7 +100,7 @@ func (n *Node) apis() []rpc.API {
 		{
 			Namespace: "service",
 			Version:   "1.0",
-			Service:   ccrpc.NewSwarmServiceAPI(n.host),
+			Service:   ccrpc.NewSwarmServiceAPI(n.host, &n.cfg.Host.DockerSwarm),
 			Public:    true,
 		},
 		{

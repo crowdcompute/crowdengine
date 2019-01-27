@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/crowdcompute/crowdengine/cmd/gocc/config"
 	"github.com/crowdcompute/crowdengine/log"
 
 	ds "github.com/ipfs/go-datastore"
@@ -40,6 +41,7 @@ type Host struct {
 	dht      *dht.IpfsDHT
 	IP       string
 	FullAddr string
+	cfg      *config.GlobalConfig
 
 	*SwarmProtocol
 	*TaskProtocol
@@ -50,17 +52,20 @@ type Host struct {
 }
 
 // NewHost creates a new Host
-func NewHost(port int, IP string, bootnodes []string) (*Host, error) {
-	host := &Host{IP: IP}
-	err := host.makeRandomHost(port, IP)
+func NewHost(cfg *config.GlobalConfig) (*Host, error) {
+	nodes := cfg.P2P.Bootstraper.Nodes
+	ip := cfg.P2P.ListenAddress
+	port := cfg.P2P.ListenPort
+	host := &Host{IP: ip, cfg: cfg}
+	err := host.makeRandomHost(port, ip)
 	if err != nil {
 		return nil, err
 	}
-	if len(bootnodes) > 0 {
-		err = host.ConnectWithNodes(bootnodes)
+	if len(nodes) > 0 {
+		err = host.ConnectWithNodes(nodes)
 	}
 	log.Print("Here is my p2p ID: ")
-	host.FullAddr = fmt.Sprintf("/ip4/%s/tcp/%d/ipfs/%s", IP, port, host.P2PHost.ID().Pretty())
+	host.FullAddr = fmt.Sprintf("/ip4/%s/tcp/%d/ipfs/%s", ip, port, host.P2PHost.ID().Pretty())
 	log.Println(host.FullAddr)
 	host.registerProtocols()
 	return host, err
@@ -68,7 +73,7 @@ func NewHost(port int, IP string, bootnodes []string) (*Host, error) {
 
 // registerProtocols registers all protocols for the node
 func (h *Host) registerProtocols() {
-	h.SwarmProtocol = NewSwarmProtocol(h.P2PHost, h.IP)
+	h.SwarmProtocol = NewSwarmProtocol(h.P2PHost, h.IP, &h.cfg.Host.DockerSwarm)
 	h.DiscoveryProtocol = NewDiscoveryProtocol(h.P2PHost, h.dht)
 	h.TaskProtocol = NewTaskProtocol(h.P2PHost)
 	// Registering the Observer that wants to get notified when the task is done.

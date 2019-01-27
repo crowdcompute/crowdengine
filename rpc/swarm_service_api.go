@@ -19,7 +19,9 @@ package rpc
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
+	"github.com/crowdcompute/crowdengine/cmd/gocc/config"
 	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/manager"
@@ -31,6 +33,7 @@ import (
 // SwarmServiceAPI ...
 type SwarmServiceAPI struct {
 	host *p2p.Host
+	cfg  *config.DockerSwarm
 }
 
 type swarmTask struct {
@@ -39,8 +42,8 @@ type swarmTask struct {
 }
 
 // NewSwarmServiceAPI creates a new RPC service with methods specific for creating a swarm service.
-func NewSwarmServiceAPI(h *p2p.Host) *SwarmServiceAPI {
-	return &SwarmServiceAPI{host: h}
+func NewSwarmServiceAPI(h *p2p.Host, cfg *config.DockerSwarm) *SwarmServiceAPI {
+	return &SwarmServiceAPI{host: h, cfg: cfg}
 }
 
 // Run initializes a swarm, makes nodes to join it, and creates a swarm service
@@ -66,7 +69,8 @@ func (api *SwarmServiceAPI) Run(ctx context.Context, task string, nodes []string
 // initSwarm initializes a docker Swarm and stores the swarm's worker & manager
 // tokens in memory
 func (api *SwarmServiceAPI) initSwarm() error {
-	_, err := manager.GetInstance().InitSwarm(api.host.IP, "0.0.0.0:2377")
+	swarmListen := fmt.Sprintf("%s:%d", api.cfg.ListenAddress, api.cfg.ListenPort)
+	_, err := manager.GetInstance().InitSwarm(api.host.IP, swarmListen)
 	if err != nil {
 		return err
 	}

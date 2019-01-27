@@ -31,10 +31,17 @@ type Host struct {
 	GPUPerContainer     int
 	MemoryPerContainer  int
 	StoragePerContainer int
+	DockerSwarm         DockerSwarm
 
 	Network struct {
 		IP string
 	}
+}
+
+// DockerSwarm configuration.
+type DockerSwarm struct {
+	ListenAddress string
+	ListenPort    int
 }
 
 // RPC related configuration

@@ -75,6 +75,18 @@ var (
 		Usage: "Amount of storage available to a container",
 	}
 
+	// DockerSwarmAddrFlag defines the docker swarm's listen address
+	DockerSwarmAddrFlag = cli.StringFlag{
+		Name:  "swarmaddr",
+		Usage: "Listen address for the docker swarm",
+	}
+
+	// DockerSwarmPortFlag defines the
+	DockerSwarmPortFlag = cli.IntFlag{
+		Name:  "swarmport",
+		Usage: "Listen port number for the docker swarm",
+	}
+
 	// RPCFlag allow rpc
 	RPCFlag = cli.BoolFlag{
 		Name:  "rpc",

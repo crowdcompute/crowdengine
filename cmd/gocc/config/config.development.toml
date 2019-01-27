@@ -12,6 +12,9 @@ memory_per_container = 1024
 storage_per_container = 4096
     [host.network]
     ip = "10.0.0.1"
+    [host.dockerswarm]
+    ip = "0.0.0.0"
+    port = 2377
 
 [rpc]
 enabled = true

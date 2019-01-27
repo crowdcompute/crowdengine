@@ -41,6 +41,7 @@ func DefaultConfig() *GlobalConfig {
 			GPUPerContainer:     2,
 			MemoryPerContainer:  1024,
 			StoragePerContainer: 2048,
+			DockerSwarm:         DockerSwarm{"0.0.0.0", 2377},
 		},
 		RPC: RPC{
 			Enabled:         false,
@@ -125,6 +126,12 @@ func ApplyFlags(ctx *cli.Context, cfg *GlobalConfig) {
 
 	if ctx.GlobalIsSet(StoragePerContainerFlag.Name) {
 		cfg.Host.MemoryPerContainer = ctx.GlobalInt(StoragePerContainerFlag.Name)
+	}
+	if ctx.GlobalIsSet(DockerSwarmAddrFlag.Name) {
+		cfg.Host.DockerSwarm.ListenAddress = ctx.GlobalString(DockerSwarmAddrFlag.Name)
+	}
+	if ctx.GlobalIsSet(DockerSwarmPortFlag.Name) {
+		cfg.Host.DockerSwarm.ListenPort = ctx.GlobalInt(DockerSwarmPortFlag.Name)
 	}
 
 	// RPC
