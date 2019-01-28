@@ -109,6 +109,24 @@ func (n *Node) apis() []rpc.API {
 			Service:   ccrpc.NewBootnodesAPI(n.host),
 			Public:    true,
 		},
+		{
+			Namespace: "container",
+			Version:   "1.0",
+			Service:   new(ContainerService),
+			Public:    true,
+		},
+		{
+			Namespace: "image",
+			Version:   "1.0",
+			Service:   new(ImageService),
+			Public:    true,
+		},
+		{
+			Namespace: "swarm",
+			Version:   "1.0",
+			Service:   new(SwarmService),
+			Public:    true,
+		},
 	}
 }
 
