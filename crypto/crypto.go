@@ -25,10 +25,9 @@ import (
 
 	"github.com/crowdcompute/crowdengine/log"
 
-	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/gogo/protobuf/proto"
 	crypto "github.com/libp2p/go-libp2p-crypto"
-	gosha3 "golang.org/x/crypto/sha3"
+	sha3 "golang.org/x/crypto/sha3"
 )
 
 // KeyPair represents private/public keys and the public address
@@ -40,7 +39,7 @@ type KeyPair struct {
 
 // Sha256Hash hashes data with the sha256
 func Sha256Hash(data []byte) hash.Hash {
-	d := gosha3.New256()
+	d := sha3.New256()
 	d.Write(data)
 	return d
 }
@@ -119,9 +118,9 @@ func PublicToAddress(data []byte) string {
 	return hex.EncodeToString(Keccak256(data)[12:])
 }
 
-// Keccak256 return sha3 of a given byte array
+//Keccak256 return sha3 of a given byte array
 func Keccak256(data ...[]byte) []byte {
-	d := sha3.NewKeccak256()
+	d := sha3.NewLegacyKeccak256()
 	for _, b := range data {
 		d.Write(b)
 	}

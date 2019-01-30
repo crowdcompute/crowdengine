@@ -18,6 +18,7 @@ package log
 
 import (
 	"io"
+	"log"
 	"net"
 	"os"
 	"time"
@@ -35,7 +36,10 @@ func init() {
 	conn, connErr = d.Dial("tcp", logstashIP+":5044")
 	if connErr == nil {
 		hostname, _ := os.Hostname()
-		hook := logrustash.New(conn, logrustash.DefaultFormatter(logrus.Fields{"application": "gocc", "@node": hostname}))
+		hook, err := logrustash.NewHookWithFieldsAndConn(conn, "gocc", logrus.Fields{"@node": hostname})
+		if err != nil {
+			log.Fatalf("Logrustash couldn't create new hook...")
+		}
 		AddHook(hook)
 	}
 }
