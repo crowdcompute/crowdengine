@@ -23,11 +23,11 @@ import (
 	"strings"
 
 	"github.com/crowdcompute/crowdengine/crypto"
-	"github.com/crowdcompute/crowdengine/log"
-
 	"github.com/crowdcompute/crowdengine/database"
+	"github.com/crowdcompute/crowdengine/log"
 	"github.com/crowdcompute/crowdengine/manager"
 	api "github.com/crowdcompute/crowdengine/p2p/protomsgs"
+
 	"github.com/docker/docker/api/types"
 	libp2pcrypto "github.com/libp2p/go-libp2p-crypto"
 	host "github.com/libp2p/go-libp2p-host"
@@ -114,7 +114,7 @@ func (p *ListImagesProtocol) listImagesForUser(publicKey string) ([]types.ImageS
 
 func extractImgData(imgSummary types.ImageSummary) ([]byte, []byte, error) {
 	imgID := strings.Replace(imgSummary.ID, "sha256:", "", -1)
-	if image, err := getImageFromDB(imgID); err == nil {
+	if image, err := database.GetImageFromDB(imgID); err == nil {
 		hashBytes, err := hex.DecodeString(image.Hash)
 		if err != nil {
 			return nil, nil, err
@@ -127,16 +127,6 @@ func extractImgData(imgSummary types.ImageSummary) ([]byte, []byte, error) {
 	} else {
 		return nil, nil, err
 	}
-}
-
-func getImageFromDB(imgID string) (*database.ImageLvlDB, error) {
-	image := &database.ImageLvlDB{}
-	i, err := database.GetDB().Model(image).Get([]byte(imgID))
-	if err != nil && err != database.ErrNotFound {
-		return nil, fmt.Errorf("There was an error getting the image from lvldb")
-	}
-	image = i.(*database.ImageLvlDB)
-	return image, nil
 }
 
 func verifyUser(publicKey string, hash []byte, signature []byte) (bool, error) {

@@ -19,7 +19,6 @@ package rpc
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -105,7 +104,7 @@ func (api *ImageManagerAPI) getFileData(imageFilePath string) (*os.File, string,
 
 	hashedFile, _ := crypto.HashFilePath(imageFilePath)
 	hash := hex.EncodeToString(hashedFile)
-	img, err := getImageFromDB(hash)
+	img, err := database.GetImageAccountFromDB(hash)
 
 	signatureFilled := common.FillString(img.Signature, common.SignatureLength)
 	hashFilled := common.FillString(hash, common.HashLength)
@@ -113,16 +112,6 @@ func (api *ImageManagerAPI) getFileData(imageFilePath string) (*os.File, string,
 	log.Println("filledHash: ", hashFilled)
 
 	return file, fileSizeFilled, fileNameFilled, signatureFilled, hashFilled, err
-}
-
-func getImageFromDB(hash string) (*database.ImageAccount, error) {
-	image := &database.ImageAccount{}
-	i, err := database.GetDB().Model(image).Get([]byte(hash))
-	if err != nil && err != database.ErrNotFound {
-		return nil, fmt.Errorf("There was an error getting the image from lvldb")
-	}
-	image = i.(*database.ImageAccount)
-	return image, nil
 }
 
 // sendFileMetadata sends the size, name, hash and signature to the peer through the opened stream

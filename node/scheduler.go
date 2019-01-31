@@ -54,28 +54,21 @@ func RemoveImages() {
 	}
 	for _, imgSummary := range summaries {
 		imgID := extractImgID(imgSummary)
-		if image, ok := getImageFromDB(imgID); ok {
+		if image, err := database.GetImageFromDB(imgID); err == nil {
 			if imageExpired(image.CreatedTime) {
 				log.Println("Removing image with ID: ", imgID)
 				removeImageFromDocker(imgID)
 				removeImageFromDB(imgID)
 			}
+		} else {
+			log.Printf("Could not Get image:%s Error : %s", imgID, err)
+			return
 		}
 	}
 }
 
 func extractImgID(imgSummary types.ImageSummary) string {
 	return strings.Replace(imgSummary.ID, "sha256:", "", -1)
-}
-
-func getImageFromDB(imgID string) (*database.ImageLvlDB, bool) {
-	image := &database.ImageLvlDB{}
-	i, err := database.GetDB().Model(image).Get([]byte(imgID))
-	if err != nil && err != database.ErrNotFound {
-		common.FatalIfErr(err, "There was an error getting the image from lvldb")
-	}
-	image, ok := i.(*database.ImageLvlDB)
-	return image, ok
 }
 
 func imageExpired(createdTime int64) bool {
