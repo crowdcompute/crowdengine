@@ -19,15 +19,27 @@ package p2p
 import (
 	"testing"
 
+	"github.com/crowdcompute/crowdengine/cmd/gocc/config"
+
 	protocol "github.com/libp2p/go-libp2p-protocol"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
 	// TestHost2 has testHost1 as a peer, but not the other way around
-	testHost1 = NewHost(2000, "127.0.0.1", nil)
-	testHost2 = NewHost(2001, "127.0.0.1", []string{testHost1.FullAddr})
-	testHost3 = NewHost(2002, "127.0.0.1", nil)
+	testHost1, _ = NewHost(&config.GlobalConfig{
+		P2P: config.P2P{ListenPort: 10209, ListenAddress: "127.0.0.1"},
+	})
+	testHost2, _ = NewHost(&config.GlobalConfig{
+		P2P: config.P2P{ListenPort: 10210, ListenAddress: "127.0.0.1",
+			Bootstraper: config.Bootstraper{
+				Nodes: []string{testHost1.FullAddr},
+			},
+		},
+	})
+	testHost3, _ = NewHost(&config.GlobalConfig{
+		P2P: config.P2P{ListenPort: 10211, ListenAddress: "127.0.0.1"},
+	})
 )
 
 func TestSignAuthenticate(t *testing.T) {

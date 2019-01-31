@@ -67,7 +67,7 @@ func (p *InspectContainerProtocol) onInspectRequest(s inet.Stream) {
 	}
 	rawInspection, err := inspectContainerRaw(data.ContainerID)
 	if err != nil {
-		log.Printf("Could not inspect container. Error : ", err)
+		log.Println("Could not inspect container. Error : ", err)
 		return
 	}
 

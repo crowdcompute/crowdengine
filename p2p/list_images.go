@@ -78,7 +78,7 @@ func (p *ListImagesProtocol) onListRequest(s inet.Stream) {
 
 	imgSummaries, err := p.listImagesForUser(data.PubKey)
 	if err != nil {
-		log.Printf("Could not List images. Error : ", err)
+		log.Println("Could not List images. Error : ", err)
 		return
 	}
 	imgSummariesBytes, err := json.Marshal(imgSummaries)

@@ -49,14 +49,22 @@ func TestMsgExpired(t *testing.T) {
 
 func TestMsgReceived(t *testing.T) {
 	req := discoveryRequestMsg(testHost2.P2PHost)
-	req.DiscoveryMsgData.InitHash = hex.EncodeToString(crypto.HashProtoMsg(req))
+	hash, err := crypto.HashProtoMsg(req)
+	if err != nil {
+		t.Errorf("Failed to HashProtoMsg")
+	}
+	req.DiscoveryMsgData.InitHash = hex.EncodeToString(hash)
 	testHost1.receivedMsg[req.DiscoveryMsgData.InitHash] = uint32(time.Now().Unix())
 	assert.True(t, testHost1.checkMsgReceived(req))
 }
 
 func TestDeleteExpiredMsgs(t *testing.T) {
 	req := discoveryRequestMsg(testHost2.P2PHost)
-	req.DiscoveryMsgData.InitHash = hex.EncodeToString(crypto.HashProtoMsg(req))
+	hash, err := crypto.HashProtoMsg(req)
+	if err != nil {
+		t.Errorf("Failed to HashProtoMsg")
+	}
+	req.DiscoveryMsgData.InitHash = hex.EncodeToString(hash)
 	testHost1.receivedMsg[req.DiscoveryMsgData.InitHash] = uint32(time.Now().Unix())
 	assert.False(t, len(testHost1.receivedMsg) == 0)
 	time.Sleep(time.Second) // making message to expire

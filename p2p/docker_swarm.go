@@ -198,7 +198,7 @@ func (p *SwarmProtocol) onJoinReqToken(s net.Stream) {
 	listenAddr := fmt.Sprintf("0.0.0.0:%d", p.cfg.ListenPort)
 	joinSwarmResult, err := manager.GetInstance().SwarmJoin(p.managerIP, "", remoteAddrs, data.JoinToken, listenAddr)
 	if err != nil {
-		log.Printf("Couldn't join swarm. Error : ", err)
+		log.Println("Couldn't join swarm. Error : ", err)
 		return
 	}
 
