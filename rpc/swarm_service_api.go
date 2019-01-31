@@ -70,7 +70,7 @@ func (api *SwarmServiceAPI) Run(ctx context.Context, task string, nodes []string
 // tokens in memory
 func (api *SwarmServiceAPI) initSwarm() error {
 	swarmListen := fmt.Sprintf("%s:%d", api.cfg.ListenAddress, api.cfg.ListenPort)
-	_, err := manager.GetInstance().InitSwarm(api.host.IP, swarmListen)
+	_, err := manager.GetInstance().InitSwarm(api.host.Cfg.P2P.ListenAddress, swarmListen)
 	if err != nil {
 		return err
 	}

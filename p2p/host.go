@@ -40,7 +40,7 @@ type Host struct {
 	P2PHost  host.Host
 	dht      *dht.IpfsDHT
 	FullAddr string
-	cfg      *config.GlobalConfig
+	Cfg      *config.GlobalConfig
 
 	*SwarmProtocol
 	*TaskProtocol
@@ -55,7 +55,7 @@ func NewHost(cfg *config.GlobalConfig) (*Host, error) {
 	nodes := cfg.P2P.Bootstraper.Nodes
 	ip := cfg.P2P.ListenAddress
 	port := cfg.P2P.ListenPort
-	host := &Host{cfg: cfg}
+	host := &Host{Cfg: cfg}
 	err := host.makeRandomHost(port, ip)
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func NewHost(cfg *config.GlobalConfig) (*Host, error) {
 
 // registerProtocols registers all protocols for the node
 func (h *Host) registerProtocols() {
-	h.SwarmProtocol = NewSwarmProtocol(h.P2PHost, h.cfg.P2P.ListenAddress, &h.cfg.Host.DockerSwarm)
+	h.SwarmProtocol = NewSwarmProtocol(h.P2PHost, h.Cfg.P2P.ListenAddress, &h.Cfg.Host.DockerSwarm)
 	h.DiscoveryProtocol = NewDiscoveryProtocol(h.P2PHost, h.dht)
 	h.TaskProtocol = NewTaskProtocol(h.P2PHost)
 	// Registering the Observer that wants to get notified when the task is done.
