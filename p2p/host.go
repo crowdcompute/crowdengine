@@ -159,5 +159,6 @@ func (h *Host) addAddrToPeerstore(addr string) error {
 
 // PeerCount returns the number of peers in the node's peerstore
 func (h *Host) PeerCount() int {
-	return h.P2PHost.Peerstore().Peers().Len()
+	// Peerstore has the current node's address as well, so we don't want to count it
+	return h.P2PHost.Peerstore().Peers().Len() - 1
 }
