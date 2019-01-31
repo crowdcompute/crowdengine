@@ -100,7 +100,7 @@ func (n *Node) apis() []rpc.API {
 		{
 			Namespace: "service",
 			Version:   "1.0",
-			Service:   ccrpc.NewSwarmServiceAPI(n.host, &n.cfg.Host.DockerSwarm),
+			Service:   ccrpc.NewSwarmServiceAPI(n.host),
 			Public:    true,
 		},
 		{

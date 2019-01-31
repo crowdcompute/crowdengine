@@ -32,8 +32,9 @@ import (
 
 // SwarmServiceAPI ...
 type SwarmServiceAPI struct {
-	host *p2p.Host
-	cfg  *config.DockerSwarm
+	host           *p2p.Host
+	addvertiseAddr string
+	cfg            *config.DockerSwarm
 }
 
 type swarmTask struct {
@@ -42,8 +43,12 @@ type swarmTask struct {
 }
 
 // NewSwarmServiceAPI creates a new RPC service with methods specific for creating a swarm service.
-func NewSwarmServiceAPI(h *p2p.Host, cfg *config.DockerSwarm) *SwarmServiceAPI {
-	return &SwarmServiceAPI{host: h, cfg: cfg}
+func NewSwarmServiceAPI(h *p2p.Host) *SwarmServiceAPI {
+	return &SwarmServiceAPI{
+		host:           h,
+		addvertiseAddr: h.Cfg.P2P.ListenAddress,
+		cfg:            &h.Cfg.Host.DockerSwarm,
+	}
 }
 
 // Run initializes a swarm, makes nodes to join it, and creates a swarm service
@@ -70,7 +75,7 @@ func (api *SwarmServiceAPI) Run(ctx context.Context, task string, nodes []string
 // tokens in memory
 func (api *SwarmServiceAPI) initSwarm() error {
 	swarmListen := fmt.Sprintf("%s:%d", api.cfg.ListenAddress, api.cfg.ListenPort)
-	_, err := manager.GetInstance().InitSwarm(api.host.Cfg.P2P.ListenAddress, swarmListen)
+	_, err := manager.GetInstance().InitSwarm(api.addvertiseAddr, swarmListen)
 	if err != nil {
 		return err
 	}
