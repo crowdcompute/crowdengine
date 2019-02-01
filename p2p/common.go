@@ -180,11 +180,12 @@ func sendProtoMessage(data proto.Message, s net.Stream) bool {
 func NewMessageData(messageID string, gossip bool, p2pHost host.Host) *api.MessageData {
 	// Add protobufs bin data for message author public key
 	// this is useful for authenticating  messages forwarded by a node authored by another node
-	nodePubKey, err := p2pHost.Peerstore().PubKey(p2pHost.ID()).Bytes()
+	pID := p2pHost.ID()
+	nodePubKey, err := p2pHost.Peerstore().PubKey(pID).Bytes()
 	common.FatalIfErr(err, "Failed to get public key for sender from local peer store.")
 
 	return &api.MessageData{ClientVersion: clientVersion,
-		NodeId:     peer.IDB58Encode(p2pHost.ID()),
+		NodeId:     peer.IDB58Encode(pID),
 		NodePubKey: nodePubKey,
 		Timestamp:  time.Now().Unix(),
 		Id:         messageID,

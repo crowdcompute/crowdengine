@@ -26,26 +26,22 @@ import (
 )
 
 var (
-	// TestHost2 has testHost1 as a peer, but not the other way around
-	testHost1, _ = NewHost(&config.GlobalConfig{
+	// commonTestHost2 has commonTestHost1 as a peer, but not the other way around
+	commonTestHost1, _ = NewHost(&config.GlobalConfig{
 		P2P: config.P2P{ListenPort: 10209, ListenAddress: "127.0.0.1"},
 	})
-	testHost2, _ = NewHost(&config.GlobalConfig{
+	commonTestHost2, _ = NewHost(&config.GlobalConfig{
 		P2P: config.P2P{ListenPort: 10210, ListenAddress: "127.0.0.1",
 			Bootstraper: config.Bootstraper{
-				Nodes: []string{testHost1.FullAddr},
+				Nodes: []string{commonTestHost1.FullAddr},
 			},
 		},
-	})
-	testHost3, _ = NewHost(&config.GlobalConfig{
-		P2P: config.P2P{ListenPort: 10211, ListenAddress: "127.0.0.1"},
 	})
 )
 
 func TestSignAuthenticate(t *testing.T) {
-	req := discoveryRequestMsg(testHost1.P2PHost)
-
-	key := testHost1.P2PHost.Peerstore().PrivKey(testHost1.P2PHost.ID())
+	req := discoveryRequestMsg(commonTestHost1.P2PHost)
+	key := commonTestHost1.P2PHost.Peerstore().PrivKey(commonTestHost1.P2PHost.ID())
 	req.DiscoveryMsgData.MessageData.Sign = signProtoMsg(req, key)
 	valid := authenticateProtoMsg(req, req.DiscoveryMsgData.MessageData)
 	assert.True(t, valid)
@@ -54,17 +50,17 @@ func TestSignAuthenticate(t *testing.T) {
 // TestHost2 sends a message to testHost1
 // TestHost2 has testHost1 as a peer
 func TestSendMsgFromConnectedPeers(t *testing.T) {
-	req := discoveryRequestMsg(testHost2.P2PHost)
+	req := discoveryRequestMsg(commonTestHost2.P2PHost)
 
-	ok := sendMsg(testHost2.P2PHost, testHost1.P2PHost.ID(), req, protocol.ID(discoveryRequest))
+	ok := sendMsg(commonTestHost2.P2PHost, commonTestHost1.P2PHost.ID(), req, protocol.ID(discoveryRequest))
 	assert.True(t, ok)
 }
 
 // TestHost1 sends a message to testHost2
 // TestHost1 doesn't have testHost2 as a peer
 func TestSendMsgFromUnconnectedPeers(t *testing.T) {
-	req := discoveryRequestMsg(testHost3.P2PHost)
+	req := discoveryRequestMsg(commonTestHost1.P2PHost)
 
-	ok := sendMsg(testHost3.P2PHost, testHost1.P2PHost.ID(), req, protocol.ID(discoveryRequest))
+	ok := sendMsg(commonTestHost1.P2PHost, commonTestHost2.P2PHost.ID(), req, protocol.ID(discoveryRequest))
 	assert.False(t, ok)
 }

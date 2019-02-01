@@ -48,7 +48,7 @@ const discoveryResponse = "/Discovery/discoveryresp/0.0.1"
 type DiscoveryProtocol struct {
 	p2pHost       host.Host                          // local host
 	dht           *dht.IpfsDHT                       // local host
-	receivedMsg   map[string]uint32                  // Store all received msgs, so that we do not re-send them when received again
+	receivedMsgs  map[string]uint32                  // Store all received msgs, so that we do not re-send them when received again
 	pendingReq    map[*api.DiscoveryRequest]struct{} // Store all requests that were unable to be fullfiled at the time the node was busy
 	maxPendingReq uint16                             // The maximum requests the node stores for later process
 	NodeIDs       map[string][]string                // Stores the Node IDs of each public Key account
@@ -60,7 +60,7 @@ func NewDiscoveryProtocol(p2pHost host.Host, dht *dht.IpfsDHT) *DiscoveryProtoco
 	p := &DiscoveryProtocol{
 		p2pHost:       p2pHost,
 		dht:           dht,
-		receivedMsg:   make(map[string]uint32),
+		receivedMsgs:  make(map[string]uint32),
 		maxPendingReq: 5,
 		NodeIDs:       make(map[string][]string),
 	}
@@ -113,7 +113,7 @@ func (p *DiscoveryProtocol) GetInitialDiscoveryReq() (*api.DiscoveryRequest, err
 
 // setTTLForDiscReq is setting the discovery request's TTL. This is when the message will get expired
 func (p *DiscoveryProtocol) setTTLForDiscReq(req *api.DiscoveryRequest, ttl time.Duration) {
-	req.DiscoveryMsgData.TTL = uint32(ttl)
+	// req.DiscoveryMsgData.TTL = uint32(ttl)
 	req.DiscoveryMsgData.Expiry = uint32(time.Now().Add(ttl).Unix())
 }
 
@@ -170,8 +170,8 @@ func (p *DiscoveryProtocol) onDiscoveryRequest(s inet.Stream) {
 	if p.requestExpired(data) || p.checkMsgReceived(data) {
 		return
 	}
-	// Storing all the received messages
-	p.receivedMsg[data.DiscoveryMsgData.InitHash] = data.DiscoveryMsgData.Expiry
+	// Storing the received discovery message so as we don't process it again
+	p.receivedMsgs[data.DiscoveryMsgData.InitHash] = data.DiscoveryMsgData.Expiry
 
 	// Authenticate integrity and authenticity of the message
 	if valid := authenticateProtoMsg(data, data.DiscoveryMsgData.MessageData); !valid {
@@ -257,9 +257,9 @@ func (p *DiscoveryProtocol) requestExpired(req *api.DiscoveryRequest) bool {
 	return false
 }
 
-// checkMsgReceived checks if request req exists in the receivedMsg slice
+// checkMsgReceived checks if request req exists in the receivedMsgs slice
 func (p *DiscoveryProtocol) checkMsgReceived(req *api.DiscoveryRequest) bool {
-	if _, ok := p.receivedMsg[req.DiscoveryMsgData.InitHash]; ok {
+	if _, ok := p.receivedMsgs[req.DiscoveryMsgData.InitHash]; ok {
 		log.Println("Already received this message. Dropping message!")
 		return true
 	}
@@ -322,14 +322,14 @@ func (p *DiscoveryProtocol) DeleteDiscoveryMsgs(quit <-chan struct{}) {
 	}
 }
 
-// deleteExpiredMsgs iterates over all the receivedMsg map
+// deleteExpiredMsgs iterates over all the receivedMsgs map
 // removing all expired messages
 func (p *DiscoveryProtocol) deleteExpiredMsgs() {
 	now := uint32(time.Now().Unix())
-	for hash, expiry := range p.receivedMsg {
+	for hash, expiry := range p.receivedMsgs {
 		if expiry < now {
 			log.Printf("about to delete this: %s\n", hash)
-			delete(p.receivedMsg, hash)
+			delete(p.receivedMsgs, hash)
 		}
 	}
 }

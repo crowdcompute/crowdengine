@@ -21,10 +21,38 @@ import (
 	"testing"
 	"time"
 
+	"github.com/crowdcompute/crowdengine/cmd/gocc/config"
 	"github.com/crowdcompute/crowdengine/crypto"
 	api "github.com/crowdcompute/crowdengine/p2p/protomsgs"
 	host "github.com/libp2p/go-libp2p-host"
 	"github.com/stretchr/testify/assert"
+)
+
+var (
+	discTestHost3, _ = NewHost(&config.GlobalConfig{
+		P2P: config.P2P{ListenPort: 10209, ListenAddress: "127.0.0.1"},
+	})
+	discTestHost4, _ = NewHost(&config.GlobalConfig{
+		P2P: config.P2P{ListenPort: 10210, ListenAddress: "127.0.0.1"},
+	})
+	discTestHost5, _ = NewHost(&config.GlobalConfig{
+		P2P: config.P2P{ListenPort: 10211, ListenAddress: "127.0.0.1"},
+	})
+	discTestHost6, _ = NewHost(&config.GlobalConfig{
+		P2P: config.P2P{ListenPort: 10212, ListenAddress: "127.0.0.1"},
+	})
+	discTestHost7, _ = NewHost(&config.GlobalConfig{
+		P2P: config.P2P{ListenPort: 10213, ListenAddress: "127.0.0.1"},
+	})
+	discTestHost8, _ = NewHost(&config.GlobalConfig{
+		P2P: config.P2P{ListenPort: 10214, ListenAddress: "127.0.0.1"},
+	})
+	discTestHost9, _ = NewHost(&config.GlobalConfig{
+		P2P: config.P2P{ListenPort: 10215, ListenAddress: "127.0.0.1"},
+	})
+	discTestHost10, _ = NewHost(&config.GlobalConfig{
+		P2P: config.P2P{ListenPort: 10216, ListenAddress: "127.0.0.1"},
+	})
 )
 
 func discoveryRequestMsg(host host.Host) *api.DiscoveryRequest {
@@ -32,63 +60,59 @@ func discoveryRequestMsg(host host.Host) *api.DiscoveryRequest {
 		Message: api.DiscoveryMessage_DiscoveryReq}
 }
 
-// TODO: Rethink of this test
+// TestSetTTLForDiscReq sets the TTL & expiry for a discovery request and checks if it was set cerrectly
 func TestSetTTLForDiscReq(t *testing.T) {
-	req := discoveryRequestMsg(testHost2.P2PHost)
-	testHost2.setTTLForDiscReq(req, time.Second)
-	assert.True(t, req.DiscoveryMsgData.TTL == uint32(time.Second))
-	assert.True(t, req.DiscoveryMsgData.Expiry == uint32(time.Now().Add(time.Second).Unix()))
+	req := discoveryRequestMsg(discTestHost3.P2PHost)
+	now := time.Now()
+	ttl := time.Second
+	discTestHost3.setTTLForDiscReq(req, ttl)
+	// assert.True(t, req.DiscoveryMsgData.TTL == uint32(ttl))
+	assert.True(t, req.DiscoveryMsgData.Expiry == uint32(now.Add(ttl).Unix()))
 }
 
+// TestMsgExpired tests the requestExpired method which checks if a discovery request got expired
+// Setting the TTL to the past
 func TestMsgExpired(t *testing.T) {
-	req := discoveryRequestMsg(testHost1.P2PHost)
-	testHost1.setTTLForDiscReq(req, 0)
-	time.Sleep(time.Second)
-	assert.True(t, testHost1.requestExpired(req))
+	req := discoveryRequestMsg(discTestHost4.P2PHost)
+	discTestHost4.setTTLForDiscReq(req, -1*time.Second)
+	assert.True(t, discTestHost4.requestExpired(req))
 }
 
+// TestMsgReceived tests whether a host received a discovery msg
 func TestMsgReceived(t *testing.T) {
-	req := discoveryRequestMsg(testHost2.P2PHost)
+	req := discoveryRequestMsg(discTestHost6.P2PHost)
 	hash, err := crypto.HashProtoMsg(req)
 	if err != nil {
 		t.Errorf("Failed to HashProtoMsg")
 	}
 	req.DiscoveryMsgData.InitHash = hex.EncodeToString(hash)
-	testHost1.receivedMsg[req.DiscoveryMsgData.InitHash] = uint32(time.Now().Unix())
-	assert.True(t, testHost1.checkMsgReceived(req))
+	// mock the reception of this discovery message with the specific hash
+	discTestHost5.receivedMsgs[req.DiscoveryMsgData.InitHash] = 0
+	assert.True(t, discTestHost5.checkMsgReceived(req))
 }
 
+// TestDeleteExpiredMsgs checks that an expired message got deleted
 func TestDeleteExpiredMsgs(t *testing.T) {
-	req := discoveryRequestMsg(testHost2.P2PHost)
+	req := discoveryRequestMsg(discTestHost7.P2PHost)
 	hash, err := crypto.HashProtoMsg(req)
 	if err != nil {
 		t.Errorf("Failed to HashProtoMsg")
 	}
 	req.DiscoveryMsgData.InitHash = hex.EncodeToString(hash)
-	testHost1.receivedMsg[req.DiscoveryMsgData.InitHash] = uint32(time.Now().Unix())
-	assert.False(t, len(testHost1.receivedMsg) == 0)
-	time.Sleep(time.Second) // making message to expire
-	testHost1.deleteExpiredMsgs()
-	assert.True(t, len(testHost1.receivedMsg) == 0)
+	// Expiry time is in the past
+	expiry := uint32(time.Now().Add(-1 * time.Second).Unix())
+	discTestHost8.receivedMsgs[req.DiscoveryMsgData.InitHash] = expiry
+	assert.True(t, len(discTestHost8.receivedMsgs) == 1)
+	discTestHost8.deleteExpiredMsgs()
+	assert.True(t, len(discTestHost8.receivedMsgs) == 0)
 }
 
-func TestCopyNewDiscoveryRequest(t *testing.T) {
-	req := discoveryRequestMsg(testHost2.P2PHost)
-	copiedReq := testHost1.copyNewDiscoveryRequest(req)
+// TestCopyNewDiscoveryRequestHaveDiffSignatures checks that when coping all values of a discovery request
+// the signature is different due to different nodes signing it
+func TestCopyNewDiscoveryRequestHaveDiffSignatures(t *testing.T) {
+	req := discoveryRequestMsg(discTestHost9.P2PHost)
+	copiedReq := discTestHost10.copyNewDiscoveryRequest(req)
 	reqSignature := string(req.DiscoveryMsgData.MessageData.Sign)
 	copiedReqSignature := string(copiedReq.DiscoveryMsgData.MessageData.Sign)
 	assert.True(t, reqSignature != copiedReqSignature)
 }
-
-// func TestPendingRequests(t *testing.T) {
-// 	req := discoveryRequestMsg(testHost1.P2PHost)
-
-// 	req.DiscoveryMsgData.InitNodeID = testHost1.P2PHost.ID().Pretty()
-
-// 	testHost2.setTTLForDiscReq(req, 10)
-// 	testHost2.pendingReq[req] = struct{}{}
-// 	testHost2.onNotify()
-
-// 	// fmt.Println(<-testHost1.NodeID)
-// 	assert.Equal(t, testHost2.P2PHost.ID(), <-testHost1.NodeID)
-// }

@@ -26,20 +26,20 @@ import (
 )
 
 var (
-	testHost4, _ = NewHost(&config.GlobalConfig{
+	hostTestHost1, _ = NewHost(&config.GlobalConfig{
 		P2P: config.P2P{ListenPort: 10209, ListenAddress: "127.0.0.1"},
 	})
-	testHost5, _ = NewHost(&config.GlobalConfig{
+	hostTestHost2, _ = NewHost(&config.GlobalConfig{
 		P2P: config.P2P{ListenPort: 10210, ListenAddress: "127.0.0.1"},
 	})
 )
 
 func TestConnectWithNodes(t *testing.T) {
-	testHost4.ConnectWithNodes([]string{testHost5.FullAddr})
+	hostTestHost1.ConnectWithNodes([]string{hostTestHost2.FullAddr})
 	// Should have itself and the peer 5
-	noOfPeers := testHost4.P2PHost.Peerstore().Peers().Len()
+	noOfPeers := hostTestHost1.P2PHost.Peerstore().Peers().Len()
 	assert.True(t, noOfPeers == 2)
 	// Check that the host connected exists in the peerstore
-	existsInPeerstore := common.SliceExists(testHost4.P2PHost.Peerstore().Peers(), testHost5.P2PHost.ID())
+	existsInPeerstore := common.SliceExists(hostTestHost1.P2PHost.Peerstore().Peers(), hostTestHost2.P2PHost.ID())
 	assert.True(t, existsInPeerstore)
 }
