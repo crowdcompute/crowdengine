@@ -49,7 +49,7 @@ var (
 
 func listImagesRequestMsg(host host.Host) *api.ListImagesRequest {
 	return &api.ListImagesRequest{ListImagesMsgData: NewListImagesMsgData("1", true, host),
-		PubKey: "mockPubKey"}
+		PubKey: "fakePubKey"}
 }
 
 func TestSignAuthenticate(t *testing.T) {

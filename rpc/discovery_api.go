@@ -36,7 +36,7 @@ func NewDiscoveryAPI(h *p2p.Host) *DiscoveryAPI {
 func (api *DiscoveryAPI) Discover(ctx context.Context, numberOfNodes int) (string, error) {
 	initialRequest, err := api.host.GetInitialDiscoveryReq()
 	if err != nil {
-		return "There was an error", err
+		return "Couldn't get initial discovery request", err
 	}
 	// TODO: InitHash is a temporary solution. Should be the public key instead.
 	api.host.InitializeDiscovery(initialRequest.DiscoveryMsgData.InitHash, numberOfNodes)
