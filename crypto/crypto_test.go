@@ -23,7 +23,7 @@ func TestGenerateKeyPair(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error while generating assymetric key: %s", err)
 	}
-	if len(keypaid.Public) != 128 {
+	if len(keypaid.Public) != 64 {
 		t.Errorf("Public key size is incorrect, got: %d, want: %d.", len(keypaid.Public), 64)
 	}
 	if len(keypaid.Address) != 40 {

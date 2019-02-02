@@ -117,7 +117,8 @@ func (p *DiscoveryProtocol) setTTLForDiscReq(req *api.DiscoveryRequest, ttl time
 	req.DiscoveryMsgData.Expiry = uint32(time.Now().Add(ttl).Unix())
 }
 
-// ForwardMsgToPeers creates a new Discovery request and sends it to its neighbours
+// ForwardMsgToPeers makes a copy of a Discovery request and sends it to its peers
+// We don't want to send the message to the peer that we received the message from (peerWhoSentMsg)
 func (p *DiscoveryProtocol) ForwardMsgToPeers(request *api.DiscoveryRequest, peerWhoSentMsg peer.ID) {
 	req := p.copyNewDiscoveryRequest(request)
 	p.sendMsgToPeers(req, peerWhoSentMsg)
