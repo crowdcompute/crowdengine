@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 
+	"github.com/crowdcompute/crowdengine/accounts/keystore"
 	"github.com/urfave/cli"
 )
 
@@ -16,13 +17,9 @@ var (
 Manage accounts, create update and import new stuff`,
 		Subcommands: []cli.Command{
 			{
-				Name:  "new",
-				Usage: "add a new account",
-				Action: func(c *cli.Context) error {
-					fmt.Println("new account...")
-					fmt.Println(c.GlobalFlagNames())
-					return nil
-				},
+				Name:   "new",
+				Usage:  "add a new account",
+				Action: NewAccount,
 			},
 			{
 				Name:  "import",
@@ -37,3 +34,10 @@ Manage accounts, create update and import new stuff`,
 		},
 	}
 )
+
+// NewAccount creates a new account for the user
+func NewAccount(c *cli.Context) error {
+	fileName := keystore.Create()
+	fmt.Printf("Your account has been created successfully to the file: {%s}\n", fileName)
+	return nil
+}

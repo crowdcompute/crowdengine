@@ -29,7 +29,7 @@ import (
 )
 
 // Create generates random keypair
-func Create() {
+func Create() string {
 	keypair, err := crypto.GenerateKeyPair()
 	if err != nil {
 		log.Fatal(err)
@@ -40,33 +40,33 @@ func Create() {
 		KeyPair: &keypair,
 	}
 
-	pass, err := terminal.Stdin.GetPassphrase("Passphrase: ", true)
+	pass, err := terminal.Stdin.GetPassphrase("Please give a password and not forget this password.", true)
 	if err != nil {
 		log.Fatalf("Error reading passphrase from terminal: %v", err)
 	}
 
-	keyJSON, err := EncryptKey(pass, key)
+	keyDataJSON, err := EncryptKey(pass, key)
 	if err != nil {
 		log.Fatalf("Error encrypting key: %v", err)
 	}
 
-	err = WriteToFile(keyJSON, key.KeyPair.Address)
+	fileName, err := WriteDataToFile(keyDataJSON, key.KeyPair.Address)
 	if err != nil {
 		log.Fatalf("Error writing keystore file: %v", err)
 	}
-
+	return fileName
 }
 
-// WriteToFile writes to a file
-func WriteToFile(keydata string, address string) error {
-
-	jsonFile, err := os.Create(keyFileName(address))
+// WriteDataToFile writes the key data to a file
+func WriteDataToFile(data []byte, extra string) (string, error) {
+	fileName := createFileName(extra)
+	jsonFile, err := os.Create(fileName)
 	if err != nil {
-		return err
+		return "nil", err
 	}
 	defer jsonFile.Close()
-	jsonFile.Write([]byte(keydata))
-	return nil
+	jsonFile.Write(data)
+	return fileName, nil
 }
 
 // LoadFromFile loads a keystore from file
@@ -78,7 +78,8 @@ func LoadFromFile(filename string) ([]byte, error) {
 	return data, nil
 }
 
-func keyFileName(address string) string {
+// Returns a name joining the timestamp and the address
+func createFileName(address string) string {
 	ts := time.Now().UTC()
 	return fmt.Sprintf("UTC--%s--%s.json", toISO8601(ts), address)
 }

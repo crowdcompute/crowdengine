@@ -38,8 +38,8 @@ var (
 	ksCipher     = "aes-128-ctr"
 )
 
-// DecryptKey decrypts the private key given a json keystore file
-func DecryptKey(password string, data string) (string, error) {
+// DecryptKey decrypts the private key given a passphrase and a json keystore file
+func DecryptKey(passphrase string, data string) (string, error) {
 	encjson := encryptedKeyJSON{}
 	err := json.Unmarshal([]byte(data), &encjson)
 	if err != nil {
@@ -55,7 +55,7 @@ func DecryptKey(password string, data string) (string, error) {
 	iv, err := hex.DecodeString(encjson.Crypto.CipherParams.IV)
 	salt, err := hex.DecodeString(encjson.Crypto.KDFParams.Salt)
 	ciphertext, err := hex.DecodeString(encjson.Crypto.CipherText)
-	dk, err := scrypt.Key([]byte(password), salt, encjson.Crypto.KDFParams.N, encjson.Crypto.KDFParams.R, encjson.Crypto.KDFParams.P, encjson.Crypto.KDFParams.DKeyLength)
+	dk, err := scrypt.Key([]byte(passphrase), salt, encjson.Crypto.KDFParams.N, encjson.Crypto.KDFParams.R, encjson.Crypto.KDFParams.P, encjson.Crypto.KDFParams.DKeyLength)
 	hash := crypto.Keccak256(dk[16:32], ciphertext)
 	if !bytes.Equal(hash, mac) {
 		return "", errors.New("Mac Mismatch")
@@ -71,28 +71,28 @@ func DecryptKey(password string, data string) (string, error) {
 }
 
 // EncryptKey encrypts a key using a symmetric algorithm
-func EncryptKey(password string, key *Key) (string, error) {
+func EncryptKey(passphrase string, key *Key) ([]byte, error) {
 	salt, err := crypto.RandomEntropy(32)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	dk, err := scrypt.Key([]byte(password), salt, scryptN, scryptR, scryptP, scryptKeyLen)
+	dk, err := scrypt.Key([]byte(passphrase), salt, scryptN, scryptR, scryptP, scryptKeyLen)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	iv, err := crypto.RandomEntropy(aes.BlockSize)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	enckey := dk[:16]
 
 	privateKeyBytes, err := hex.DecodeString(key.KeyPair.Private)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	aesBlock, err := aes.NewCipher(enckey)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	stream := cipher.NewCTR(aesBlock, iv)
 	cipherText := make([]byte, len(privateKeyBytes))
@@ -128,7 +128,7 @@ func EncryptKey(password string, key *Key) (string, error) {
 	}
 	data, err := json.MarshalIndent(&encjson, "", "  ")
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return string(data), nil
+	return data, nil
 }
