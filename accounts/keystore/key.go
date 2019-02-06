@@ -17,80 +17,51 @@
 package keystore
 
 import (
-	"fmt"
-	"io/ioutil"
 	"log"
-	"os"
-	"time"
 
 	"github.com/crowdcompute/crowdengine/cmd/terminal"
+	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/crypto"
 	"github.com/pborman/uuid"
 )
 
-// Create generates random keypair
-func Create() string {
+// Key represents a key with UUID
+type Key struct {
+	*crypto.KeyPair
+	ID uuid.UUID
+}
+
+// NewKey creates a new Key
+func NewKey() *Key {
 	keypair, err := crypto.GenerateKeyPair()
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	key := &Key{
-		Id:      uuid.NewRandom(),
+	return &Key{
+		ID:      uuid.NewRandom(),
 		KeyPair: &keypair,
 	}
+}
 
+// NewKeyAndStoreToFile creates a new Key
+func NewKeyAndStoreToFile() (*Key, string) {
+	key := NewKey()
+	return key, key.StoreKeyToFile()
+}
+
+// StoreKeyToFile generates random keypair
+func (key *Key) StoreKeyToFile() string {
 	pass, err := terminal.Stdin.GetPassphrase("Please give a password and not forget this password.", true)
 	if err != nil {
 		log.Fatalf("Error reading passphrase from terminal: %v", err)
 	}
-
-	keyDataJSON, err := EncryptKey(pass, key)
+	keyDataJSON, err := MarshalKey(pass, key)
 	if err != nil {
 		log.Fatalf("Error encrypting key: %v", err)
 	}
-
-	fileName, err := WriteDataToFile(keyDataJSON, key.KeyPair.Address)
+	fileName, err := common.WriteDataToFile(keyDataJSON, createFileName(key.KeyPair.Address))
 	if err != nil {
 		log.Fatalf("Error writing keystore file: %v", err)
 	}
 	return fileName
-}
-
-// WriteDataToFile writes the key data to a file
-func WriteDataToFile(data []byte, extra string) (string, error) {
-	fileName := createFileName(extra)
-	jsonFile, err := os.Create(fileName)
-	if err != nil {
-		return "nil", err
-	}
-	defer jsonFile.Close()
-	jsonFile.Write(data)
-	return fileName, nil
-}
-
-// LoadFromFile loads a keystore from file
-func LoadFromFile(filename string) ([]byte, error) {
-	data, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
-}
-
-// Returns a name joining the timestamp and the address
-func createFileName(address string) string {
-	ts := time.Now().UTC()
-	return fmt.Sprintf("UTC--%s--%s.json", toISO8601(ts), address)
-}
-
-func toISO8601(t time.Time) string {
-	var tz string
-	name, offset := t.Zone()
-	if name == "UTC" {
-		tz = "Z"
-	} else {
-		tz = fmt.Sprintf("%03d00", offset/3600)
-	}
-	return fmt.Sprintf("%04d-%02d-%02dT%02d-%02d-%02d.%09d%s", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), tz)
 }

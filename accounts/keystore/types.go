@@ -16,11 +16,6 @@
 
 package keystore
 
-import (
-	"github.com/crowdcompute/crowdengine/crypto"
-	"github.com/pborman/uuid"
-)
-
 type cipherparamsJSON struct {
 	IV string `json:"iv"`
 }
@@ -48,10 +43,4 @@ type encryptedKeyJSON struct {
 	Crypto  cryptoJSON `json:"crypto"`
 	Id      string     `json:"id"`
 	Version int        `json:"version"`
-}
-
-// Key represents a key with UUID
-type Key struct {
-	*crypto.KeyPair
-	Id uuid.UUID
 }

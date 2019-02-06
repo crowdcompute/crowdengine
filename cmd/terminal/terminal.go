@@ -17,6 +17,8 @@
 package terminal
 
 import (
+	"fmt"
+
 	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/peterh/liner"
@@ -37,7 +39,7 @@ type Terminal struct {
 // GetPassphrase gets the password from stdin
 func (t *Terminal) GetPassphrase(prompt string, confirmation bool) (passwd string, err error) {
 	if prompt != "" {
-		t.State.Prompt(prompt)
+		fmt.Println(prompt)
 	}
 	pass, err := t.getPassword("Passphrase:")
 	if err != nil {

@@ -23,6 +23,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"time"
 
 	"github.com/crowdcompute/crowdengine/crypto"
 	"golang.org/x/crypto/scrypt"
@@ -71,7 +73,7 @@ func DecryptKey(passphrase string, data string) (string, error) {
 }
 
 // EncryptKey encrypts a key using a symmetric algorithm
-func EncryptKey(passphrase string, key *Key) ([]byte, error) {
+func MarshalKey(passphrase string, key *Key) ([]byte, error) {
 	salt, err := crypto.RandomEntropy(32)
 	if err != nil {
 		return nil, err
@@ -123,7 +125,7 @@ func EncryptKey(passphrase string, key *Key) ([]byte, error) {
 	encjson := encryptedKeyJSON{
 		Address: key.KeyPair.Address,
 		Crypto:  keyjson,
-		Id:      key.Id.String(),
+		Id:      key.ID.String(),
 		Version: ksVersion,
 	}
 	data, err := json.MarshalIndent(&encjson, "", "  ")
@@ -131,4 +133,21 @@ func EncryptKey(passphrase string, key *Key) ([]byte, error) {
 		return nil, err
 	}
 	return data, nil
+}
+
+// Returns a name joining the timestamp and the address
+func createFileName(address string) string {
+	ts := time.Now().UTC()
+	return fmt.Sprintf("UTC--%s--%s.json", toISO8601(ts), address)
+}
+
+func toISO8601(t time.Time) string {
+	var tz string
+	name, offset := t.Zone()
+	if name == "UTC" {
+		tz = "Z"
+	} else {
+		tz = fmt.Sprintf("%03d00", offset/3600)
+	}
+	return fmt.Sprintf("%04d-%02d-%02dT%02d-%02d-%02d.%09d%s", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), tz)
 }

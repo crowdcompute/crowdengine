@@ -18,6 +18,7 @@ package common
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"time"
@@ -61,4 +62,24 @@ func RemoveFile(filePath string) error {
 		return fmt.Errorf("There was an error removing the file %s. Error: %s", filePath, err)
 	}
 	return nil
+}
+
+// WriteDataToFile writes the data to a file named fileName
+func WriteDataToFile(data []byte, fileName string) (string, error) {
+	file, err := os.Create(fileName)
+	if err != nil {
+		return "nil", err
+	}
+	defer file.Close()
+	file.Write(data)
+	return fileName, nil
+}
+
+// LoadFromFile loads data from file
+func LoadFromFile(filename string) ([]byte, error) {
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }

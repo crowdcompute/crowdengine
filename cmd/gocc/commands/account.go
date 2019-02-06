@@ -37,7 +37,7 @@ Manage accounts, create update and import new stuff`,
 
 // NewAccount creates a new account for the user
 func NewAccount(c *cli.Context) error {
-	fileName := keystore.Create()
+	_, fileName := keystore.NewKeyAndStoreToFile()
 	fmt.Printf("Your account has been created successfully to the file: {%s}\n", fileName)
 	return nil
 }
