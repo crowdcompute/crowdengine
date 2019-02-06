@@ -19,7 +19,6 @@ package keystore
 import (
 	"log"
 
-	"github.com/crowdcompute/crowdengine/cmd/terminal"
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/crypto"
 	"github.com/pborman/uuid"
@@ -44,17 +43,13 @@ func NewKey() *Key {
 }
 
 // NewKeyAndStoreToFile creates a new Key
-func NewKeyAndStoreToFile() (*Key, string) {
+func NewKeyAndStoreToFile(passphrase string) (*Key, string) {
 	key := NewKey()
-	return key, key.StoreKeyToFile()
+	return key, key.StoreKeyToFile(passphrase)
 }
 
 // StoreKeyToFile generates random keypair
-func (key *Key) StoreKeyToFile() string {
-	pass, err := terminal.Stdin.GetPassphrase("Please give a password and not forget this password.", true)
-	if err != nil {
-		log.Fatalf("Error reading passphrase from terminal: %v", err)
-	}
+func (key *Key) StoreKeyToFile(pass string) string {
 	keyDataJSON, err := MarshalKey(pass, key)
 	if err != nil {
 		log.Fatalf("Error encrypting key: %v", err)
