@@ -32,41 +32,8 @@ import (
 
 // KeyPair represents private/public keys and the public address
 type KeyPair struct {
-	Private string
-	Public  string
+	Private crypto.PrivKey
 	Address string
-}
-
-// Sha256Hash hashes data with the sha256
-func Sha256Hash(data []byte) hash.Hash {
-	d := sha3.New256()
-	d.Write(data)
-	return d
-}
-
-// HashProtoMsg marshals the proto message and returns a sha256 hash
-func HashProtoMsg(message proto.Message) ([]byte, error) {
-	bin, err := proto.Marshal(message)
-	return Sha256Hash(bin).Sum(nil), err
-}
-
-// HashFile hashes the file with the sha256
-func HashFile(file *os.File) []byte {
-	h := sha256.New()
-	if _, err := io.Copy(h, file); err != nil {
-		log.Fatal(err)
-	}
-	return h.Sum(nil)
-}
-
-// HashFilePath hashes the file with the sha256
-func HashFilePath(filePath string) ([]byte, error) {
-	if file, err := os.Open(filePath); err == nil {
-		defer file.Close()
-		return HashFile(file), nil
-	} else {
-		return nil, err
-	}
 }
 
 // GenerateKeyPair generates a private, public, and address keys
@@ -75,22 +42,11 @@ func GenerateKeyPair() (KeyPair, error) {
 	if err != nil {
 		return KeyPair{}, err
 	}
-
-	privateBytes, err := priv.Bytes()
-	if err != nil {
-		return KeyPair{}, err
-	}
-
 	publicBytes, err := pub.Bytes()
 	if err != nil {
 		return KeyPair{}, err
 	}
-
-	// Drop first x bytes of priv(4), and pub(5)
-	privateBytes = privateBytes[4:]
-	publicBytes = publicBytes[5:]
-
-	return KeyPair{Private: hex.EncodeToString(privateBytes), Public: hex.EncodeToString(publicBytes), Address: PublicToAddress(publicBytes)}, nil
+	return KeyPair{Private: priv, Address: PublicToAddress(publicBytes)}, nil
 }
 
 // RestorePrivateKey unmarshals the privateKey
@@ -125,4 +81,36 @@ func Keccak256(data ...[]byte) []byte {
 		d.Write(b)
 	}
 	return d.Sum(nil)
+}
+
+// Sha256Hash hashes data with the sha256
+func Sha256Hash(data []byte) hash.Hash {
+	d := sha3.New256()
+	d.Write(data)
+	return d
+}
+
+// HashProtoMsg marshals the proto message and returns a sha256 hash
+func HashProtoMsg(message proto.Message) ([]byte, error) {
+	bin, err := proto.Marshal(message)
+	return Sha256Hash(bin).Sum(nil), err
+}
+
+// HashFile hashes the file with the sha256
+func HashFile(file *os.File) []byte {
+	h := sha256.New()
+	if _, err := io.Copy(h, file); err != nil {
+		log.Fatal(err)
+	}
+	return h.Sum(nil)
+}
+
+// HashFilePath hashes the file with the sha256
+func HashFilePath(filePath string) ([]byte, error) {
+	if file, err := os.Open(filePath); err == nil {
+		defer file.Close()
+		return HashFile(file), nil
+	} else {
+		return nil, err
+	}
 }

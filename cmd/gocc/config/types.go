@@ -20,6 +20,7 @@ package config
 type Global struct {
 	LogLevel     string
 	DataDir      string
+	KeystoreDir  string
 	DatabaseName string
 	Availability []string
 }

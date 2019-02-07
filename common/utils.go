@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -65,14 +66,20 @@ func RemoveFile(filePath string) error {
 }
 
 // WriteDataToFile writes the data to a file named fileName
-func WriteDataToFile(data []byte, fileName string) (string, error) {
-	file, err := os.Create(fileName)
+func WriteDataToFile(data []byte, filePath string) (string, error) {
+	// Create the directory with appropriate permissions
+	// in case it is not present yet.
+	const dirPerm = 0700
+	if err := os.MkdirAll(filepath.Dir(filePath), dirPerm); err != nil {
+		return "", err
+	}
+	file, err := os.Create(filePath)
 	if err != nil {
 		return "nil", err
 	}
 	defer file.Close()
 	file.Write(data)
-	return fileName, nil
+	return filePath, nil
 }
 
 // LoadFromFile loads data from file

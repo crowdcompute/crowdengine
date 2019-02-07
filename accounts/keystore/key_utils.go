@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/crowdcompute/crowdengine/crypto"
+	"github.com/pborman/uuid"
 	"golang.org/x/crypto/scrypt"
 )
 
@@ -40,18 +41,18 @@ var (
 	ksCipher     = "aes-128-ctr"
 )
 
-// DecryptKey decrypts the private key given a passphrase and a json keystore file
-func DecryptKey(passphrase string, data string) (string, error) {
+// UnmarshalKey decrypts the private key given a passphrase and a json keystore file
+func UnmarshalKey(data []byte, passphrase string) (*Key, error) {
 	encjson := encryptedKeyJSON{}
-	err := json.Unmarshal([]byte(data), &encjson)
+	err := json.Unmarshal(data, &encjson)
 	if err != nil {
-		return "", err
+		return &Key{}, err
 	}
 	if encjson.Version != ksVersion {
-		return "", errors.New("Version Mismatch")
+		return &Key{}, errors.New("Version Mismatch")
 	}
 	if encjson.Crypto.Cipher != ksCipher {
-		return "", errors.New("Cipher Mismatch")
+		return &Key{}, errors.New("Cipher Mismatch")
 	}
 	mac, err := hex.DecodeString(encjson.Crypto.MAC)
 	iv, err := hex.DecodeString(encjson.Crypto.CipherParams.IV)
@@ -60,19 +61,27 @@ func DecryptKey(passphrase string, data string) (string, error) {
 	dk, err := scrypt.Key([]byte(passphrase), salt, encjson.Crypto.KDFParams.N, encjson.Crypto.KDFParams.R, encjson.Crypto.KDFParams.P, encjson.Crypto.KDFParams.DKeyLength)
 	hash := crypto.Keccak256(dk[16:32], ciphertext)
 	if !bytes.Equal(hash, mac) {
-		return "", errors.New("Mac Mismatch")
+		return &Key{}, errors.New("Mac Mismatch")
 	}
 	aesBlock, err := aes.NewCipher(dk[:16])
 	if err != nil {
-		return "", err
+		return &Key{}, err
 	}
 	stream := cipher.NewCTR(aesBlock, iv)
 	outputkey := make([]byte, len(ciphertext))
 	stream.XORKeyStream(outputkey, ciphertext)
-	return hex.EncodeToString(outputkey), nil
+	privKey, err := crypto.RestorePrivateKey(outputkey)
+
+	return &Key{
+		ID: uuid.UUID(encjson.ID),
+		KeyPair: &crypto.KeyPair{
+			Private: privKey,
+			Address: encjson.Address,
+		},
+	}, nil
 }
 
-// EncryptKey encrypts a key using a symmetric algorithm
+// MarshalKey encrypts a key using a symmetric algorithm
 func MarshalKey(passphrase string, key *Key) ([]byte, error) {
 	salt, err := crypto.RandomEntropy(32)
 	if err != nil {
@@ -88,7 +97,8 @@ func MarshalKey(passphrase string, key *Key) ([]byte, error) {
 	}
 	enckey := dk[:16]
 
-	privateKeyBytes, err := hex.DecodeString(key.KeyPair.Private)
+	privateKeyBytes, err := key.KeyPair.Private.Bytes()
+	privateKeyBytes = privateKeyBytes[4:]
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +135,7 @@ func MarshalKey(passphrase string, key *Key) ([]byte, error) {
 	encjson := encryptedKeyJSON{
 		Address: key.KeyPair.Address,
 		Crypto:  keyjson,
-		Id:      key.ID.String(),
+		ID:      key.ID.String(),
 		Version: ksVersion,
 	}
 	data, err := json.MarshalIndent(&encjson, "", "  ")

@@ -18,7 +18,9 @@ package keystore
 
 import (
 	"log"
+	"path/filepath"
 
+	"github.com/crowdcompute/crowdengine/cmd/gocc/config"
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/crypto"
 	"github.com/pborman/uuid"
@@ -54,7 +56,8 @@ func (key *Key) StoreKeyToFile(pass string) string {
 	if err != nil {
 		log.Fatalf("Error encrypting key: %v", err)
 	}
-	fileName, err := common.WriteDataToFile(keyDataJSON, createFileName(key.KeyPair.Address))
+	cfg := config.DefaultConfig()
+	fileName, err := common.WriteDataToFile(keyDataJSON, filepath.Join(cfg.Global.KeystoreDir, createFileName(key.KeyPair.Address)))
 	if err != nil {
 		log.Fatalf("Error writing keystore file: %v", err)
 	}

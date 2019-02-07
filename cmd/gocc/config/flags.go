@@ -17,6 +17,8 @@
 package config
 
 import (
+	"path/filepath"
+
 	"github.com/urfave/cli"
 )
 
@@ -30,9 +32,16 @@ var (
 	// DataDirFlag to store all the engine related data
 	DataDirFlag = cli.StringFlag{
 		Name:  "datadir",
+		Value: DefaultDataDir(),
 		Usage: "Data directory to store data/metadata",
 	}
 
+	// KeystoreDirFlag to store all the engine related data
+	KeystoreDirFlag = cli.StringFlag{
+		Name:  "keystoredir",
+		Value: filepath.Join(DefaultDataDir(), "keystore"),
+		Usage: "Directory for the keystore",
+	}
 	// DatabaseNameFlag used to store user data
 	DatabaseNameFlag = cli.StringFlag{
 		Name:  "dbname",
@@ -216,6 +225,7 @@ var GOCCAppFlags = []cli.Flag{
 	},
 	LogLevelFlag,
 	DataDirFlag,
+	KeystoreDirFlag,
 	DatabaseNameFlag,
 	AvailabilityFlag,
 	MaxContainersFlag,

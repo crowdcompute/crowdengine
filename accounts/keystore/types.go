@@ -41,6 +41,6 @@ type cryptoJSON struct {
 type encryptedKeyJSON struct {
 	Address string     `json:"address"`
 	Crypto  cryptoJSON `json:"crypto"`
-	Id      string     `json:"id"`
+	ID      string     `json:"id"`
 	Version int        `json:"version"`
 }

@@ -16,17 +16,20 @@
 
 package crypto
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestGenerateKeyPair(t *testing.T) {
-	keypaid, err := GenerateKeyPair()
+	keypair, err := GenerateKeyPair()
 	if err != nil {
 		t.Errorf("Error while generating assymetric key: %s", err)
 	}
-	if len(keypaid.Public) != 64 {
-		t.Errorf("Public key size is incorrect, got: %d, want: %d.", len(keypaid.Public), 64)
+	privBytes, _ := keypair.Private.Bytes()
+	if len(privBytes) != 36 {
+		t.Errorf("Public key size is incorrect, got: %d, want: %d.", len(privBytes), 36)
 	}
-	if len(keypaid.Address) != 40 {
-		t.Errorf("Address size is incorrect, got: %d, want: %d.", len(keypaid.Address), 40)
+	if len(keypair.Address) != 40 {
+		t.Errorf("Address size is incorrect, got: %d, want: %d.", len(keypair.Address), 40)
 	}
 }
