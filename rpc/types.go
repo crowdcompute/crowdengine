@@ -18,10 +18,11 @@ package rpc
 
 // API describes the rpc procedure behaviour
 type API struct {
-	Namespace string
-	Version   string
-	Service   interface{}
-	Public    bool
+	Namespace    string
+	Version      string
+	Service      interface{}
+	Public       bool
+	AuthRequired bool
 }
 
 // Args represent the arguments

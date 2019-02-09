@@ -17,6 +17,7 @@
 package node
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"sync"
@@ -86,57 +87,90 @@ func (n *Node) Stop() error {
 }
 
 // apis returns the collection of RPC descriptors this node offers.
-func (n *Node) apis() []rpc.API {
-	return []rpc.API{
+func (n *Node) apis() []ccrpc.API {
+	return []ccrpc.API{
 		{
-			Namespace: "discovery",
-			Version:   "1.0",
-			Service:   ccrpc.NewDiscoveryAPI(n.host),
-			Public:    true,
+			Namespace:    "discovery",
+			Version:      "1.0",
+			Service:      ccrpc.NewDiscoveryAPI(n.host),
+			Public:       true,
+			AuthRequired: true,
 		},
 		{
-			Namespace: "imagemanager",
-			Version:   "1.0",
-			Service:   ccrpc.NewImageManagerAPI(n.host),
-			Public:    true,
+			Namespace:    "imagemanager",
+			Version:      "1.0",
+			Service:      ccrpc.NewImageManagerAPI(n.host),
+			Public:       true,
+			AuthRequired: true,
 		},
 		{
-			Namespace: "service",
-			Version:   "1.0",
-			Service:   ccrpc.NewSwarmServiceAPI(n.host),
-			Public:    true,
+			Namespace:    "service",
+			Version:      "1.0",
+			Service:      ccrpc.NewSwarmServiceAPI(n.host),
+			Public:       true,
+			AuthRequired: true,
 		},
 		{
-			Namespace: "bootnodes",
-			Version:   "1.0",
-			Service:   ccrpc.NewBootnodesAPI(n.host),
-			Public:    true,
+			Namespace:    "bootnodes",
+			Version:      "1.0",
+			Service:      ccrpc.NewBootnodesAPI(n.host),
+			Public:       true,
+			AuthRequired: true,
 		},
 		{
-			Namespace: "container",
-			Version:   "1.0",
-			Service:   ccrpc.NewContainerService(),
-			Public:    true,
+			Namespace:    "container",
+			Version:      "1.0",
+			Service:      ccrpc.NewContainerService(),
+			Public:       true,
+			AuthRequired: true,
 		},
 		{
-			Namespace: "image",
-			Version:   "1.0",
-			Service:   ccrpc.NewImageService(),
-			Public:    true,
+			Namespace:    "image",
+			Version:      "1.0",
+			Service:      ccrpc.NewImageService(),
+			Public:       true,
+			AuthRequired: true,
 		},
 		{
-			Namespace: "swarm",
-			Version:   "1.0",
-			Service:   ccrpc.NewSwarmService(),
-			Public:    true,
+			Namespace:    "swarm",
+			Version:      "1.0",
+			Service:      ccrpc.NewSwarmService(),
+			Public:       true,
+			AuthRequired: true,
 		},
 		{
-			Namespace: "accounts",
-			Version:   "1.0",
-			Service:   ccrpc.NewAccountsAPI(n.host, n.ks),
-			Public:    true,
+			Namespace:    "accounts",
+			Version:      "1.0",
+			Service:      ccrpc.NewAccountsAPI(n.host, n.ks),
+			Public:       true,
+			AuthRequired: false,
 		},
 	}
+}
+
+// AuthRequired authenticates a token
+func AuthRequired(apis []ccrpc.API, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// check authorization header
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			//http.Error(w, http.StatusText(403), 403)
+		}
+
+		// if empty body
+		if r.ContentLength == 0 {
+			http.Error(w, http.StatusText(400), 400)
+			return
+		}
+
+		// the logic to check against the unlocked account
+
+		// additional checks
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(r.Body)
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 // StartHTTP starts a http server
@@ -147,7 +181,7 @@ func (n *Node) StartHTTP() {
 		common.FatalIfErr(err, "Ethereum RPC could not register name.")
 	}
 	serveMux := http.NewServeMux()
-	serveMux.HandleFunc("/", server.ServeHTTP)
+	serveMux.Handle("/", AuthRequired(n.apis(), server))
 	serveMux.HandleFunc("/upload", ccrpc.ServeHTTP)
 
 	port := n.cfg.RPC.HTTP.ListenPort
