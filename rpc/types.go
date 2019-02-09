@@ -16,13 +16,26 @@
 
 package rpc
 
+import "encoding/json"
+
+const (
+	serviceMethodSeparator = "_"
+)
+
+type jsonRequest struct {
+	Method  string          `json:"method"`
+	Version string          `json:"jsonrpc"`
+	Id      json.RawMessage `json:"id,omitempty"`
+	Payload json.RawMessage `json:"params,omitempty"`
+}
+
 // API describes the rpc procedure behaviour
 type API struct {
 	Namespace    string
 	Version      string
 	Service      interface{}
 	Public       bool
-	AuthRequired bool
+	AuthRequired string
 }
 
 // Args represent the arguments

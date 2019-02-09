@@ -20,7 +20,9 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
+	"unicode"
 
 	"github.com/crowdcompute/crowdengine/log"
 
@@ -94,80 +96,117 @@ func (n *Node) apis() []ccrpc.API {
 			Version:      "1.0",
 			Service:      ccrpc.NewDiscoveryAPI(n.host),
 			Public:       true,
-			AuthRequired: true,
+			AuthRequired: "*",
 		},
 		{
 			Namespace:    "imagemanager",
 			Version:      "1.0",
 			Service:      ccrpc.NewImageManagerAPI(n.host),
 			Public:       true,
-			AuthRequired: true,
+			AuthRequired: "*",
 		},
 		{
 			Namespace:    "service",
 			Version:      "1.0",
 			Service:      ccrpc.NewSwarmServiceAPI(n.host),
 			Public:       true,
-			AuthRequired: true,
+			AuthRequired: "*",
 		},
 		{
 			Namespace:    "bootnodes",
 			Version:      "1.0",
 			Service:      ccrpc.NewBootnodesAPI(n.host),
 			Public:       true,
-			AuthRequired: true,
+			AuthRequired: "*",
 		},
 		{
 			Namespace:    "container",
 			Version:      "1.0",
 			Service:      ccrpc.NewContainerService(),
 			Public:       true,
-			AuthRequired: true,
+			AuthRequired: "*",
 		},
 		{
 			Namespace:    "image",
 			Version:      "1.0",
 			Service:      ccrpc.NewImageService(),
 			Public:       true,
-			AuthRequired: true,
+			AuthRequired: "*",
 		},
 		{
 			Namespace:    "swarm",
 			Version:      "1.0",
 			Service:      ccrpc.NewSwarmService(),
 			Public:       true,
-			AuthRequired: true,
+			AuthRequired: "*",
 		},
 		{
 			Namespace:    "accounts",
 			Version:      "1.0",
 			Service:      ccrpc.NewAccountsAPI(n.host, n.ks),
 			Public:       true,
-			AuthRequired: false,
+			AuthRequired: "UnlockAccount, LockAccount",
 		},
 	}
+}
+
+// LcFirst converts the first letter of s to lowercase
+func LcFirst(str string) string {
+	for i, v := range str {
+		return string(unicode.ToLower(v)) + str[i+1:]
+	}
+	return ""
 }
 
 // AuthRequired authenticates a token
 func AuthRequired(apis []ccrpc.API, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// check authorization header
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			//http.Error(w, http.StatusText(403), 403)
-		}
-
 		// if empty body
 		if r.ContentLength == 0 {
 			http.Error(w, http.StatusText(400), 400)
 			return
 		}
 
-		// the logic to check against the unlocked account
-
-		// additional checks
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(r.Body)
+		namespace, method, err := ccrpc.FindNamespaceMethod(buf.Bytes())
+
+		if err != nil {
+			http.Error(w, http.StatusText(400), 400)
+			return
+		}
+
+		// find which namespace
+		namespaceMethodProtected := false
+		for _, v := range apis {
+			if v.Namespace == namespace {
+				// if * then all methods are protected
+				if v.AuthRequired == "*" {
+					namespaceMethodProtected = true
+					break
+				}
+
+				// break them and inspect them
+				fncs := strings.Split(v.AuthRequired, ",")
+				for _, w := range fncs {
+					if LcFirst(strings.TrimSpace(w)) == method {
+						namespaceMethodProtected = true
+						break
+					}
+				}
+				break
+			}
+		}
+		// ns is protected, place the logic which verifies the header
+		if namespaceMethodProtected {
+			// check authorization header
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				http.Error(w, http.StatusText(401), 401)
+			}
+
+			// the logic which checks if this token is valid
+		}
 
 		next.ServeHTTP(w, r)
 	})
