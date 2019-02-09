@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-	"unicode"
 
 	"github.com/crowdcompute/crowdengine/log"
 
@@ -150,14 +149,6 @@ func (n *Node) apis() []ccrpc.API {
 	}
 }
 
-// LcFirst converts the first letter of s to lowercase
-func LcFirst(str string) string {
-	for i, v := range str {
-		return string(unicode.ToLower(v)) + str[i+1:]
-	}
-	return ""
-}
-
 // AuthRequired authenticates a token
 func AuthRequired(apis []ccrpc.API, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -189,7 +180,7 @@ func AuthRequired(apis []ccrpc.API, next http.Handler) http.Handler {
 				// break them and inspect them
 				fncs := strings.Split(v.AuthRequired, ",")
 				for _, w := range fncs {
-					if LcFirst(strings.TrimSpace(w)) == method {
+					if common.LcFirst(strings.TrimSpace(w)) == method {
 						namespaceMethodProtected = true
 						break
 					}

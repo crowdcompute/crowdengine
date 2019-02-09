@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+	"unicode"
 )
 
 var r *rand.Rand // Rand for this package.
@@ -30,6 +31,14 @@ var r *rand.Rand // Rand for this package.
 // check if applicable or should be placed inside random string
 func init() {
 	r = rand.New(rand.NewSource(time.Now().UnixNano()))
+}
+
+// LcFirst converts the first letter of s to lowercase
+func LcFirst(str string) string {
+	for i, v := range str {
+		return string(unicode.ToLower(v)) + str[i+1:]
+	}
+	return ""
 }
 
 // RandomString generates a random string of strlen length
