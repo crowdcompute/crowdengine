@@ -24,8 +24,7 @@ import (
 	"sync"
 )
 
-// scan performs a new scan on the given directory, compares against the already
-// cached filenames, and returns file sets: creates, deletes, updates.
+// GetKeystoreFiles returns all path files existend in the keyDir
 func GetKeystoreFiles(keyDir string) ([]string, error) {
 	var mu sync.RWMutex
 	var keyFiles []string

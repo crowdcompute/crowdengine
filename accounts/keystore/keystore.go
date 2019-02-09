@@ -87,6 +87,7 @@ func (ks *KeyStore) addAccount(a Account) {
 	ks.accounts[a.Address] = a
 }
 
+// Delete deletes an account from the disk and the memory
 func (ks *KeyStore) Delete(address, passphrase string) error {
 	var err error
 	a, err := ks.Find(address)

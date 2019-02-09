@@ -74,7 +74,7 @@ func NewKeyAndStoreToFile(passphrase string, keyDir string) (*Key, string) {
 	return key, fileName
 }
 
-// MarshalJSON encrypts a key using a symmetric algorithm
+// MarshalJSON marshals the key with the passphrase
 func (key *Key) MarshalJSON(passphrase string) ([]byte, error) {
 	salt, err := crypto.RandomEntropy(32)
 	if err != nil {
