@@ -14,20 +14,33 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
 
-package crypto
+package keystore
 
 import (
-	"crypto/rand"
-	"errors"
-	"io"
+	"encoding/hex"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-// RandomEntropy returns a slice of n bytes from rand.Reader
-func RandomEntropy(length int) ([]byte, error) {
-	buf := make([]byte, length)
-	n, err := io.ReadFull(rand.Reader, buf)
-	if err != nil || n != length {
-		return nil, errors.New("Unable to read random bytes of length")
+func TestMarshalUnmarshal(t *testing.T) {
+	key := NewKey()
+	dummyPass := "test"
+	data, err := key.MarshalJSON(dummyPass)
+	if err != nil {
+		t.Errorf("There was an error marshaling the key: %s", err)
 	}
-	return buf, nil
+	unmarshaledKey, err := UnmarshalKey(data, dummyPass)
+	if err != nil {
+		t.Errorf("There was an error unmarshaling the key: %s", err)
+	}
+	priv, err := key.Private.Bytes()
+	if err != nil {
+		t.Errorf("There was an error getting the bytes from the priv key: %s", err)
+	}
+	unmarshaledPriv, err := unmarshaledKey.Private.Bytes()
+	if err != nil {
+		t.Errorf("There was an error getting the bytes from the priv key: %s", err)
+	}
+	assert.True(t, hex.EncodeToString(priv) == hex.EncodeToString(unmarshaledPriv))
 }

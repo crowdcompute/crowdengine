@@ -21,6 +21,8 @@ func GetImageFromDB(imgID string) (*ImageLvlDB, error) {
 	i, err := GetDB().Model(image).Get([]byte(imgID))
 	if err != nil && err != ErrNotFound {
 		return nil, fmt.Errorf("There was an error getting the image from lvldb")
+	} else if err == ErrNotFound || i == nil {
+		return nil, err
 	}
 	image = i.(*ImageLvlDB)
 	return image, nil

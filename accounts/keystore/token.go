@@ -1,137 +1,79 @@
+// Copyright 2018 The crowdcompute:crowdengine Authors
+// This file is part of the crowdcompute:crowdengine library.
+//
+// The crowdcompute:crowdengine library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The crowdcompute:crowdengine library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
+
 package keystore
 
 import (
-	"encoding/base64"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"strings"
+	"log"
 	"time"
 
-	crypto "github.com/libp2p/go-libp2p-crypto"
+	jwt "github.com/dgrijalva/jwt-go"
 )
 
 // TokenClaims represents a token
 type TokenClaims struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
-	Exp   int64  `json:"exp"`
-	Iat   int64  `json:"iat"`
+	// TODO: See what do we actually need as claims
+	Name  string `json:"name,omitempty"`
+	Email string `json:"email,omitempty"`
+	jwt.StandardClaims
 }
 
-func NewTokenClaims(name string, email string) TokenClaims {
-	return TokenClaims{
-		Name:  name,
-		Email: email,
-		Exp:   time.Now().Add(time.Hour).Unix(),
-		Iat:   time.Now().Unix(),
+// NewTokenClaims creates and returns new Token Claims
+func NewTokenClaims(name string, email string) *TokenClaims {
+	sc := jwt.StandardClaims{
+		ExpiresAt: time.Now().Add(time.Hour).Unix(),
+		IssuedAt:  time.Now().Unix(),
+	}
+	return &TokenClaims{
+		Name:           name,
+		Email:          email,
+		StandardClaims: sc,
 	}
 }
 
-func (c TokenClaims) Valid() error {
-	return nil
+// Valid determines if the token is invalid for any supported reason
+// This is being checked when we are Parsing the token
+func (c *TokenClaims) Valid() error {
+	return c.StandardClaims.Valid()
 }
 
-// A JWT Token.  Different fields will be used depending on whether you're
-// creating or parsing/verifying a token.
-type Token struct {
-	Raw         string                 // The raw token.  Populated when you Parse a token
-	Header      map[string]interface{} // The first segment of the token
-	TokenClaims TokenClaims            // The second segment of the token
-	Signature   string                 // The third segment of the token.  Populated when you Parse a token
-	Valid       bool                   // Is the token valid?  Populated when you Parse/Verify a token
-}
-
-func NewWithClaims(claims TokenClaims) *Token {
-	return &Token{
-		Header: map[string]interface{}{
-			"typ": "JWT",
-			"alg": "HS256",
-		},
-		TokenClaims: claims,
+// NewToken creates a new JWT token and fills the Raw of the jwt.Token
+func NewToken(key []byte, tClaims *TokenClaims) (*jwt.Token, error) {
+	tok := jwt.NewWithClaims(jwt.SigningMethodHS256, tClaims)
+	tokenString, err := tok.SignedString(key)
+	if err != nil {
+		log.Println("There was an error getting signed token: ", err)
+		return nil, err
 	}
+	tok.Raw = tokenString
+	return tok, nil
 }
 
-func (t *Token) GetToken(key crypto.PrivKey) (string, error) {
-	var sstr string
-	var sig []byte
-	var err error
-	if sstr, err = t.CreateTokenParts(); err != nil {
-		return "", err
-	}
-	fmt.Println("sstr: ")
-	fmt.Println(sstr)
-	fmt.Println(key)
-	if sig, err = key.Sign([]byte(sstr)); err != nil {
-		return "", err
-	}
-	return strings.Join([]string{sstr, hex.EncodeToString(sig)}, "."), nil
-}
-
-func (t *Token) CreateTokenParts() (string, error) {
-	var err error
-	parts := make([]string, 2)
-	for i, _ := range parts {
-		var jsonValue []byte
-		if i == 0 {
-			if jsonValue, err = json.Marshal(t.Header); err != nil {
-				return "", err
-			}
-		} else {
-			if jsonValue, err = json.Marshal(t.TokenClaims); err != nil {
-				return "", err
-			}
+// VerifyToken checks if the token's data is valid
+func VerifyToken(t *jwt.Token, key []byte) (bool, error) {
+	parser := new(jwt.Parser)
+	// Checks if the claims are valid as well
+	token, err := parser.ParseWithClaims(t.Raw, t.Claims, func(token *jwt.Token) (interface{}, error) {
+		// Don't forget to validate the alg is what you expect:
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
-
-		parts[i] = EncodeSegment(jsonValue)
-	}
-	return strings.Join(parts, "."), nil
-}
-
-// Encode JWT specific base64url encoding with padding stripped
-func EncodeSegment(seg []byte) string {
-	return strings.TrimRight(base64.URLEncoding.EncodeToString(seg), "=")
-}
-
-func VerifyToken(pubKey crypto.PubKey, token string) (bool, error) {
-	tokenParts := strings.Split(token, ".")[:2]
-	signature := strings.Split(token, ".")[2]
-	data := strings.Join(tokenParts, ".")
-	sigBytes, err := hex.DecodeString(signature)
-	if err != nil {
-		return false, err
-	}
-	return pubKey.Verify([]byte(data), sigBytes)
-}
-
-// func CreateJSONToken(tokenData string) ([]byte, error) {
-// 	token := TokenJSON{
-// 		TokenData: tokenData,
-// 	}
-// 	data, err := json.MarshalIndent(&token, "", "  ")
-// 	if err != nil {
-// 		return data, err
-// 	}
-// 	return data, nil
-// }
-
-// func DecryptJSONToken(tokenData string) (string, error) {
-// 	encjson := TokenJSON{}
-// 	err := json.Unmarshal([]byte(tokenData), &encjson)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	return encjson.TokenData, nil
-// }
-
-func CreateToken(privKey crypto.PrivKey) (string, error) {
-	token := NewWithClaims(NewTokenClaims("Test", "aa@bb.com"))
-	tokenString, err := token.GetToken(privKey)
-	if err != nil {
-		fmt.Println("There was an error: ", err)
-		return "", err
-	}
-	fmt.Println("tokenString:")
-	fmt.Println(tokenString)
-	return tokenString, nil
+		// hmacSampleSecret is a []byte containing your secret, e.g. []byte("my_secret_key")
+		return key, nil
+	})
+	return token.Valid, err
 }

@@ -23,6 +23,7 @@ import (
 
 	"github.com/crowdcompute/crowdengine/log"
 
+	"github.com/crowdcompute/crowdengine/accounts/keystore"
 	"github.com/crowdcompute/crowdengine/cmd/gocc/config"
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/database"
@@ -41,6 +42,7 @@ type Node struct {
 	store, imgTable database.Database
 	host            *p2p.Host
 	cfg             *config.GlobalConfig
+	ks              *keystore.KeyStore
 }
 
 // NewNode returns new Node instance
@@ -48,6 +50,7 @@ func NewNode(cfg *config.GlobalConfig) (*Node, error) {
 	n := &Node{
 		cfg:  cfg,
 		quit: make(chan struct{}),
+		ks:   keystore.NewKeyStore(cfg.Global.KeystoreDir),
 	}
 	host, err := p2p.NewHost(cfg)
 	n.host = host
@@ -127,6 +130,12 @@ func (n *Node) apis() []rpc.API {
 			Service:   ccrpc.NewSwarmService(),
 			Public:    true,
 		},
+		{
+			Namespace: "accounts",
+			Version:   "1.0",
+			Service:   ccrpc.NewAccountsAPI(n.host, n.ks),
+			Public:    true,
+		},
 	}
 }
 
@@ -141,7 +150,9 @@ func (n *Node) StartHTTP() {
 	serveMux.HandleFunc("/", server.ServeHTTP)
 	serveMux.HandleFunc("/upload", ccrpc.ServeHTTP)
 
-	httpAddr := fmt.Sprintf("%s:%d", n.cfg.RPC.HTTP.ListenAddress, n.cfg.RPC.HTTP.ListenPort)
+	port := n.cfg.RPC.HTTP.ListenPort
+	log.Println("RPC listening to the port: ", port)
+	httpAddr := fmt.Sprintf("%s:%d", n.cfg.RPC.HTTP.ListenAddress, port)
 	log.Fatal(http.ListenAndServe(httpAddr, serveMux))
 }
 

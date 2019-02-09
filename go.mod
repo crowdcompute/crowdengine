@@ -3,11 +3,13 @@ module github.com/crowdcompute/crowdengine
 require (
 	github.com/Microsoft/go-winio v0.4.11 // indirect
 	github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412 // indirect
+	github.com/allegro/bigcache v1.1.0 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20190121184617-8f049bdb8feb // indirect
 	github.com/bshuster-repo/logrus-logstash-hook v0.4.1
 	github.com/btcsuite/btcd v0.0.0-20190115013929-ed77733ec07d // indirect
 	github.com/coreos/go-semver v0.2.0 // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.13.1
 	github.com/docker/go-connections v0.4.0 // indirect

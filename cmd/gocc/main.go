@@ -59,17 +59,7 @@ func init() {
 
 func gocc(ctx *cli.Context) error {
 	// create default config
-	cfg := config.DefaultConfig()
-
-	// if config file is given, load it
-	confFile := ctx.String("config")
-	if confFile != "" {
-		config.LoadTomlConfig(ctx, cfg)
-	}
-
-	// apply flags to config
-	config.ApplyFlags(ctx, cfg)
-
+	cfg := config.GetConfig(ctx)
 	// create and start node
 	if node, err := node.NewNode(cfg); err != nil {
 		log.Fatal(err)

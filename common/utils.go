@@ -65,11 +65,21 @@ func RemoveFile(filePath string) error {
 	return nil
 }
 
+// FileExist checks if a file exists at filePath.
+func FileExist(filePath string) bool {
+	_, err := os.Stat(filePath)
+	if err != nil && os.IsNotExist(err) {
+		return false
+	}
+
+	return true
+}
+
 // WriteDataToFile writes the data to a file named fileName
 func WriteDataToFile(data []byte, filePath string) (string, error) {
 	// Create the directory with appropriate permissions
 	// in case it is not present yet.
-	const dirPerm = 0700
+	const dirPerm = 0600
 	if err := os.MkdirAll(filepath.Dir(filePath), dirPerm); err != nil {
 		return "", err
 	}
@@ -82,8 +92,8 @@ func WriteDataToFile(data []byte, filePath string) (string, error) {
 	return filePath, nil
 }
 
-// LoadFromFile loads data from file
-func LoadFromFile(filename string) ([]byte, error) {
+// LoadDataFromFile loads data from file
+func LoadDataFromFile(filename string) ([]byte, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err

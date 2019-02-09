@@ -60,9 +60,6 @@ func RemoveImages() {
 				removeImageFromDocker(imgID)
 				removeImageFromDB(imgID)
 			}
-		} else {
-			log.Printf("Could not Get image:%s Error : %s", imgID, err)
-			return
 		}
 	}
 }

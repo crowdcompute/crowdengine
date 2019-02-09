@@ -228,6 +228,20 @@ func ApplyFlags(ctx *cli.Context, cfg *GlobalConfig) {
 
 }
 
+// GetConfig returns the config after applying the defaults, toml file and flags
+func GetConfig(ctx *cli.Context) *GlobalConfig {
+	// create default config
+	cfg := DefaultConfig()
+	// if config file is given, load it
+	confFile := ctx.String("config")
+	if confFile != "" {
+		LoadTomlConfig(ctx, cfg)
+	}
+	// apply flags to config
+	ApplyFlags(ctx, cfg)
+	return cfg
+}
+
 // DefaultDataDir is the default data directory to use for the databases and other
 // persistence requirements.
 func DefaultDataDir() string {
@@ -242,10 +256,11 @@ func DefaultDataDir() string {
 			return filepath.Join(home, ".gocc_data")
 		}
 	}
-	// As we cannot guess a stable location, return empty and handle later
+	// if a common location wasn't found, return empty and handle later
 	return ""
 }
 
+// Return the user's home dir
 func homeDir() string {
 	if home := os.Getenv("HOME"); home != "" {
 		return home

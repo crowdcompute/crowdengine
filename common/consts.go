@@ -56,3 +56,6 @@ const ContainerCheckInterval time.Duration = time.Second * 3
 
 // DiscoveryTimeout represents the time to wait for
 const DiscoveryTimeout time.Duration = time.Second * 10
+
+// TokenTimeout represents the time to wait for the JWT account token to expire
+const TokenTimeout time.Duration = time.Second * 30
