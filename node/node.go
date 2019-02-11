@@ -19,6 +19,7 @@ package node
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
@@ -150,8 +151,8 @@ func (n *Node) apis() []ccrpc.API {
 }
 
 // AuthRequired authenticates a token
-func AuthRequired(apis []ccrpc.API, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func AuthRequired(apis []ccrpc.API, next http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		// if empty body
 		if r.ContentLength == 0 {
 			http.Error(w, http.StatusText(400), 400)
@@ -198,9 +199,10 @@ func AuthRequired(apis []ccrpc.API, next http.Handler) http.Handler {
 
 			// the logic which checks if this token is valid
 		}
-
+		// Restore the io.ReadCloser to its original state
+		r.Body = ioutil.NopCloser(buf)
 		next.ServeHTTP(w, r)
-	})
+	}
 }
 
 // StartHTTP starts a http server
