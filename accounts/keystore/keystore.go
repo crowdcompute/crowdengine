@@ -223,21 +223,21 @@ func (ks *KeyStore) TimedUnlock(accAddress, passphrase string, timeout time.Dura
 	return nil
 }
 
-func (ks *KeyStore) expire(addr string, u *unlocked, timeout time.Duration) {
+func (ks *KeyStore) expire(hashedToken string, u *unlocked, timeout time.Duration) {
 	t := time.NewTimer(timeout)
 	defer t.Stop()
 	select {
 	case <-u.abort:
 		// just quit
 	case <-t.C:
-		log.Printf("The account {%s} has expired. Locking... ", addr)
+		log.Printf("The account has expired. Locking...")
 		ks.mu.Lock()
 		// only drop if it's still the same key instance that dropLater
 		// was launched with. we can check that using pointer equality
 		// because the map stores a new pointer every time the key is
 		// unlocked.
-		if ks.unlocked[addr] == u {
-			delete(ks.unlocked, addr)
+		if ks.unlocked[hashedToken] == u {
+			delete(ks.unlocked, hashedToken)
 		}
 		ks.mu.Unlock()
 	}
