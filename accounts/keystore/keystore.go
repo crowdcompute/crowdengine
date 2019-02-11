@@ -141,10 +141,9 @@ func (ks *KeyStore) GetKeyIfUnlockedAndValid(rawToken string) (*Key, error) {
 	} else if err != nil {
 		return nil, err
 	}
-	hashedToken := HashToken(rawToken)
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
-	unlockedKey, found := ks.unlocked[hashedToken]
+	unlockedKey, found := ks.unlocked[HashToken(rawToken)]
 	if !found {
 		return nil, ErrLocked
 	}
@@ -164,10 +163,15 @@ func (ks *KeyStore) Find(accAddress string) (Account, error) {
 
 // Lock removes the private key with the given address from memory.
 func (ks *KeyStore) Lock(accAddress string) error {
+	a, err := ks.Find(accAddress)
+	if err != nil {
+		return err
+	}
+	hashedToken := HashToken(a.Token.Raw)
 	ks.mu.Lock()
-	if unl, found := ks.unlocked[accAddress]; found {
+	if unl, found := ks.unlocked[hashedToken]; found {
 		ks.mu.Unlock()
-		ks.expire(accAddress, unl, time.Duration(0)*time.Nanosecond)
+		ks.expire(hashedToken, unl, time.Duration(0)*time.Nanosecond)
 	} else {
 		ks.mu.Unlock()
 	}
