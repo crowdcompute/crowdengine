@@ -21,6 +21,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/crowdcompute/crowdengine/crypto"
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
@@ -63,8 +64,28 @@ func NewToken(key []byte, tClaims *TokenClaims) (*jwt.Token, error) {
 	return tok, nil
 }
 
+func HashToken(rawToken string) string {
+	b := crypto.Sha256Hash([]byte(rawToken)).Sum(nil)
+	return string(b)
+}
+
 // VerifyToken checks if the token's data is valid
-func VerifyToken(t *jwt.Token, key []byte) (bool, error) {
+func VerifyToken(rawToken string, key []byte) (bool, error) {
+	parser := new(jwt.Parser)
+	// Checks if the claims are valid as well
+	token, err := parser.Parse(rawToken, func(token *jwt.Token) (interface{}, error) {
+		// Don't forget to validate the alg is what you expect:
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+		// hmacSampleSecret is a []byte containing your secret, e.g. []byte("my_secret_key")
+		return key, nil
+	})
+	return token.Valid, err
+}
+
+// VerifyTokenWithClaims checks if the token's data is valid
+func VerifyTokenWithClaims(t *jwt.Token, key []byte) (bool, error) {
 	parser := new(jwt.Parser)
 	// Checks if the claims are valid as well
 	token, err := parser.ParseWithClaims(t.Raw, t.Claims, func(token *jwt.Token) (interface{}, error) {

@@ -97,7 +97,7 @@ func (ks *KeyStore) Delete(address, passphrase string) error {
 	// Decrypting the key isn't really necessary, but we do
 	// it anyway to check the password and zero out the key
 	// immediately afterwards.
-	if _, err = ks.extractKeyFromFile(address, passphrase); err != nil {
+	if _, err = ks.extractKeyFromFile(a.Address, a.Path, passphrase); err != nil {
 		return err
 	}
 	err = os.Remove(a.Path)
@@ -107,7 +107,7 @@ func (ks *KeyStore) Delete(address, passphrase string) error {
 	return err
 }
 
-// AddAccount adds or replaces an account
+// deleteAccount removes an account from the accounts map
 func (ks *KeyStore) deleteAccount(address string) {
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
@@ -135,30 +135,20 @@ func (ks *KeyStore) IssueTokenForAccount(accAddress string, tClaims *TokenClaims
 
 // GetKeyIfUnlockedAndValid returns the Key structure of the account if the account is unlocked
 // and its token is valid
-func (ks *KeyStore) GetKeyIfUnlockedAndValid(accAddress string) (*Key, error) {
-	if verified, err := ks.VerifyTokenForAccount(accAddress); !verified {
-		return nil, fmt.Errorf("Token could not be verified for this account: {%s}", accAddress)
+func (ks *KeyStore) GetKeyIfUnlockedAndValid(rawToken string) (*Key, error) {
+	if verified, err := VerifyToken(rawToken, ks.symmKey); !verified {
+		return nil, fmt.Errorf("Token could not be verified for this account: {%s}", rawToken)
 	} else if err != nil {
 		return nil, err
 	}
+	hashedToken := HashToken(rawToken)
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
-	unlockedKey, found := ks.unlocked[accAddress]
+	unlockedKey, found := ks.unlocked[hashedToken]
 	if !found {
 		return nil, ErrLocked
 	}
 	return unlockedKey.Key, nil
-}
-
-// VerifyTokenForAccount verifies validity of a token for the specified account
-func (ks *KeyStore) VerifyTokenForAccount(accAddress string) (bool, error) {
-	a, err := ks.Find(accAddress)
-	if err != nil {
-		return false, err
-	} else if a.Token == nil {
-		return false, ErrTokenNotIssued
-	}
-	return VerifyToken(a.Token, ks.symmKey)
 }
 
 // Find resolves the given account into a unique entry in the keystore.
@@ -197,13 +187,19 @@ func (ks *KeyStore) Unlock(accAddress, passphrase string) error {
 // shortens the active unlock timeout. If the address was previously unlocked
 // indefinitely the timeout is not altered.
 func (ks *KeyStore) TimedUnlock(accAddress, passphrase string, timeout time.Duration) error {
-	key, err := ks.extractKeyFromFile(accAddress, passphrase)
+	a, err := ks.Find(accAddress)
 	if err != nil {
 		return err
 	}
+	key, err := ks.extractKeyFromFile(a.Address, a.Path, passphrase)
+	if err != nil {
+		return err
+	}
+	hashedToken := HashToken(a.Token.Raw)
+
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
-	u, found := ks.unlocked[accAddress]
+	u, found := ks.unlocked[hashedToken]
 	if found {
 		if u.abort == nil {
 			// The address was unlocked indefinitely, so unlocking
@@ -215,11 +211,11 @@ func (ks *KeyStore) TimedUnlock(accAddress, passphrase string, timeout time.Dura
 	}
 	if timeout > 0 {
 		u = &unlocked{Key: key, abort: make(chan struct{})}
-		go ks.expire(accAddress, u, timeout)
+		go ks.expire(hashedToken, u, timeout)
 	} else {
 		u = &unlocked{Key: key}
 	}
-	ks.unlocked[accAddress] = u
+	ks.unlocked[hashedToken] = u
 	return nil
 }
 
@@ -244,13 +240,9 @@ func (ks *KeyStore) expire(addr string, u *unlocked, timeout time.Duration) {
 }
 
 // extractKeyFromFile loads the key from the account's path and unmarshals its contents
-func (ks *KeyStore) extractKeyFromFile(accAddress string, pass string) (*Key, error) {
-	a, err := ks.Find(accAddress)
-	if err != nil {
-		return nil, err
-	}
+func (ks *KeyStore) extractKeyFromFile(accAddress, accPath, pass string) (*Key, error) {
 	// gets the byte data from a file
-	keyData, err := common.LoadDataFromFile(a.Path)
+	keyData, err := common.LoadDataFromFile(accPath)
 	if err != nil {
 		return nil, err
 	}
@@ -260,8 +252,8 @@ func (ks *KeyStore) extractKeyFromFile(accAddress string, pass string) (*Key, er
 		return nil, fmt.Errorf("Given passphrase could be wrong. Error: %s", err)
 	}
 	// Make sure we're really operating on the requested key (no swap attacks)
-	if key.Address != a.Address {
-		return nil, fmt.Errorf("key content mismatch: have account %x, want %x", key.Address, a.Address)
+	if key.Address != accAddress {
+		return nil, fmt.Errorf("key content mismatch: have account %x, want %x", key.Address, accAddress)
 	}
 	return key, nil
 }

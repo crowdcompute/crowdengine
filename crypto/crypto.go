@@ -105,7 +105,7 @@ func HashFile(file *os.File) []byte {
 	return h.Sum(nil)
 }
 
-// HashFilePath hashes the file with the sha256
+// HashFilePath hashes the file that exists in the filePath with the sha256
 func HashFilePath(filePath string) ([]byte, error) {
 	if file, err := os.Open(filePath); err == nil {
 		defer file.Close()
