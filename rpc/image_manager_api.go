@@ -19,11 +19,13 @@ package rpc
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"os"
 	"strconv"
 	"time"
 
+	"github.com/crowdcompute/crowdengine/accounts/keystore"
 	"github.com/crowdcompute/crowdengine/database"
 	"github.com/crowdcompute/crowdengine/log"
 
@@ -50,9 +52,9 @@ func NewImageManagerAPI(h *p2p.Host) *ImageManagerAPI {
 // UploadImage hashes an image and stores its signature on the hash
 // TODO: This will change in the future and authorization + token will be used instead of privaty key passed
 func (api *ImageManagerAPI) UploadImage(ctx context.Context, imageFilePath string, privateKey string) error {
-	privByte, _ := hex.DecodeString(privateKey)
-	priv, err := crypto.RestorePrivateKey(privByte)
+	log.Println("Uploading an image to the node...")
 
+	key := ctx.Value(common.ContextPrivateKey).(*keystore.Key)
 	// Hash image
 	file, err := os.Open(imageFilePath)
 	if err != nil {
@@ -60,7 +62,7 @@ func (api *ImageManagerAPI) UploadImage(ctx context.Context, imageFilePath strin
 	}
 	defer file.Close()
 	hash := crypto.HashFile(file)
-	sign, err := priv.Sign(hash)
+	sign, err := key.KeyPair.Private.Sign(hash)
 
 	storeImageToDB(hex.EncodeToString(hash), hex.EncodeToString(sign))
 	return err
@@ -74,6 +76,8 @@ func storeImageToDB(hash string, signature string) {
 
 // PushImage is the API call to push an image to the peer peerID
 func (api *ImageManagerAPI) PushImage(ctx context.Context, peerID string, imageFilePath string) string {
+	log.Println("Pushing an image to the peer : ", peerID)
+
 	file, fileSize, fileName, signature, hash, err := api.getFileData(imageFilePath)
 	common.FatalIfErr(err, "Error getting file data")
 	defer file.Close()
@@ -105,6 +109,9 @@ func (api *ImageManagerAPI) getFileData(imageFilePath string) (*os.File, string,
 	hashedFile, _ := crypto.HashFilePath(imageFilePath)
 	hash := hex.EncodeToString(hashedFile)
 	img, err := database.GetImageAccountFromDB(hash)
+	if err != nil {
+		return nil, "", "", "", "", fmt.Errorf("Couldn't find the image on the database")
+	}
 
 	signatureFilled := common.FillString(img.Signature, common.SignatureLength)
 	hashFilled := common.FillString(hash, common.HashLength)

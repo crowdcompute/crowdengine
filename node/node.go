@@ -151,15 +151,9 @@ func (n *Node) apis() []ccrpc.API {
 	}
 }
 
-type ContextKey string
-
 // AuthRequired authenticates a token
 func AuthRequired(apis []ccrpc.API, ks *keystore.KeyStore, next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		const ContextPrivateKey ContextKey = "privatekey"
-		ctx := context.WithValue(r.Context(), ContextPrivateKey, "the-private-key")
-
 		// if empty body
 		if r.ContentLength == 0 {
 			http.Error(w, http.StatusText(400), 400)
@@ -169,6 +163,8 @@ func AuthRequired(apis []ccrpc.API, ks *keystore.KeyStore, next http.Handler) ht
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(r.Body)
 		namespace, method, err := ccrpc.FindNamespaceMethod(buf.Bytes())
+		// Restore the r.Body to its original state
+		r.Body = ioutil.NopCloser(buf)
 
 		if err != nil {
 			http.Error(w, http.StatusText(400), 400)
@@ -207,20 +203,18 @@ func AuthRequired(apis []ccrpc.API, ks *keystore.KeyStore, next http.Handler) ht
 			}
 
 			// the logic which checks if this token is valid
-			log.Printf("Header: {%s}\n", authHeader)
 			token := strings.Split(authHeader, " ")[1]
-			log.Printf("Token: {%s}\n", token)
 			key, err := ks.GetKeyIfUnlockedAndValid(token)
 			if err != nil {
 				log.Println("Error while trying to get key for a token. Error: ", err)
 				return
 			}
+			ctx := context.WithValue(r.Context(), common.ContextPrivateKey, key)
 			log.Printf("Token valid and account {%s} unlocked. ", key.Address)
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
 		}
-		// Restore the r.Body to its original state
-		r.Body = ioutil.NopCloser(buf)
-
-		next.ServeHTTP(w, r.WithContext(ctx))
+		next.ServeHTTP(w, r)
 	}
 }
 

@@ -62,7 +62,7 @@ type ImageLvlDB struct {
 }
 
 // ImageAccount represents the Image Account Model
-// Identify images related to users' account
+// These are the images uploaded to the dev node by users
 // TODO: name to be changed
 type ImageAccount struct {
 	Signature   string `json:"signature"`   // The uploader of this image
