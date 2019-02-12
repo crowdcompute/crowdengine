@@ -2,6 +2,7 @@ module github.com/crowdcompute/crowdengine
 
 require (
 	github.com/Microsoft/go-winio v0.4.11 // indirect
+	github.com/allegro/bigcache v1.2.0 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20190204200901-2166578f3448 // indirect
 	github.com/bshuster-repo/logrus-logstash-hook v0.4.1
 	github.com/btcsuite/btcd v0.0.0-20190209000034-12ce2fc7d321 // indirect

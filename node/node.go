@@ -145,13 +145,13 @@ func (n *Node) apis() []ccrpc.API {
 			Version:      "1.0",
 			Service:      ccrpc.NewAccountsAPI(n.host, n.ks),
 			Public:       true,
-			AuthRequired: "UnlockAccount, LockAccount",
+			AuthRequired: "LockAccount",
 		},
 	}
 }
 
 // AuthRequired authenticates a token
-func AuthRequired(apis []ccrpc.API, next http.Handler) http.HandlerFunc {
+func AuthRequired(apis []ccrpc.API, ks *keystore.KeyStore, next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// if empty body
 		if r.ContentLength == 0 {
@@ -195,11 +195,22 @@ func AuthRequired(apis []ccrpc.API, next http.Handler) http.HandlerFunc {
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
 				http.Error(w, http.StatusText(401), 401)
+				log.Println("Namespace is protected, however no Authorization given.")
+				return
 			}
 
 			// the logic which checks if this token is valid
+			log.Printf("Header: {%s}\n", authHeader)
+			token := strings.Split(authHeader, " ")[1]
+			log.Printf("Token: {%s}\n", token)
+			key, err := ks.GetKeyIfUnlockedAndValid(token)
+			if err != nil {
+				log.Println("Error while trying to get key for a token. Error: ", err)
+				return
+			}
+			log.Printf("Token valid and account {%s} unlocked. ", key.Address)
 		}
-		// Restore the io.ReadCloser to its original state
+		// Restore the r.Body to its original state
 		r.Body = ioutil.NopCloser(buf)
 		next.ServeHTTP(w, r)
 	}
@@ -213,7 +224,7 @@ func (n *Node) StartHTTP() {
 		common.FatalIfErr(err, "Ethereum RPC could not register name.")
 	}
 	serveMux := http.NewServeMux()
-	serveMux.Handle("/", AuthRequired(n.apis(), server))
+	serveMux.Handle("/", AuthRequired(n.apis(), n.ks, server))
 	serveMux.HandleFunc("/upload", ccrpc.ServeHTTP)
 
 	port := n.cfg.RPC.HTTP.ListenPort

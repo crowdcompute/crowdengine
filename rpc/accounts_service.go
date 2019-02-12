@@ -18,6 +18,7 @@ package rpc
 
 import (
 	"context"
+	"time"
 
 	"github.com/crowdcompute/crowdengine/accounts/keystore"
 	"github.com/crowdcompute/crowdengine/common"
@@ -58,11 +59,39 @@ func (api *AccountsAPI) UnlockAccount(ctx context.Context, accAddr, path, passph
 	if err := api.ks.TimedUnlock(accAddr, passphrase, common.TokenTimeout); err != nil {
 		return "", err
 	}
+	toMinutes := float64(common.TokenTimeout) / float64(time.Minute)
+	log.Printf("The account {%s} has been unlocked for %.2f minutes... This is the token: {%s} \n", accAddr, toMinutes, rawToken)
 	return rawToken, err
 }
 
+// ListAccounts creates a new account
+func (api *AccountsAPI) ListAccounts(ctx context.Context) []string {
+	accounts := api.ks.GetAccounts()
+	accAddresses := make([]string, 0)
+	for _, acc := range accounts {
+		accAddresses = append(accAddresses, acc.Address)
+	}
+	log.Printf("Here is the list of all accounts of this node: {%s}\n", accAddresses)
+	return accAddresses
+}
+
+// DeleteAccount deletes the account with the address accAddr and the passphrase passphrase
+func (api *AccountsAPI) DeleteAccount(ctx context.Context, accAddr, passphrase string) error {
+	err := api.ks.Delete(accAddr, passphrase)
+	if err != nil {
+		return err
+	}
+	log.Printf("Deleted this account : {%s}\n", accAddr)
+	return nil
+}
+
 // LockAccount locks an account
-func (api *AccountsAPI) LockAccount(ctx context.Context, accAddr string) (peers []string) {
-	api.ks.Lock(accAddr)
-	return
+func (api *AccountsAPI) LockAccount(ctx context.Context, accAddr string) error {
+	err := api.ks.Lock(accAddr)
+	if err != nil {
+		log.Println("There was an error locking the account. Error: ", err)
+		return err
+	}
+	log.Printf("The account {%s} has been locked... \n", accAddr)
+	return nil
 }

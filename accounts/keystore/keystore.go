@@ -95,8 +95,7 @@ func (ks *KeyStore) Delete(address, passphrase string) error {
 		return err
 	}
 	// Decrypting the key isn't really necessary, but we do
-	// it anyway to check the password and zero out the key
-	// immediately afterwards.
+	// it anyway to check the passphrase
 	if _, err = ks.extractKeyFromFile(a.Address, a.Path, passphrase); err != nil {
 		return err
 	}
