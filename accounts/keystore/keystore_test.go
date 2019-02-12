@@ -63,21 +63,27 @@ func TestKeyStore(t *testing.T) {
 	}
 }
 
-// func TestVerifyTokenForAccount(t *testing.T) {
-// 	dir, ks := tmpKeyStore(t)
-// 	defer os.RemoveAll(dir)
+func TestGetAccounts(t *testing.T) {
+	dir, ks := tmpKeyStore(t)
+	defer os.RemoveAll(dir)
 
-// 	a, err := ks.NewAccount(passphrase)
-// 	if err != nil {
-// 		t.Errorf("There was an error creating new account: %s", err)
-// 	}
-// 	ks.IssueTokenForAccount(a.Address, NewTokenClaims("", ""))
-// 	verify, err := ks.VerifyTokenForAccount(a.Address)
-// 	if err != nil {
-// 		t.Errorf("There was an error verifying token for account. Error: %s", err)
-// 	}
-// 	assert.True(t, verify)
-// }
+	if accounts := ks.GetAccounts(); len(accounts) != 0 {
+		t.Errorf("Accounts length should be zero. Got %d", len(accounts))
+	}
+	a, err := ks.NewAccount(passphrase)
+	if err != nil {
+		t.Errorf("There was an error creating new account: %s", err)
+	}
+	if accounts := ks.GetAccounts(); len(accounts) != 1 {
+		t.Errorf("Accounts length should be one. Got %d", len(accounts))
+	}
+	if err := ks.Delete(a.Address, passphrase); err != nil {
+		t.Errorf("Delete error: %v", err)
+	}
+	if accounts := ks.GetAccounts(); len(accounts) != 0 {
+		t.Errorf("Accounts length should be zero. Got %d", len(accounts))
+	}
+}
 
 func TestTimedUnlock(t *testing.T) {
 	dir, ks := tmpKeyStore(t)

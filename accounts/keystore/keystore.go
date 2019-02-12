@@ -114,11 +114,15 @@ func (ks *KeyStore) deleteAccount(address string) {
 	delete(ks.accounts, address)
 }
 
-// Accounts returns all key files present in the directory.
-func (ks *KeyStore) Accounts(accAddress string) Account {
+// GetAccounts returns all accounts in this keystore
+func (ks *KeyStore) GetAccounts() []Account {
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
-	return ks.accounts[accAddress]
+	accounts := make([]Account, 0)
+	for _, acc := range ks.accounts {
+		accounts = append(accounts, acc)
+	}
+	return accounts
 }
 
 // IssueTokenForAccount issues a token for the specified account
