@@ -43,11 +43,11 @@ type Account struct {
 }
 
 type KeyStore struct {
-	keyDir   string
-	accounts map[string]Account   // address -> Account
-	unlocked map[string]*unlocked // Currently unlocked account (decrypted private keys)
-	symmKey  []byte               // Key for signing tokens
-	mu       sync.RWMutex
+	keyDir      string
+	accounts    map[string]Account   // address -> Account
+	unlockedAcc map[string]*unlocked // Currently unlocked accounts
+	symmKey     []byte               // Key for signing tokens
+	mu          sync.RWMutex
 }
 
 type unlocked struct {
@@ -61,10 +61,10 @@ func NewKeyStore(keyDir string) *KeyStore {
 	symmKey, err := crypto.RandomEntropy(32)
 	common.FatalIfErr(err, "There was an error getting random entropy")
 	return &KeyStore{
-		accounts: make(map[string]Account),
-		unlocked: make(map[string]*unlocked),
-		symmKey:  symmKey,
-		keyDir:   keyDir,
+		accounts:    make(map[string]Account),
+		unlockedAcc: make(map[string]*unlocked),
+		symmKey:     symmKey,
+		keyDir:      keyDir,
 	}
 }
 
@@ -137,13 +137,13 @@ func (ks *KeyStore) IssueTokenForAccount(accAddress string, tClaims *TokenClaims
 // and its token is valid
 func (ks *KeyStore) GetKeyIfUnlockedAndValid(rawToken string) (*Key, error) {
 	if verified, err := VerifyToken(rawToken, ks.symmKey); !verified {
-		return nil, fmt.Errorf("Token could not be verified for this account: {%s}", rawToken)
+		return nil, fmt.Errorf("Couldn't verify token: {%s}", rawToken)
 	} else if err != nil {
 		return nil, err
 	}
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
-	unlockedKey, found := ks.unlocked[HashToken(rawToken)]
+	unlockedKey, found := ks.unlockedAcc[HashToken(rawToken)]
 	if !found {
 		return nil, ErrLocked
 	}
@@ -169,9 +169,13 @@ func (ks *KeyStore) Lock(accAddress string) error {
 	}
 	hashedToken := HashToken(a.Token.Raw)
 	ks.mu.Lock()
-	if unl, found := ks.unlocked[hashedToken]; found {
+	if unl, found := ks.unlockedAcc[hashedToken]; found {
+		// Terminate the routine
+		if unl.abort != nil {
+			close(unl.abort)
+		}
+		delete(ks.unlockedAcc, hashedToken)
 		ks.mu.Unlock()
-		ks.expire(hashedToken, unl, time.Duration(0)*time.Nanosecond)
 	} else {
 		ks.mu.Unlock()
 	}
@@ -203,7 +207,7 @@ func (ks *KeyStore) TimedUnlock(accAddress, passphrase string, timeout time.Dura
 
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
-	u, found := ks.unlocked[hashedToken]
+	u, found := ks.unlockedAcc[hashedToken]
 	if found {
 		if u.abort == nil {
 			// The address was unlocked indefinitely, so unlocking
@@ -219,7 +223,7 @@ func (ks *KeyStore) TimedUnlock(accAddress, passphrase string, timeout time.Dura
 	} else {
 		u = &unlocked{Key: key}
 	}
-	ks.unlocked[hashedToken] = u
+	ks.unlockedAcc[hashedToken] = u
 	return nil
 }
 
@@ -236,8 +240,8 @@ func (ks *KeyStore) expire(hashedToken string, u *unlocked, timeout time.Duratio
 		// was launched with. we can check that using pointer equality
 		// because the map stores a new pointer every time the key is
 		// unlocked.
-		if ks.unlocked[hashedToken] == u {
-			delete(ks.unlocked, hashedToken)
+		if ks.unlockedAcc[hashedToken] == u {
+			delete(ks.unlockedAcc, hashedToken)
 		}
 		ks.mu.Unlock()
 	}
