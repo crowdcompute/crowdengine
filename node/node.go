@@ -18,6 +18,7 @@ package node
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -150,9 +151,15 @@ func (n *Node) apis() []ccrpc.API {
 	}
 }
 
+type ContextKey string
+
 // AuthRequired authenticates a token
 func AuthRequired(apis []ccrpc.API, ks *keystore.KeyStore, next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		const ContextPrivateKey ContextKey = "privatekey"
+		ctx := context.WithValue(r.Context(), ContextPrivateKey, "the-private-key")
+
 		// if empty body
 		if r.ContentLength == 0 {
 			http.Error(w, http.StatusText(400), 400)
@@ -212,7 +219,8 @@ func AuthRequired(apis []ccrpc.API, ks *keystore.KeyStore, next http.Handler) ht
 		}
 		// Restore the r.Body to its original state
 		r.Body = ioutil.NopCloser(buf)
-		next.ServeHTTP(w, r)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 }
 
