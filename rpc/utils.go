@@ -15,7 +15,7 @@ func FindNamespaceMethod(incomingMsg json.RawMessage) (string, string, error) {
 
 	elems := strings.Split(in.Method, serviceMethodSeparator)
 	if len(elems) != 2 {
-		return "", "", errors.New("Method not found")
+		return "", "", errors.New("Method not given")
 	}
 
 	return elems[0], elems[1], nil

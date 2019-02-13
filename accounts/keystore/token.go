@@ -81,6 +81,9 @@ func VerifyToken(rawToken string, key []byte) (bool, error) {
 		// hmacSampleSecret is a []byte containing your secret, e.g. []byte("my_secret_key")
 		return key, nil
 	})
+	if err != nil {
+		return false, err
+	}
 	return token.Valid, err
 }
 

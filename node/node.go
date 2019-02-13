@@ -156,48 +156,26 @@ func AuthRequired(apis []ccrpc.API, ks *keystore.KeyStore, next http.Handler) ht
 	return func(w http.ResponseWriter, r *http.Request) {
 		// if empty body
 		if r.ContentLength == 0 {
-			http.Error(w, http.StatusText(400), 400)
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
 
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(r.Body)
-		namespace, method, err := ccrpc.FindNamespaceMethod(buf.Bytes())
+		protected, err := NamespaceProtected(apis, buf.Bytes())
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
 		// Restore the r.Body to its original state
 		r.Body = ioutil.NopCloser(buf)
 
-		if err != nil {
-			http.Error(w, http.StatusText(400), 400)
-			return
-		}
-
-		// find which namespace
-		namespaceMethodProtected := false
-		for _, v := range apis {
-			if v.Namespace == namespace {
-				// if * then all methods are protected
-				if v.AuthRequired == "*" {
-					namespaceMethodProtected = true
-					break
-				}
-
-				// break them and inspect them
-				fncs := strings.Split(v.AuthRequired, ",")
-				for _, w := range fncs {
-					if common.LcFirst(strings.TrimSpace(w)) == method {
-						namespaceMethodProtected = true
-						break
-					}
-				}
-				break
-			}
-		}
 		// ns is protected, place the logic which verifies the header
-		if namespaceMethodProtected {
+		if protected {
 			// check authorization header
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
-				http.Error(w, http.StatusText(401), 401)
+				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 				log.Println("Namespace is protected, however no Authorization given.")
 				return
 			}
@@ -206,6 +184,7 @@ func AuthRequired(apis []ccrpc.API, ks *keystore.KeyStore, next http.Handler) ht
 			token := strings.Split(authHeader, " ")[1]
 			key, err := ks.GetKeyIfUnlockedAndValid(token)
 			if err != nil {
+				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 				log.Println("Error while trying to get key for a token. Error: ", err)
 				return
 			}
@@ -216,6 +195,35 @@ func AuthRequired(apis []ccrpc.API, ks *keystore.KeyStore, next http.Handler) ht
 		}
 		next.ServeHTTP(w, r)
 	}
+}
+
+func NamespaceProtected(apis []ccrpc.API, rawJSONBody []byte) (bool, error) {
+	namespace, method, err := ccrpc.FindNamespaceMethod(rawJSONBody)
+	if err != nil {
+		return false, err
+	}
+	// find which namespace
+	namespaceMethodProtected := false
+	for _, v := range apis {
+		if v.Namespace == namespace {
+			// if * then all methods are protected
+			if v.AuthRequired == "*" {
+				namespaceMethodProtected = true
+				break
+			}
+
+			// break them and inspect them
+			fncs := strings.Split(v.AuthRequired, ",")
+			for _, w := range fncs {
+				if common.LcFirst(strings.TrimSpace(w)) == method {
+					namespaceMethodProtected = true
+					break
+				}
+			}
+			break
+		}
+	}
+	return namespaceMethodProtected, nil
 }
 
 // StartHTTP starts a http server
