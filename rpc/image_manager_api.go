@@ -18,18 +18,15 @@ package rpc
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
 	"strconv"
 
-	"github.com/crowdcompute/crowdengine/accounts/keystore"
 	"github.com/crowdcompute/crowdengine/database"
 	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/common"
-	"github.com/crowdcompute/crowdengine/crypto"
 	"github.com/crowdcompute/crowdengine/p2p"
 	peer "github.com/libp2p/go-libp2p-peer"
 )
@@ -44,27 +41,6 @@ func NewImageManagerAPI(h *p2p.Host) *ImageManagerAPI {
 	return &ImageManagerAPI{
 		host: h,
 	}
-}
-
-// TODO: THIS WHOLE LOGIC OF UPLOADING IMAGES NEEDS FURTHER CONSIDERATION
-
-// UploadImage hashes an image and stores its signature on the hash
-// TODO: This will change in the future and authorization + token will be used instead of privaty key passed
-func (api *ImageManagerAPI) UploadImage(ctx context.Context, imageFilePath string, privateKey string) error {
-	log.Println("Uploading an image to the node...")
-
-	key := ctx.Value(common.ContextKeyPrivateKey).(*keystore.Key)
-	// Hash image
-	file, err := os.Open(imageFilePath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	hash := crypto.HashFile(file)
-	sign, err := key.KeyPair.Private.Sign(hash)
-
-	storeImageToDB(hex.EncodeToString(hash), "temp", hex.EncodeToString(sign))
-	return err
 }
 
 // PushImage is the API call to push an image to the peer peerID
