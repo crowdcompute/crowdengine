@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -13,6 +14,7 @@ import (
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/crypto"
 	"github.com/crowdcompute/crowdengine/database"
+	libcrypto "github.com/libp2p/go-libp2p-crypto"
 )
 
 // ServeHTTP accepts file uploads multipart/form-data
@@ -27,51 +29,61 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		fmt.Fprintln(w, "There was an error getting the upload path from the context")
 	}
+	filename, fileHandler := getFileFromRequest(w, r)
+	defer fileHandler.Close()
 
+	localFile, fullpath, err := createFile(filename, uploadPath)
+	if err != nil {
+		fmt.Fprint(w, err)
+		return
+	}
+	defer localFile.Close()
+
+	_, err = io.Copy(localFile, fileHandler)
+	if err != nil {
+		fmt.Fprint(w, err)
+		return
+	}
+
+	hexHash := storeImageToDB(localFile, key.KeyPair.Private, fullpath)
+	fmt.Fprint(w, hexHash)
+}
+
+func getFileFromRequest(w http.ResponseWriter, r *http.Request) (string, multipart.File) {
 	// Get the file from the http request
 	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024*1024) // 500 Mb
 	r.ParseMultipartForm(32 << 20)                          // 33 Mb memory
 	file, handler, err := r.FormFile("file")
 	if err != nil {
 		fmt.Fprintln(w, "Unable to upload file. Error: ", err, file)
-		return
+		return "", nil
 	}
-	defer file.Close()
-	// Save the file
-	filename := common.RandomString(30) + filepath.Ext(handler.Filename)
+	return handler.Filename, file
+}
 
-	filePath := uploadPath + "/uploads/" + filename
-
+func createFile(filename, path string) (*os.File, string, error) {
+	randFilename := common.RandomString(30) + filepath.Ext(filename)
+	fullpath := path + "/uploads/" + randFilename
 	// TODO: Why 0777 gets wrxr-xr-x
 	const dirPerm = 0777
-	if err := os.MkdirAll(filepath.Dir(filePath), dirPerm); err != nil {
-		fmt.Fprint(w, err)
-		return
+	if err := os.MkdirAll(filepath.Dir(fullpath), dirPerm); err != nil {
+		return nil, "", err
 	}
-	f, err := os.Create(filePath)
+	f, err := os.Create(fullpath)
 	if err != nil {
-		fmt.Fprint(w, err)
-		return
+		return nil, "", err
 	}
-	defer f.Close()
-
-	_, err = io.Copy(f, file)
-	if err != nil {
-		fmt.Fprint(w, err)
-		return
-	}
-
-	hash := crypto.HashFile(f)
-	sign, err := key.KeyPair.Private.Sign(hash)
-	hexHash := hex.EncodeToString(hash)
-	storeImageToDB(hex.EncodeToString(hash), filePath, hex.EncodeToString(sign))
-
-	// Return a response to the requester
-	fmt.Fprint(w, hexHash)
+	return f, fullpath, nil
 }
 
 // storeImageToDB stores the new image's data to our level DB
-func storeImageToDB(hash, path, signature string) {
-	image := &database.ImageAccount{Signature: signature, Path: path, CreatedTime: time.Now().Unix()}
+func storeImageToDB(f *os.File, priv libcrypto.PrivKey, path string) string {
+	hash := crypto.HashFile(f)
+	sign, err := priv.Sign(hash)
+	common.FatalIfErr(err, "Couldn't sign with key")
+	hexHash := hex.EncodeToString(hash)
+	hexSignature := hex.EncodeToString(sign)
+	image := &database.ImageAccount{Signature: hexSignature, Path: path, CreatedTime: time.Now().Unix()}
 	database.GetDB().Model(image).Put([]byte(hash))
+	return hexHash
 }
