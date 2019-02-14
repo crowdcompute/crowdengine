@@ -79,12 +79,6 @@ func (api *ImageManagerAPI) getFileData(imageHash string) (*os.File, string, str
 	log.Println("fileSize: ", fileSizeFilled)
 	log.Println("fileName: ", fileNameFilled)
 
-	// TODO
-	// That's the wrong hashhhhhh noooooo
-	log.Println("hash: ")
-	log.Println(imageHash)
-	log.Println("img.Path: ")
-	log.Println(img.Path)
 	signatureFilled := common.FillString(img.Signature, common.SignatureLength)
 	hashFilled := common.FillString(imageHash, common.HashLength)
 	log.Println("filledSignature: ", signatureFilled)
