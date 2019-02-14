@@ -41,11 +41,11 @@ func NewAccountsAPI(h *p2p.Host, ks *keystore.KeyStore) *AccountsAPI {
 }
 
 // CreateAccount creates a new account
-func (api *AccountsAPI) CreateAccount(ctx context.Context, passphrase string) (string, error) {
+func (api *AccountsAPI) CreateAccount(ctx context.Context, passphrase string) (string, string, error) {
 	acc, err := api.ks.NewAccount(passphrase)
 	common.FatalIfErr(err, "There was an error creating the account")
 	log.Printf("The account has been created successfully to the file: {%s}\n", acc.Path)
-	return acc.Path, nil
+	return acc.Address, acc.Path, nil
 }
 
 // UnlockAccount unlocks an account and returns its token

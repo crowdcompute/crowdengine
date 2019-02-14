@@ -47,9 +47,9 @@ func NewImageManagerAPI(h *p2p.Host) *ImageManagerAPI {
 func (api *ImageManagerAPI) PushImage(ctx context.Context, peerID string, imageHash string) string {
 	log.Println("Pushing an image to the peer : ", peerID)
 
-	file, fileSize, fileName, signature, hash, err := api.getFileData(imageHash)
+	file, filepath, fileSize, fileName, signature, hash, err := api.getFileData(imageHash)
 	common.FatalIfErr(err, "Error getting file data")
-	defer file.Close()
+	defer removeImage(filepath, imageHash)
 
 	pID, err := peer.IDB58Decode(peerID)
 	common.FatalIfErr(err, "Error decoding the peerID")
@@ -60,19 +60,30 @@ func (api *ImageManagerAPI) PushImage(ctx context.Context, peerID string, imageH
 	return <-api.host.ImageIDchan
 }
 
+// Removed the image specified from the disk and the level DB
+func removeImage(filepath, hash string) error {
+	os.Remove(filepath)
+	image := &database.ImageAccount{}
+	err := database.GetDB().Model(image).Delete([]byte(hash))
+	if err != nil {
+		return fmt.Errorf("There was an error deleting the image from lvldb")
+	}
+	return nil
+}
+
 // getFileData gets the file's handler, size, name, hash and signature
-func (api *ImageManagerAPI) getFileData(imageHash string) (*os.File, string, string, string, string, error) {
+func (api *ImageManagerAPI) getFileData(imageHash string) (*os.File, string, string, string, string, string, error) {
 	img, err := database.GetImageAccountFromDB(imageHash)
 	if err != nil {
-		return nil, "", "", "", "", fmt.Errorf("Couldn't find the image on the database")
+		return nil, "", "", "", "", "", fmt.Errorf("Couldn't find the image on the database")
 	}
 	file, err := os.Open(img.Path)
 	if err != nil {
-		return nil, "", "", "", "", err
+		return nil, "", "", "", "", "", err
 	}
 	fileInfo, err := file.Stat()
 	if err != nil {
-		return nil, "", "", "", "", err
+		return nil, "", "", "", "", "", err
 	}
 	fileSizeFilled := common.FillString(strconv.FormatInt(fileInfo.Size(), 10), common.FileSizeLength)
 	fileNameFilled := common.FillString(fileInfo.Name(), common.FileNameLength)
@@ -84,7 +95,7 @@ func (api *ImageManagerAPI) getFileData(imageHash string) (*os.File, string, str
 	log.Println("filledSignature: ", signatureFilled)
 	log.Println("filledHash: ", hashFilled)
 
-	return file, fileSizeFilled, fileNameFilled, signatureFilled, hashFilled, err
+	return file, img.Path, fileSizeFilled, fileNameFilled, signatureFilled, hashFilled, err
 }
 
 // sendFileMetadata sends the size, name, hash and signature to the peer through the opened stream
