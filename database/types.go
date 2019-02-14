@@ -66,5 +66,6 @@ type ImageLvlDB struct {
 // TODO: name to be changed
 type ImageAccount struct {
 	Signature   string `json:"signature"`   // The uploader of this image
+	Path        string `json:"path"`        // Physical path of the location of the image
 	CreatedTime int64  `json:"createdtime"` // The time the image was created into the current node
 }

@@ -62,4 +62,5 @@ const TokenTimeout time.Duration = time.Second * 60
 
 type ContextKey string
 
-const ContextPrivateKey ContextKey = "privatekey"
+const ContextKeyPrivateKey ContextKey = "privatekey"
+const ContextKeyUploadPath ContextKey = "uploadpath"

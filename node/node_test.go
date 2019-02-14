@@ -56,7 +56,7 @@ func serveRequest(n *Node, req *http.Request) *httptest.ResponseRecorder {
 		err := server.RegisterName(api.Namespace, api.Service)
 		common.FatalIfErr(err, "Ethereum RPC could not register name.")
 	}
-	handler := AuthRequired(testApis(), n.ks, server)
+	handler := authRequired(testApis(), n.ks, server)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 	return rr

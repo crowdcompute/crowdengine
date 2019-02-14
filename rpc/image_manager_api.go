@@ -23,7 +23,6 @@ import (
 	"io"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/crowdcompute/crowdengine/accounts/keystore"
 	"github.com/crowdcompute/crowdengine/database"
@@ -54,7 +53,7 @@ func NewImageManagerAPI(h *p2p.Host) *ImageManagerAPI {
 func (api *ImageManagerAPI) UploadImage(ctx context.Context, imageFilePath string, privateKey string) error {
 	log.Println("Uploading an image to the node...")
 
-	key := ctx.Value(common.ContextPrivateKey).(*keystore.Key)
+	key := ctx.Value(common.ContextKeyPrivateKey).(*keystore.Key)
 	// Hash image
 	file, err := os.Open(imageFilePath)
 	if err != nil {
@@ -64,21 +63,15 @@ func (api *ImageManagerAPI) UploadImage(ctx context.Context, imageFilePath strin
 	hash := crypto.HashFile(file)
 	sign, err := key.KeyPair.Private.Sign(hash)
 
-	storeImageToDB(hex.EncodeToString(hash), hex.EncodeToString(sign))
+	storeImageToDB(hex.EncodeToString(hash), "temp", hex.EncodeToString(sign))
 	return err
 }
 
-// storeImageToDB stores the new image's data to our level DB
-func storeImageToDB(hash string, signature string) {
-	image := &database.ImageAccount{Signature: signature, CreatedTime: time.Now().Unix()}
-	database.GetDB().Model(image).Put([]byte(hash))
-}
-
 // PushImage is the API call to push an image to the peer peerID
-func (api *ImageManagerAPI) PushImage(ctx context.Context, peerID string, imageFilePath string) string {
+func (api *ImageManagerAPI) PushImage(ctx context.Context, peerID string, imageHash string) string {
 	log.Println("Pushing an image to the peer : ", peerID)
 
-	file, fileSize, fileName, signature, hash, err := api.getFileData(imageFilePath)
+	file, fileSize, fileName, signature, hash, err := api.getFileData(imageHash)
 	common.FatalIfErr(err, "Error getting file data")
 	defer file.Close()
 
@@ -92,8 +85,12 @@ func (api *ImageManagerAPI) PushImage(ctx context.Context, peerID string, imageF
 }
 
 // getFileData gets the file's handler, size, name, hash and signature
-func (api *ImageManagerAPI) getFileData(imageFilePath string) (*os.File, string, string, string, string, error) {
-	file, err := os.Open(imageFilePath)
+func (api *ImageManagerAPI) getFileData(imageHash string) (*os.File, string, string, string, string, error) {
+	img, err := database.GetImageAccountFromDB(imageHash)
+	if err != nil {
+		return nil, "", "", "", "", fmt.Errorf("Couldn't find the image on the database")
+	}
+	file, err := os.Open(img.Path)
 	if err != nil {
 		return nil, "", "", "", "", err
 	}
@@ -106,15 +103,14 @@ func (api *ImageManagerAPI) getFileData(imageFilePath string) (*os.File, string,
 	log.Println("fileSize: ", fileSizeFilled)
 	log.Println("fileName: ", fileNameFilled)
 
-	hashedFile, _ := crypto.HashFilePath(imageFilePath)
-	hash := hex.EncodeToString(hashedFile)
-	img, err := database.GetImageAccountFromDB(hash)
-	if err != nil {
-		return nil, "", "", "", "", fmt.Errorf("Couldn't find the image on the database")
-	}
-
+	// TODO
+	// That's the wrong hashhhhhh noooooo
+	log.Println("hash: ")
+	log.Println(imageHash)
+	log.Println("img.Path: ")
+	log.Println(img.Path)
 	signatureFilled := common.FillString(img.Signature, common.SignatureLength)
-	hashFilled := common.FillString(hash, common.HashLength)
+	hashFilled := common.FillString(imageHash, common.HashLength)
 	log.Println("filledSignature: ", signatureFilled)
 	log.Println("filledHash: ", hashFilled)
 

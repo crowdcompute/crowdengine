@@ -97,49 +97,49 @@ func (n *Node) apis() []ccrpc.API {
 			Version:      "1.0",
 			Service:      ccrpc.NewDiscoveryAPI(n.host),
 			Public:       true,
-			AuthRequired: "*",
+			AuthRequired: "",
 		},
 		{
 			Namespace:    "imagemanager",
 			Version:      "1.0",
 			Service:      ccrpc.NewImageManagerAPI(n.host),
 			Public:       true,
-			AuthRequired: "*",
+			AuthRequired: "UploadImage",
 		},
 		{
 			Namespace:    "service",
 			Version:      "1.0",
 			Service:      ccrpc.NewSwarmServiceAPI(n.host),
 			Public:       true,
-			AuthRequired: "*",
+			AuthRequired: "",
 		},
 		{
 			Namespace:    "bootnodes",
 			Version:      "1.0",
 			Service:      ccrpc.NewBootnodesAPI(n.host),
 			Public:       true,
-			AuthRequired: "*",
+			AuthRequired: "",
 		},
 		{
 			Namespace:    "container",
 			Version:      "1.0",
 			Service:      ccrpc.NewContainerService(),
 			Public:       true,
-			AuthRequired: "*",
+			AuthRequired: "",
 		},
 		{
 			Namespace:    "image",
 			Version:      "1.0",
 			Service:      ccrpc.NewImageService(),
 			Public:       true,
-			AuthRequired: "*",
+			AuthRequired: "",
 		},
 		{
 			Namespace:    "swarm",
 			Version:      "1.0",
 			Service:      ccrpc.NewSwarmService(),
 			Public:       true,
-			AuthRequired: "*",
+			AuthRequired: "",
 		},
 		{
 			Namespace:    "accounts",
@@ -151,8 +151,9 @@ func (n *Node) apis() []ccrpc.API {
 	}
 }
 
-// AuthRequired authenticates a token
-func AuthRequired(apis []ccrpc.API, ks *keystore.KeyStore, next http.Handler) http.HandlerFunc {
+// authRequired is a middleware for the HTTP server.
+// Authenticates a token and passes the request to the next handler
+func authRequired(apis []ccrpc.API, ks *keystore.KeyStore, next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// if empty body
 		if r.ContentLength == 0 {
@@ -162,7 +163,7 @@ func AuthRequired(apis []ccrpc.API, ks *keystore.KeyStore, next http.Handler) ht
 
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(r.Body)
-		protected, err := NamespaceProtected(apis, buf.Bytes())
+		protected, err := isMethodProtected(apis, buf.Bytes())
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
@@ -172,32 +173,20 @@ func AuthRequired(apis []ccrpc.API, ks *keystore.KeyStore, next http.Handler) ht
 
 		// ns is protected, place the logic which verifies the header
 		if protected {
-			// check authorization header
-			authHeader := r.Header.Get("Authorization")
-			if authHeader == "" {
-				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-				log.Println("Namespace is protected, however no Authorization given.")
-				return
-			}
-
-			// the logic which checks if this token is valid
-			token := strings.Split(authHeader, " ")[1]
-			key, err := ks.GetKeyIfUnlockedAndValid(token)
+			key, err := getKeyForAccount(ks, r.Header)
 			if err != nil {
 				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-				log.Println("Error while trying to get key for a token. Error: ", err)
 				return
 			}
-			ctx := context.WithValue(r.Context(), common.ContextPrivateKey, key)
+			ctx := context.WithValue(r.Context(), common.ContextKeyPrivateKey, key)
 			log.Printf("Token valid and account {%s} unlocked. ", key.Address)
 			next.ServeHTTP(w, r.WithContext(ctx))
-			return
 		}
 		next.ServeHTTP(w, r)
 	}
 }
 
-func NamespaceProtected(apis []ccrpc.API, rawJSONBody []byte) (bool, error) {
+func isMethodProtected(apis []ccrpc.API, rawJSONBody []byte) (bool, error) {
 	namespace, method, err := ccrpc.FindNamespaceMethod(rawJSONBody)
 	if err != nil {
 		return false, err
@@ -226,6 +215,41 @@ func NamespaceProtected(apis []ccrpc.API, rawJSONBody []byte) (bool, error) {
 	return namespaceMethodProtected, nil
 }
 
+// Extracts the token from authorization header,
+// and checks if token valid and related acount unlocked.
+// And returns the key
+func getKeyForAccount(ks *keystore.KeyStore, header http.Header) (*keystore.Key, error) {
+	authHeader := header.Get("Authorization")
+	if authHeader == "" {
+		err := fmt.Errorf("No Authorization given on header")
+		log.Println(err.Error())
+		return nil, err
+	}
+	token := strings.Split(authHeader, " ")[1]
+	key, err := ks.GetKeyIfUnlockedAndValid(token)
+	if err != nil {
+		log.Println("Error while trying to get key for a token. Error: ", err)
+		return nil, err
+	}
+	return key, nil
+}
+
+// UploadAuth authenticates a token and enriches the requests
+// Authenticates a token and passes the request to the next handler
+func uploadAuth(ks *keystore.KeyStore, uploadPath string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		key, err := getKeyForAccount(ks, r.Header)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+		ctx := context.WithValue(r.Context(), common.ContextKeyPrivateKey, key)
+		ctx = context.WithValue(ctx, common.ContextKeyUploadPath, uploadPath)
+		log.Printf("Token valid and account {%s} unlocked. ", key.Address)
+		next(w, r.WithContext(ctx))
+	}
+}
+
 // StartHTTP starts a http server
 func (n *Node) StartHTTP() {
 	server := rpc.NewServer()
@@ -234,8 +258,8 @@ func (n *Node) StartHTTP() {
 		common.FatalIfErr(err, "Ethereum RPC could not register name.")
 	}
 	serveMux := http.NewServeMux()
-	serveMux.Handle("/", AuthRequired(n.apis(), n.ks, server))
-	serveMux.HandleFunc("/upload", ccrpc.ServeHTTP)
+	serveMux.Handle("/", authRequired(n.apis(), n.ks, server))
+	serveMux.HandleFunc("/upload", uploadAuth(n.ks, n.cfg.Global.DataDir, ccrpc.ServeHTTP))
 
 	port := n.cfg.RPC.HTTP.ListenPort
 	log.Println("RPC listening to the port: ", port)
