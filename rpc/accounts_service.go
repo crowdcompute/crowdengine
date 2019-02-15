@@ -45,11 +45,11 @@ func (api *AccountsAPI) CreateAccount(ctx context.Context, passphrase string) (s
 	acc, err := api.ks.NewAccount(passphrase)
 	common.FatalIfErr(err, "There was an error creating the account")
 	log.Printf("The account has been created successfully to the file: {%s}\n", acc.Path)
-	return acc.Path, err
+	return acc.Address, err
 }
 
 // UnlockAccount unlocks an account and returns its token
-func (api *AccountsAPI) UnlockAccount(ctx context.Context, accAddr, path, passphrase string) (string, error) {
+func (api *AccountsAPI) UnlockAccount(ctx context.Context, accAddr, passphrase string) (string, error) {
 	// First issue a token
 	rawToken, err := api.ks.IssueTokenForAccount(accAddr, keystore.NewTokenClaims("", ""))
 	if err != nil {
