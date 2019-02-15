@@ -53,6 +53,7 @@ func init() {
 	})
 }
 
+// Creates a basic JSON http POST request
 func createPOSTreq(jsonStr []byte) *http.Request {
 	url := fmt.Sprintf("http://%s:%d/", listenAddress, listenPort)
 
@@ -64,6 +65,8 @@ func createPOSTreq(jsonStr []byte) *http.Request {
 	return req
 }
 
+// Serves an http request
+// It registers RPC methods and it authorizes every http request
 func serveRequest(ks *keystore.KeyStore, req *http.Request) *httptest.ResponseRecorder {
 	server := rpc.NewServer()
 	for _, api := range testApis() {
@@ -76,6 +79,7 @@ func serveRequest(ks *keystore.KeyStore, req *http.Request) *httptest.ResponseRe
 	return rr
 }
 
+// Test RPC APIs
 func testApis() []ccrpc.API {
 	return []ccrpc.API{
 		{
@@ -88,6 +92,7 @@ func testApis() []ccrpc.API {
 	}
 }
 
+// TestService is a RPC API service for test purposes
 type TestService struct {
 	ks *keystore.KeyStore
 }
@@ -111,10 +116,6 @@ func (api *TestService) UnlockTestAccount(ctx context.Context, accAddr, passphra
 	return rawToken, err
 }
 
-func (api *TestService) CreateTTAccount(ctx context.Context, passphrase string) error {
-	return nil
-}
-
 func (api *TestService) MethodThatRequiresAuth(ctx context.Context) error {
 	return nil
 }
@@ -123,6 +124,12 @@ func (api *TestService) MethodThatNotRequiresAuth(ctx context.Context) error {
 	return nil
 }
 
+// EtherRPCResponse stores the result of the response
+type EtherRPCResponse struct {
+	Result string `json:"result"`
+}
+
+// Sends a JSON RPC request that requires authorization (token) but it is not given
 func TestMethodRequiresAuthButNotAuthGiven(t *testing.T) {
 	var jsonStr = []byte(`{"jsonrpc":"2.0","id":"1","method":"testService_methodThatRequiresAuth","params":[]}`)
 	req := createPOSTreq(jsonStr)
@@ -131,12 +138,9 @@ func TestMethodRequiresAuthButNotAuthGiven(t *testing.T) {
 	assert.True(t, resp.Code == http.StatusUnauthorized)
 }
 
-type EtherRPCResponse struct {
-	Result string `json:"result"`
-}
-
-// This is an integration test.
-// Creates an account, unlocks it, and passes it as Authirization to the header on an RPC method that requires Authirization
+// Sends a JSON RPC request that requires authorization (token) which is given
+// Creates an account, unlocks it (via http requests), and uses that token as Authorization
+// when calling an RPC method that requires Authorization
 func TestMethodRequiresAuthAndAuthGiven(t *testing.T) {
 	// Create a temporary account using json RPC http request
 	var jsonStr = []byte(fmt.Sprintf(`{"jsonrpc":"2.0","id":"1","method":"testService_createTestAccount","params":["%s"]}`, passphrase))
@@ -176,6 +180,7 @@ func TestMethodRequiresAuthAndAuthGiven(t *testing.T) {
 	assert.True(t, respRequiresAuth.Code == http.StatusOK)
 }
 
+// Sends a JSON RPC request that does not require authorization (token) which is given
 func TestMethodNotRequiresAuth(t *testing.T) {
 	var jsonStr = []byte(`{"jsonrpc":"2.0","id":"1","method":"testService_methodThatNotRequiresAuth","params":[]}`)
 	req := createPOSTreq(jsonStr)
@@ -183,6 +188,8 @@ func TestMethodNotRequiresAuth(t *testing.T) {
 	assert.True(t, resp.Code == http.StatusOK)
 }
 
+// Sends a JSON RPC request that does not have a method.
+// This should return Bad Request code
 func TestMethodNotGiven(t *testing.T) {
 	var jsonStr = []byte(`{"jsonrpc":"2.0","id":"1","method":"testService","params":[]}`)
 	req := createPOSTreq(jsonStr)
