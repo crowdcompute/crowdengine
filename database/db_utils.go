@@ -53,11 +53,8 @@ func (db *DB) Model(iface interface{}) *DB {
 // a struct that implements the encoding.BinaryUnmarshaler interface
 func (db *DB) Get(key []byte) (interface{}, error) {
 	has, err := db.Has(key)
-	if !has {
+	if err != nil || !has {
 		return nil, ErrNotFound
-	}
-	if err != nil {
-		return nil, err
 	}
 	data, _ := db.levelDB.Get(db.prefixKey(key), nil)
 	err = json.Unmarshal(data, db.CurrentModel)

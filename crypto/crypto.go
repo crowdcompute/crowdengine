@@ -97,7 +97,7 @@ func HashProtoMsg(message proto.Message) ([]byte, error) {
 }
 
 // HashFile hashes the file with the sha256
-func HashFile(file *os.File) []byte {
+func HashFile(file io.Reader) []byte {
 	h := sha256.New()
 	if _, err := io.Copy(h, file); err != nil {
 		log.Fatal(err)

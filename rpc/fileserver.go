@@ -32,6 +32,13 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	filename, fileHandler := getFileFromRequest(w, r)
 	defer fileHandler.Close()
+	if checkIfFileUploaded(fileHandler) {
+		msg := fmt.Sprintf("File %s uploaded already", filename)
+		log.Println(msg)
+		fmt.Fprint(w, msg)
+		return
+	}
+	fileHandler.Seek(0, 0)
 
 	localFile, fullpath, err := createFile(filename, uploadPath)
 	if err != nil {
@@ -50,6 +57,7 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Println("The file has been successgully uploaded, full path is: ", fullpath)
 
 	hexHash := storeImageToDB(localFile, key.KeyPair.Private, fullpath)
+	log.Println("The hash is: ", hexHash)
 	fmt.Fprint(w, hexHash)
 }
 
@@ -63,6 +71,18 @@ func getFileFromRequest(w http.ResponseWriter, r *http.Request) (string, multipa
 		return "", nil
 	}
 	return handler.Filename, file
+}
+
+func checkIfFileUploaded(f multipart.File) bool {
+	hexHash := hex.EncodeToString(crypto.HashFile(f))
+	_, err := database.GetImageAccountFromDB(hexHash)
+	if err == database.ErrNotFound {
+		log.Println("why ErrNotFound??.")
+		return false
+	} else if err != nil {
+		log.Println("There was an error getting the image from DB.")
+	}
+	return true
 }
 
 func createFile(filename, path string) (*os.File, string, error) {
@@ -87,8 +107,7 @@ func storeImageToDB(f *os.File, priv libcrypto.PrivKey, path string) string {
 	common.FatalIfErr(err, "Couldn't sign with key")
 	hexHash := hex.EncodeToString(hash)
 	hexSignature := hex.EncodeToString(sign)
-	log.Println("The hash is: ", hexHash)
 	image := &database.ImageAccount{Signature: hexSignature, Path: path, CreatedTime: time.Now().Unix()}
-	database.GetDB().Model(image).Put([]byte(hash))
+	database.GetDB().Model(image).Put([]byte(hexHash))
 	return hexHash
 }
