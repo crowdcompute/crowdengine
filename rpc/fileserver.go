@@ -14,6 +14,7 @@ import (
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/crypto"
 	"github.com/crowdcompute/crowdengine/database"
+	"github.com/crowdcompute/crowdengine/log"
 	libcrypto "github.com/libp2p/go-libp2p-crypto"
 )
 
@@ -44,6 +45,9 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, err)
 		return
 	}
+	// Rewind the file pointer to the beginning
+	localFile.Seek(0, 0)
+	log.Println("The file has been successgully uploaded, full path is: ", fullpath)
 
 	hexHash := storeImageToDB(localFile, key.KeyPair.Private, fullpath)
 	fmt.Fprint(w, hexHash)
@@ -83,6 +87,7 @@ func storeImageToDB(f *os.File, priv libcrypto.PrivKey, path string) string {
 	common.FatalIfErr(err, "Couldn't sign with key")
 	hexHash := hex.EncodeToString(hash)
 	hexSignature := hex.EncodeToString(sign)
+	log.Println("The hash is: ", hexHash)
 	image := &database.ImageAccount{Signature: hexSignature, Path: path, CreatedTime: time.Now().Unix()}
 	database.GetDB().Model(image).Put([]byte(hash))
 	return hexHash
