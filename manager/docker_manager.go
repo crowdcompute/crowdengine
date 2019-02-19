@@ -24,10 +24,12 @@ import (
 	"regexp"
 	"sync"
 
+	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 )
 
@@ -170,13 +172,32 @@ func (m *DockerManager) Logs(containerid string, sincetime string) ([]byte, erro
 	return data, nil
 }
 
+func newVolumeMount(src, dst string) mount.Mount {
+	return mount.Mount{
+		Type:         mount.TypeVolume,
+		Source:       src,
+		Target:       dst,
+		ReadOnly:     false,
+		BindOptions:  nil,
+		TmpfsOptions: nil,
+		VolumeOptions: &mount.VolumeOptions{
+			NoCopy: false,
+			Labels: map[string]string{},
+		},
+	}
+}
+
 // CreateContainer the manager
 // TODO: persist containerid into levelDB
-func (m *DockerManager) CreateContainer(imageid string) (container.ContainerCreateCreatedBody, error) {
+func (m *DockerManager) CreateContainer(imageID string) (container.ContainerCreateCreatedBody, error) {
 	ctx := context.Background()
+	hostconfig := new(container.HostConfig)
+	hostconfig.Mounts = make([]mount.Mount, 0)
+	hostconfig.Mounts = append(hostconfig.Mounts, newVolumeMount(imageID, common.DockerMountDest)) // imageID will be the name of the volume
+	// TODO: Give permissions to edit the /home folder
 	resp, err := m.client.ContainerCreate(ctx, &container.Config{
-		Image: imageid,
-	}, nil, nil, "")
+		Image: imageID,
+	}, hostconfig, nil, "")
 
 	if err != nil {
 		return container.ContainerCreateCreatedBody{}, err
@@ -203,7 +224,7 @@ func (m *DockerManager) InspectContainer(containerid string) (types.ContainerJSO
 	return inspection, nil
 }
 
-// InspectContainer inspects a running container
+// InspectContainerRaw inspects a running container
 func (m *DockerManager) InspectContainerRaw(containerid string, getSize bool) (types.ContainerJSON, []byte, error) {
 	inspection, raw, err := m.client.ContainerInspectWithRaw(context.Background(), containerid, getSize)
 	if err != nil {
@@ -212,7 +233,7 @@ func (m *DockerManager) InspectContainerRaw(containerid string, getSize bool) (t
 	return inspection, raw, nil
 }
 
-// InspectContainer inspects a running container
+// RemoveContainer removes a container
 func (m *DockerManager) RemoveContainer(containerid string, options types.ContainerRemoveOptions) error {
 	err := m.client.ContainerRemove(context.Background(), containerid, options)
 	if err != nil {

@@ -62,5 +62,11 @@ const TokenTimeout time.Duration = time.Second * 60
 
 type ContextKey string
 
+// ContextKeyPrivateKey represents the context key name for a private key
 const ContextKeyPrivateKey ContextKey = "privatekey"
+
+// ContextKeyUploadPath represents the context key name for an upload path
 const ContextKeyUploadPath ContextKey = "uploadpath"
+
+// DockerMountDest is the destination of the mount of all docker containers
+const DockerMountDest string = "/home/data"

@@ -77,10 +77,10 @@ func checkIfFileUploaded(f multipart.File) bool {
 	hexHash := hex.EncodeToString(crypto.HashFile(f))
 	_, err := database.GetImageAccountFromDB(hexHash)
 	if err == database.ErrNotFound {
-		log.Println("why ErrNotFound??.")
 		return false
 	} else if err != nil {
 		log.Println("There was an error getting the image from DB.")
+		return false
 	}
 	return true
 }

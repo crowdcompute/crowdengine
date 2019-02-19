@@ -48,8 +48,12 @@ func (api *ImageManagerAPI) PushImage(ctx context.Context, peerID string, imageH
 	log.Println("Pushing an image to the peer : ", peerID)
 
 	file, filepath, fileSize, fileName, signature, hash, err := api.getFileData(imageHash)
-	common.FatalIfErr(err, "Error getting file data")
 	defer removeImage(filepath, imageHash)
+	if err != nil {
+		msg := fmt.Sprintf("Error getting file data. Error: %s", err)
+		log.Println(msg)
+		return msg
+	}
 
 	pID, err := peer.IDB58Decode(peerID)
 	common.FatalIfErr(err, "Error decoding the peerID")

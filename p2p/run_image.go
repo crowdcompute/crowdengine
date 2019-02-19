@@ -17,6 +17,7 @@
 package p2p
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/crowdcompute/crowdengine/common"
@@ -104,17 +105,22 @@ func (p *TaskProtocol) onRunRequest(s inet.Stream) {
 		return
 	}
 	containerID, err := createRunContainer(data.ImageID)
-	common.FatalIfErr(err, "Error crating a container")
-
+	if err != nil {
+		log.Errorf("Error crating a container. Error: %s", err)
+		return
+	}
 	p.createSendResponse(s.Conn().RemotePeer(), containerID)
-
 	p.runningContainers[containerID] = struct{}{}
 	log.Println("Start tracking job's status...")
+
 	go p.waitForJobToFinish(containerID)
 }
 
 func createRunContainer(imageID string) (string, error) {
 	container, err := manager.GetInstance().CreateContainer(imageID)
+	if err != nil {
+		return "", fmt.Errorf("Error creating container form this image ID: %s. Image ID could be wrong. Error: %s", imageID, err)
+	}
 	_, err = manager.GetInstance().RunContainer(container.ID)
 	return container.ID, err
 }
