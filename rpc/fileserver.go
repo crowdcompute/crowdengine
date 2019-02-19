@@ -98,10 +98,13 @@ func fileserve(w http.ResponseWriter, r *http.Request) {
 func getFileFromRequest(w http.ResponseWriter, r *http.Request) (string, multipart.File) {
 	// Get the file from the http request
 	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024*1024) // 500 Mb
-	r.ParseMultipartForm(32 << 20)                          // 33 Mb memory
+	err := r.ParseMultipartForm(32 << 20)                   // 33 Mb memory
+	if err != nil {
+		fmt.Fprintln(w, "Unable Parse Multipart Form. Error: ", err)
+		return "", nil
+	}
 	file, handler, err := r.FormFile("file")
 	if err != nil {
-		log.Printf("Error Here : ", err, file)
 		fmt.Fprintln(w, "Unable to upload file. Error: ", err, file)
 		return "", nil
 	}
