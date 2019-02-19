@@ -17,12 +17,8 @@
 package node
 
 import (
-	"bytes"
-	"context"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"strings"
 	"sync"
 
 	"github.com/crowdcompute/crowdengine/log"
@@ -151,115 +147,11 @@ func (n *Node) apis() []ccrpc.API {
 	}
 }
 
-// authRequired is a middleware for the HTTP server.
-// Authenticates a token and passes the request to the next handler
-func authRequired(apis []ccrpc.API, ks *keystore.KeyStore, next http.Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// if empty body
-		if r.ContentLength == 0 {
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(r.Body)
-		protected, err := isMethodProtected(apis, buf.Bytes())
-		if err != nil {
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-			return
-		}
-		// Restore the r.Body to its original state
-		r.Body = ioutil.NopCloser(buf)
-
-		// ns is protected, place the logic which verifies the header
-		if protected {
-			key, err := getKeyForAccount(ks, r.Header)
-			if err != nil {
-				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-				return
-			}
-			ctx := context.WithValue(r.Context(), common.ContextKeyPrivateKey, key)
-			log.Printf("Token valid and account {%s} unlocked. ", key.Address)
-			next.ServeHTTP(w, r.WithContext(ctx))
-		}
-		next.ServeHTTP(w, r)
-	}
-}
-
-func isMethodProtected(apis []ccrpc.API, rawJSONBody []byte) (bool, error) {
-	namespace, method, err := ccrpc.FindNamespaceMethod(rawJSONBody)
-	if err != nil {
-		return false, err
-	}
-	// find which namespace
-	namespaceMethodProtected := false
-	for _, v := range apis {
-		if v.Namespace == namespace {
-			// if * then all methods are protected
-			if v.AuthRequired == "*" {
-				namespaceMethodProtected = true
-				break
-			}
-
-			// break them and inspect them
-			fncs := strings.Split(v.AuthRequired, ",")
-			for _, w := range fncs {
-				if common.LcFirst(strings.TrimSpace(w)) == method {
-					namespaceMethodProtected = true
-					break
-				}
-			}
-			break
-		}
-	}
-	return namespaceMethodProtected, nil
-}
-
-// Extracts the token from authorization header,
-// and checks if token valid and related acount unlocked.
-// And returns the key
-func getKeyForAccount(ks *keystore.KeyStore, header http.Header) (*keystore.Key, error) {
-	authHeader := header.Get("Authorization")
-	if authHeader == "" {
-		err := fmt.Errorf("No Authorization given on header")
-		log.Println(err.Error())
-		return nil, err
-	}
-	token := strings.Split(authHeader, " ")[1]
-	key, err := ks.GetKeyIfUnlockedAndValid(token)
-	if err != nil {
-		log.Println("Error while trying to get key for a token. Error: ", err)
-		return nil, err
-	}
-	return key, nil
-}
-
-// UploadAuth authenticates a token and enriches the requests
-// Authenticates a token and passes the request to the next handler
-func uploadAuth(ks *keystore.KeyStore, uploadPath string, next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		key, err := getKeyForAccount(ks, r.Header)
-		if err != nil {
-			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
-			return
-		}
-		ctx := context.WithValue(r.Context(), common.ContextKeyPrivateKey, key)
-		ctx = context.WithValue(ctx, common.ContextKeyUploadPath, uploadPath)
-		log.Printf("Token valid and account {%s} unlocked. ", key.Address)
-		next(w, r.WithContext(ctx))
-	}
-}
-
 // StartHTTP starts a http server
 func (n *Node) StartHTTP() {
-	server := rpc.NewServer()
-	for _, api := range n.apis() {
-		err := server.RegisterName(api.Namespace, api.Service)
-		common.FatalIfErr(err, "Ethereum RPC could not register name.")
-	}
 	serveMux := http.NewServeMux()
-	serveMux.Handle("/", authRequired(n.apis(), n.ks, server))
-	serveMux.HandleFunc("/upload", uploadAuth(n.ks, n.cfg.Global.DataDir, ccrpc.ServeHTTP))
+	serveMux.Handle("/", ccrpc.ServeHTTP(n.apis(), n.ks))
+	serveMux.HandleFunc("/upload", ccrpc.ServeFilesHTTP(n.ks, n.cfg.Global.DataDir))
 
 	port := n.cfg.RPC.HTTP.ListenPort
 	log.Println("RPC listening to the port: ", port)
