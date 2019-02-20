@@ -20,10 +20,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"path/filepath"
+	"strings"
 
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/iterator"
+	"github.com/syndtr/goleveldb/leveldb/util"
 )
 
 // ErrNotFound is returned when no results are returned from the database
@@ -53,6 +57,29 @@ func (db *DB) Model(iface interface{}) *DB {
 		CurrentModel: iface,
 		levelDB:      db.levelDB,
 	}
+}
+
+// GetAll returns all values in the database if no db.tableName is given,
+// else it returns those values that are of the db.tableName type
+func (db *DB) GetAll() (map[string]string, error) {
+	var iter iterator.Iterator
+	if db.tableName == "" {
+		iter = db.levelDB.NewIterator(nil, nil)
+	} else {
+		iter = db.levelDB.NewIterator(util.BytesPrefix([]byte(db.tableName)), nil)
+	}
+	data := make(map[string]string)
+	for iter.Next() {
+		key := string(iter.Key())
+		if strings.HasPrefix(key, db.tableName) {
+			value := iter.Value()
+			log.Println(string(value))
+			data[key] = string(value)
+		}
+	}
+	iter.Release()
+	err := iter.Error()
+	return data, err
 }
 
 // Get retrieves a persisted value for a specific key. If there is no results

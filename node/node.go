@@ -145,6 +145,13 @@ func (n *Node) apis() []ccrpc.API {
 			Public:       true,
 			AuthRequired: "LockAccount",
 		},
+		{
+			Namespace:    "lvldb",
+			Version:      "1.0",
+			Service:      ccrpc.NewLvlDBManagerAPI(),
+			Public:       true,
+			AuthRequired: "",
+		},
 	}
 }
 
