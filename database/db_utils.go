@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
 
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -27,11 +28,17 @@ import (
 
 // ErrNotFound is returned when no results are returned from the database
 var ErrNotFound = errors.New("ErrorNotFound")
+var lvlDBPath = "gocc_db"
+
+// SetLvlDBPath sets the path for lvldb to store the data
+func SetLvlDBPath(path string) {
+	lvlDBPath = filepath.Join(path, lvlDBPath)
+}
 
 // GetDB returns a singleton DB object
 func GetDB() *DB {
 	once.Do(func() {
-		lvldb, err := leveldb.OpenFile("gocc_data", nil)
+		lvldb, err := leveldb.OpenFile(lvlDBPath, nil)
 		common.FatalIfErr(err, "Couldn't create a new Level DB")
 		db = &DB{levelDB: lvldb}
 	})
@@ -84,6 +91,13 @@ func (db *DB) prefixKey(key []byte) []byte {
 // Delete removes entries stored under a specific key.
 func (db *DB) Delete(key []byte) error {
 	return db.levelDB.Delete(db.prefixKey(key), nil)
+}
+
+// GetProperty returns value of the given property name.
+func (db *DB) GetProperty(name string) string {
+	res, err := db.levelDB.GetProperty(name)
+	common.FatalIfErr(err, "Failed to read database stats")
+	return res
 }
 
 // Close releases the resources used by the underlying LevelDB.

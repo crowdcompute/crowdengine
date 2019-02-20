@@ -52,6 +52,7 @@ func NewNode(cfg *config.GlobalConfig) (*Node, error) {
 		quit: make(chan struct{}),
 		ks:   keystore.NewKeyStore(cfg.Global.KeystoreDir),
 	}
+	database.SetLvlDBPath(cfg.Global.DataDir)
 	host, err := p2p.NewHost(cfg)
 	n.host = host
 	return n, err
