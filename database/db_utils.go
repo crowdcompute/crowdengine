@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"path/filepath"
 	"strings"
 
@@ -73,7 +72,6 @@ func (db *DB) GetAll() (map[string]string, error) {
 		key := string(iter.Key())
 		if strings.HasPrefix(key, db.tableName) {
 			value := iter.Value()
-			log.Println(string(value))
 			data[key] = string(value)
 		}
 	}
