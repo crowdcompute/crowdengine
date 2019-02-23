@@ -66,7 +66,7 @@ func authRequired(apis []API, ks *keystore.KeyStore, next http.Handler) http.Han
 				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 				return
 			}
-			ctx := context.WithValue(r.Context(), common.ContextKeyPrivateKey, key)
+			ctx := context.WithValue(r.Context(), common.ContextKeyPair, key)
 			log.Printf("Token valid and account {%s} unlocked. ", key.Address)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		}

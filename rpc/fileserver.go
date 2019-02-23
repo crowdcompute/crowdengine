@@ -48,7 +48,7 @@ func uploadAuthorization(ks *keystore.KeyStore, uploadPath string, next http.Han
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
-		ctx := context.WithValue(r.Context(), common.ContextKeyPrivateKey, key)
+		ctx := context.WithValue(r.Context(), common.ContextKeyPair, key)
 		ctx = context.WithValue(ctx, common.ContextKeyUploadPath, uploadPath)
 		log.Printf("Token valid and account {%s} unlocked. ", key.Address)
 		next(w, r.WithContext(ctx))
@@ -59,7 +59,7 @@ func uploadAuthorization(ks *keystore.KeyStore, uploadPath string, next http.Han
 // should return an id which represents the uploaded file
 // should be able to register a clientID with a list of uploaded files
 func fileserve(w http.ResponseWriter, r *http.Request) {
-	key, ok := r.Context().Value(common.ContextKeyPrivateKey).(*keystore.Key)
+	key, ok := r.Context().Value(common.ContextKeyPair).(*keystore.Key)
 	if !ok {
 		fmt.Fprintln(w, "There was an error getting the key from the context")
 	}

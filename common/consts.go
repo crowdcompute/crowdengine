@@ -62,8 +62,8 @@ const TokenTimeout time.Duration = time.Second * 60
 
 type ContextKey string
 
-// ContextKeyPrivateKey represents the context key name for a private key
-const ContextKeyPrivateKey ContextKey = "privatekey"
+// ContextKeyPair represents the context key name for a private key
+const ContextKeyPair ContextKey = "keypair"
 
 // ContextKeyUploadPath represents the context key name for an upload path
 const ContextKeyUploadPath ContextKey = "uploadpath"
