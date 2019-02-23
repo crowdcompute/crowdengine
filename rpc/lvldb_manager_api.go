@@ -48,16 +48,28 @@ func getInstance(objectName string) (interface{}, bool) {
 	return i, ok
 }
 
-// SelectAll returns all values in the database if no objectNameis given,
-// else it returns those values that are of the objectName type
-func (api *LvlDBManagerAPI) SelectAll(ctx context.Context, objectName string) (string, error) {
+// SelectAllObjects returns all values that are of the objectName type
+func (api *LvlDBManagerAPI) SelectAllObjects(ctx context.Context, objectName string) (string, error) {
 	var data map[string]string
 	var err error
 	if i, ok := getInstance(objectName); ok {
 		data, err = database.GetDB().Model(i).GetAll()
-	} else {
-		data, err = database.GetDB().GetAll()
 	}
+	if err != nil {
+		return "", err
+	}
+	dataBytes, err := json.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+	return string(dataBytes), err
+}
+
+// SelectAll returns all values in the database
+func (api *LvlDBManagerAPI) SelectAll(ctx context.Context) (string, error) {
+	var data map[string]string
+	var err error
+	data, err = database.GetDB().GetAll()
 	if err != nil {
 		return "", err
 	}
