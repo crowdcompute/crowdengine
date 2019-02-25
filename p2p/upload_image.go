@@ -123,7 +123,10 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 		return
 	}
 
-	p.storeImageToDB(imageID, hash, signature)
+	if err = p.storeImageToDB(imageID, hash, signature); err != nil {
+		log.Error("There was an error storing this image to DB: ", imageID)
+	}
+	log.Printf("This image %s with this hash {%s} and signature {%s} was stored into the DB \n", imageID, hash, signature)
 	p.createSendResponse(s.Conn().RemotePeer(), imageID)
 }
 
@@ -220,9 +223,9 @@ func getImageSummaryFromTag(tag string) types.ImageSummary {
 }
 
 // storeImageToDB stores the new image's data to our level DB
-func (p *UploadImageProtocol) storeImageToDB(imageID string, hash string, signature string) {
+func (p *UploadImageProtocol) storeImageToDB(imageID string, hash string, signature string) error {
 	image := &database.ImageLvlDB{Hash: hash, Signature: signature, CreatedTime: time.Now().Unix()}
-	database.GetDB().Model(image).Put([]byte(imageID))
+	return database.GetDB().Model(image).Put([]byte(imageID))
 }
 
 // createSendResponse creates and sends a response to the toPeer note
