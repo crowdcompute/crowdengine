@@ -57,7 +57,11 @@ type unlocked struct {
 
 // NewKeyStore creates and returns a new keystore
 func NewKeyStore(keyDir string) *KeyStore {
-	// Symmetric key
+	// TODO: give the appropriate permissions here
+	const dirPerm = 0777
+	if err := os.MkdirAll(keyDir, dirPerm); err != nil {
+		return nil
+	}
 	symmKey, err := crypto.RandomEntropy(32)
 	common.FatalIfErr(err, "There was an error getting random entropy")
 	return &KeyStore{
