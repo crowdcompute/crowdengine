@@ -69,10 +69,10 @@ func fileserve(w http.ResponseWriter, r *http.Request) {
 	}
 	filename, fileHandler := getFileFromRequest(w, r)
 	defer fileHandler.Close()
-	if checkIfFileUploaded(fileHandler) {
+	if uploaded, hash := checkIfFileUploaded(fileHandler); uploaded {
 		msg := fmt.Sprintf("File %s uploaded already", filename)
 		log.Println(msg)
-		fmt.Fprint(w, msg)
+		fmt.Fprint(w, hash)
 		return
 	}
 	fileHandler.Seek(0, 0)
@@ -111,16 +111,16 @@ func getFileFromRequest(w http.ResponseWriter, r *http.Request) (string, multipa
 	return handler.Filename, file
 }
 
-func checkIfFileUploaded(f multipart.File) bool {
+func checkIfFileUploaded(f multipart.File) (bool, string) {
 	hexHash := hex.EncodeToString(crypto.HashFile(f))
 	_, err := database.GetImageAccountFromDB(hexHash)
 	if err == database.ErrNotFound {
-		return false
+		return false, ""
 	} else if err != nil {
 		log.Println("There was an error getting the image from DB.")
-		return false
+		return false, ""
 	}
-	return true
+	return true, hexHash
 }
 
 func createFile(filename, path string) (*os.File, string, error) {

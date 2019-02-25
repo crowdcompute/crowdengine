@@ -101,10 +101,16 @@ func (p *ListImagesProtocol) listImagesForUser(publicKey string) ([]types.ImageS
 	for _, imgSummary := range allSummaries {
 		hash, signature, err := extractImgData(imgSummary)
 		if err != nil {
+			if err == database.ErrNotFound {
+				log.Println("Continuing... ")
+				continue
+			}
 			return nil, err
 		}
-		if ok, err := verifyUser(publicKey, hash, signature); ok && err != nil {
+		if ok, err := verifyUser(publicKey, hash, signature); ok && err == nil {
 			imgSummaries = append(imgSummaries, imgSummary)
+		} else if !ok {
+			log.Println("Could not verify this user. Public key doesn't match the signature...")
 		} else if err != nil {
 			return nil, err
 		}
@@ -138,7 +144,7 @@ func verifyUser(publicKey string, hash []byte, signature []byte) (bool, error) {
 	if err != nil {
 		return verification, err
 	}
-	return verification, err
+	return verification, nil
 }
 
 func getPubKey(publicKey string) (libp2pcrypto.PubKey, error) {
