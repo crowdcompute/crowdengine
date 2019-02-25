@@ -154,17 +154,15 @@ func (api *ImageManagerAPI) InspectContainer(ctx context.Context, peerID string,
 // ListImages gets a list of images from the peer peerID using the user's publicKey
 func (api *ImageManagerAPI) ListImages(ctx context.Context, peerID string) (string, error) {
 	key, ok := ctx.Value(common.ContextKeyPair).(*keystore.Key)
-
 	if !ok {
 		return "", fmt.Errorf("There was an error getting the key from the context")
 	}
 	toNodeID, _ := peer.IDB58Decode(peerID)
-	privByt, _ := key.KeyPair.Private.Bytes()
 	pubBytes, err := key.KeyPair.Private.GetPublic().Bytes()
 	if err != nil {
 		return "", err
 	}
-	// Drop first 5 bytes of pub key
+	// Drop first 4 bytes of pub key
 	pubBytes = pubBytes[4:]
 	api.host.InitiateListRequest(toNodeID, hex.EncodeToString(pubBytes))
 	return <-api.host.ListChan, nil
