@@ -178,9 +178,6 @@ func (p *ListImagesProtocol) onListResponse(s inet.Stream) {
 		log.Println("Failed to authenticate message")
 		return
 	}
-	log.Printf("data.ListResult")
-	log.Printf(data.ListResult)
-
 	log.Printf("%s: Received List response from %s. Message id:%s.", s.Conn().LocalPeer(), s.Conn().RemotePeer(), data.ListImagesMsgData.MessageData.Id)
 	p.ListChan <- data.ListResult
 }
