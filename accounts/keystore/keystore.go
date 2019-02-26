@@ -241,7 +241,7 @@ func (ks *KeyStore) expire(hashedToken string, u *unlocked, timeout time.Duratio
 	case <-u.abort:
 		// just quit
 	case <-t.C:
-		log.Printf("The account has expired. Locking...")
+		log.Printf("The account {%s} has expired. Locking...", ks.unlockedAcc[hashedToken].Address)
 		ks.mu.Lock()
 		// only drop if it's still the same key instance that dropLater
 		// was launched with. we can check that using pointer equality
