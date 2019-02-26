@@ -99,7 +99,7 @@ func (p *ListImagesProtocol) listImagesForUser(publicKey string) ([]types.ImageS
 	}
 
 	for _, imgSummary := range allSummaries {
-		hash, signatures, err := extractImgData(imgSummary)
+		hash, signatures, err := getImgDataFromDB(imgSummary.ID)
 		if err != nil {
 			if err == database.ErrNotFound {
 				log.Println("Continuing... ")
@@ -126,14 +126,13 @@ func (p *ListImagesProtocol) listImagesForUser(publicKey string) ([]types.ImageS
 	return imgSummaries, nil
 }
 
-func extractImgData(imgSummary types.ImageSummary) ([]byte, []string, error) {
-	imgID := strings.Replace(imgSummary.ID, "sha256:", "", -1)
+func getImgDataFromDB(imgID string) ([]byte, []string, error) {
+	imgID = strings.Replace(imgID, "sha256:", "", -1)
 	if image, err := database.GetImageFromDB(imgID); err == nil {
 		hashBytes, err := hex.DecodeString(image.Hash)
 		if err != nil {
 			return nil, nil, err
 		}
-
 		return hashBytes, image.Signatures, err
 	} else {
 		return nil, nil, err

@@ -101,7 +101,7 @@ func (n *Node) apis() []ccrpc.API {
 			Version:      "1.0",
 			Service:      ccrpc.NewImageManagerAPI(n.host),
 			Public:       true,
-			AuthRequired: "ListImages",
+			AuthRequired: "ListImages,ListContainers",
 		},
 		{
 			Namespace:    "service",

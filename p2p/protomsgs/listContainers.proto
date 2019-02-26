@@ -1,0 +1,19 @@
+syntax = "proto3";
+ 
+package protomsgs;
+import "common.proto";
+
+message ListContainersMsgData {
+    MessageData messageData = 1;
+}
+
+// a protocol define a set of reuqest and responses
+message ListContainersRequest {
+    ListContainersMsgData ListContainersMsgData = 1;
+    string pubKey = 2;
+}
+
+message ListContainersResponse {
+    ListContainersMsgData ListContainersMsgData = 1;
+    string listResult = 2;  // Result of execution   
+}

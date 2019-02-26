@@ -48,6 +48,7 @@ type Host struct {
 	*UploadImageProtocol
 	*InspectContainerProtocol
 	*ListImagesProtocol
+	*ListContainersProtocol
 }
 
 // NewHost creates a new Host
@@ -80,6 +81,7 @@ func (h *Host) registerProtocols() {
 	h.UploadImageProtocol = NewUploadImageProtocol(h.P2PHost)
 	h.InspectContainerProtocol = NewInspectContainerProtocol(h.P2PHost)
 	h.ListImagesProtocol = NewListImagesProtocol(h.P2PHost)
+	h.ListContainersProtocol = NewListContainersProtocol(h.P2PHost)
 }
 
 // makeRandomHost creates a libp2p host with a randomly generated identity.

@@ -227,3 +227,10 @@ func NewListImagesMsgData(messageID string, gossip bool, p2pHost host.Host) *api
 		MessageData: NewMessageData(messageID, gossip, p2pHost),
 	}
 }
+
+// NewListImagesMsgData generates message data shared between all node's p2p protocols
+func NewListContainersMsgData(messageID string, gossip bool, p2pHost host.Host) *api.ListContainersMsgData {
+	return &api.ListContainersMsgData{
+		MessageData: NewMessageData(messageID, gossip, p2pHost),
+	}
+}
