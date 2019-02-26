@@ -99,7 +99,7 @@ func (p *ListImagesProtocol) listImagesForUser(publicKey string) ([]types.ImageS
 	}
 
 	for _, imgSummary := range allSummaries {
-		hash, signature, err := extractImgData(imgSummary)
+		hash, signatures, err := extractImgData(imgSummary)
 		if err != nil {
 			if err == database.ErrNotFound {
 				log.Println("Continuing... ")
@@ -107,29 +107,34 @@ func (p *ListImagesProtocol) listImagesForUser(publicKey string) ([]types.ImageS
 			}
 			return nil, err
 		}
-		if ok, err := verifyUser(publicKey, hash, signature); ok && err == nil {
-			imgSummaries = append(imgSummaries, imgSummary)
-		} else if !ok {
-			log.Println("Could not verify this user. Public key doesn't match the signature...")
-		} else if err != nil {
-			return nil, err
+		// Verify all signatures for the same image
+		for _, signature := range signatures {
+			signedBytes, err := hex.DecodeString(signature)
+			if err != nil {
+				return nil, err
+			}
+			if ok, err := verifyUser(publicKey, hash, signedBytes); ok && err == nil {
+				imgSummaries = append(imgSummaries, imgSummary)
+				// TODO: Delete those comments. Only for debugging mode
+				// } else if !ok {
+				// 	log.Println("Could not verify this user. Signature could not be verified by the Public key...")
+			} else if err != nil {
+				return nil, err
+			}
 		}
 	}
 	return imgSummaries, nil
 }
 
-func extractImgData(imgSummary types.ImageSummary) ([]byte, []byte, error) {
+func extractImgData(imgSummary types.ImageSummary) ([]byte, []string, error) {
 	imgID := strings.Replace(imgSummary.ID, "sha256:", "", -1)
 	if image, err := database.GetImageFromDB(imgID); err == nil {
 		hashBytes, err := hex.DecodeString(image.Hash)
 		if err != nil {
 			return nil, nil, err
 		}
-		signedBytes, err := hex.DecodeString(image.Signature)
-		if err != nil {
-			return nil, nil, err
-		}
-		return hashBytes, signedBytes, err
+
+		return hashBytes, image.Signatures, err
 	} else {
 		return nil, nil, err
 	}

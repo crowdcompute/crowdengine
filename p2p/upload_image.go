@@ -223,8 +223,18 @@ func getImageSummaryFromTag(tag string) types.ImageSummary {
 }
 
 // storeImageToDB stores the new image's data to our level DB
+// If image exists it will keep the old signature
 func (p *UploadImageProtocol) storeImageToDB(imageID string, hash string, signature string) error {
-	image := &database.ImageLvlDB{Hash: hash, Signature: signature, CreatedTime: time.Now().Unix()}
+	signatures := make([]string, 0)
+	// In the case the imageID already exists in the database we just want to keep the old signatures,
+	// And because the image ID is the same all the values in DB will be updated with the new ones (CreatedTime will be the new one)
+	if image, err := database.GetImageFromDB(imageID); err == nil {
+		// TODO: Need to check if hash of the same image ID is going to always be the same
+		// hashes = append(hashes, image.Hash)
+		signatures = image.Signatures
+	}
+	signatures = append(signatures, signature)
+	image := &database.ImageLvlDB{Hash: hash, Signatures: signatures, CreatedTime: time.Now().Unix()}
 	return database.GetDB().Model(image).Put([]byte(imageID))
 }
 
