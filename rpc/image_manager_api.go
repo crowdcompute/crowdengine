@@ -132,7 +132,7 @@ func (api *ImageManagerAPI) sendFile(file *os.File) error {
 }
 
 // RunImage is the API call to run an imageID to the peerID node
-func (api *ImageManagerAPI) RunImage(ctx context.Context, peerID string, imageID string) string {
+func (api *ImageManagerAPI) RunImage(ctx context.Context, peerID, imageID string) string {
 	toNodeID, _ := peer.IDB58Decode(peerID)
 	api.host.RunImage(toNodeID, imageID)
 
@@ -143,7 +143,7 @@ func (api *ImageManagerAPI) RunImage(ctx context.Context, peerID string, imageID
 }
 
 // InspectContainer inspects a container containerID from the peer peerID
-func (api *ImageManagerAPI) InspectContainer(ctx context.Context, peerID string, containerID string) (string, error) {
+func (api *ImageManagerAPI) InspectContainer(ctx context.Context, peerID, containerID string) (string, error) {
 	toNodeID, _ := peer.IDB58Decode(peerID)
 	log.Println("About to inspect a container...")
 	api.host.InitiateInspectRequest(toNodeID, containerID)

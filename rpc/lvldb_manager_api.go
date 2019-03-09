@@ -48,11 +48,11 @@ func getInstance(objectName string) (interface{}, bool) {
 	return i, ok
 }
 
-// SelectAllObjects returns all values that are of the objectName type
-func (api *LvlDBManagerAPI) SelectAllObjects(ctx context.Context, objectName string) (string, error) {
+// SelectType returns all values that are of the structName type
+func (api *LvlDBManagerAPI) SelectType(ctx context.Context, typeName string) (string, error) {
 	var data map[string]string
 	var err error
-	if i, ok := getInstance(objectName); ok {
+	if i, ok := getInstance(typeName); ok {
 		data, err = database.GetDB().Model(i).GetAll()
 	}
 	if err != nil {
@@ -65,7 +65,7 @@ func (api *LvlDBManagerAPI) SelectAllObjects(ctx context.Context, objectName str
 	return string(dataBytes), err
 }
 
-// SelectAll returns all values in the database
+// SelectAll returns all values of the database
 func (api *LvlDBManagerAPI) SelectAll(ctx context.Context) (string, error) {
 	var data map[string]string
 	var err error
@@ -80,8 +80,8 @@ func (api *LvlDBManagerAPI) SelectAll(ctx context.Context) (string, error) {
 	return string(dataBytes), err
 }
 
-// GetImage returns all values from lvldb
-func (api *LvlDBManagerAPI) GetImage(ctx context.Context, imgID string) (string, error) {
+// SelectImage returns an ImageLvlDB if exists in the database
+func (api *LvlDBManagerAPI) SelectImage(ctx context.Context, imgID string) (string, error) {
 	image, err := database.GetImageFromDB(imgID)
 	if err != nil {
 		return "", err
@@ -91,8 +91,8 @@ func (api *LvlDBManagerAPI) GetImage(ctx context.Context, imgID string) (string,
 	return string(imgBytes), nil
 }
 
-// GetImageAccount returns an ImageAccountLvlDB if exists in the database
-func (api *LvlDBManagerAPI) GetImageAccount(ctx context.Context, imgHash string) (string, error) {
+// SelectImageAccount returns an ImageAccountLvlDB if exists in the database
+func (api *LvlDBManagerAPI) SelectImageAccount(ctx context.Context, imgHash string) (string, error) {
 	image, err := database.GetImageAccountFromDB(imgHash)
 	if err != nil {
 		return "", err
