@@ -81,7 +81,7 @@ func fileserve(w http.ResponseWriter, r *http.Request) {
 	log.Printf("uploadPath is: %s", uploadPath)
 	log.Printf("hash is: %s, filename: %s ", hash,  filename )
 
-
+	fileExt := filepath.Ext(filename)
 	fileHandler.Seek(0, 0)
 	localFile, fullpath, err := createFile(filename, uploadPath, hash)
 	if err != nil {
@@ -99,7 +99,7 @@ func fileserve(w http.ResponseWriter, r *http.Request) {
 	log.Println("The file has been successgully uploaded, full path is: ", fullpath)
 	hexHash := storeImageToDB(localFile, key.KeyPair.Private, fullpath)
 	log.Println("The hash is: ", hexHash)
-	fmt.Fprint(w, hexHash)
+	fmt.Fprint(w, hexHash + fileExt)
 }
 
 func getFileFromRequest(w http.ResponseWriter, r *http.Request) (string, multipart.File) {
