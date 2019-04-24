@@ -160,7 +160,7 @@ func (n *Node) apis() []ccrpc.API {
 func (n *Node) StartHTTP() {
 	serveMux := http.NewServeMux()
 	serveMux.Handle("/", ccrpc.ServeHTTP(n.apis(), n.ks))
-	serveMux.HandleFunc("/upload", ccrpc.ServeFilesHTTP(n.ks, n.cfg.Global.DataDir))
+	serveMux.HandleFunc("/upload", ccrpc.ServeFilesHTTP(n.ks, n.cfg.Global.UploadsDir))
 
 	port := n.cfg.RPC.HTTP.ListenPort
 	log.Println("RPC listening to the port: ", port)

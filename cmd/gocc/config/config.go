@@ -36,6 +36,7 @@ func DefaultConfig() *GlobalConfig {
 			LogLevel:     "TRACE",
 			DataDir:      DefaultDataDir(),
 			KeystoreDir:  filepath.Join(DefaultDataDir(), "keystore"),
+			UploadsDir:   filepath.Join(DefaultDataDir(), "uploads"),
 			DatabaseName: "gocc_db",
 			Availability: []string{},
 		},
@@ -108,6 +109,9 @@ func ApplyFlags(ctx *cli.Context, cfg *GlobalConfig) {
 	}
 	if ctx.GlobalIsSet(KeystoreDirFlag.Name) {
 		cfg.Global.KeystoreDir = ctx.GlobalString(KeystoreDirFlag.Name)
+	}
+	if ctx.GlobalIsSet(UploadsDirFlag.Name) {
+		cfg.Global.UploadsDir = ctx.GlobalString(UploadsDirFlag.Name)
 	}
 	if ctx.GlobalIsSet(DatabaseNameFlag.Name) {
 		cfg.Global.DatabaseName = ctx.GlobalString(DatabaseNameFlag.Name)

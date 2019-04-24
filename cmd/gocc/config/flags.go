@@ -40,7 +40,13 @@ var (
 	KeystoreDirFlag = cli.StringFlag{
 		Name:  "keystoredir",
 		Value: filepath.Join(DefaultDataDir(), "keystore"),
-		Usage: "Directory for the keystore",
+		Usage: "Keystore directory",
+	}
+	// UploadsDirFlag to store all the engine related data
+	UploadsDirFlag = cli.StringFlag{
+		Name:  "uploadsdir",
+		Value: filepath.Join(DefaultDataDir(), "uploads"),
+		Usage: "Uploads directory",
 	}
 	// DatabaseNameFlag used to store user data
 	DatabaseNameFlag = cli.StringFlag{

@@ -21,6 +21,7 @@ type Global struct {
 	LogLevel     string
 	DataDir      string
 	KeystoreDir  string
+	UploadsDir   string
 	DatabaseName string
 	Availability []string
 }
