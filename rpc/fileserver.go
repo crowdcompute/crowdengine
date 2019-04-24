@@ -69,14 +69,21 @@ func fileserve(w http.ResponseWriter, r *http.Request) {
 	}
 	filename, fileHandler := getFileFromRequest(w, r)
 	defer fileHandler.Close()
-	if uploaded, hash := checkIfFileUploaded(fileHandler); uploaded {
+	uploaded, hash := checkIfFileUploaded(fileHandler)
+	if uploaded {
 		msg := fmt.Sprintf("File %s uploaded already", filename)
 		log.Println(msg)
 		fmt.Fprint(w, hash)
 		return
 	}
+
+	
+	log.Printf("uploadPath is: %s", uploadPath)
+	log.Printf("hash is: %s, filename: %s ", hash,  filename )
+
+
 	fileHandler.Seek(0, 0)
-	localFile, fullpath, err := createFile(filename, uploadPath)
+	localFile, fullpath, err := createFile(filename, uploadPath, hash)
 	if err != nil {
 		fmt.Fprint(w, err)
 		return
@@ -113,18 +120,19 @@ func getFileFromRequest(w http.ResponseWriter, r *http.Request) (string, multipa
 
 func checkIfFileUploaded(f multipart.File) (bool, string) {
 	hexHash := hex.EncodeToString(crypto.HashFile(f))
+	log.Printf("inside checkifuploaded %s", hexHash)
 	_, err := database.GetImageAccountFromDB(hexHash)
 	if err == database.ErrNotFound {
-		return false, ""
+		return false, hexHash
 	} else if err != nil {
 		log.Println("There was an error getting the image from DB.")
-		return false, ""
+		return false, hexHash
 	}
 	return true, hexHash
 }
 
-func createFile(filename, path string) (*os.File, string, error) {
-	randFilename := common.RandomString(30) + filepath.Ext(filename)
+func createFile(filename, path, hash string) (*os.File, string, error) {
+	randFilename := hash + filepath.Ext(filename)
 	fullpath := path + "/uploads/" + randFilename
 	// TODO: Why 0777 gets wrxr-xr-x
 	const dirPerm = 0777
