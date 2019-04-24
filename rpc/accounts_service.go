@@ -53,10 +53,12 @@ func (api *AccountsAPI) UnlockAccount(ctx context.Context, accAddr, passphrase s
 	// First issue a token
 	rawToken, err := api.ks.IssueTokenForAccount(accAddr, keystore.NewTokenClaims("", ""))
 	if err != nil {
+		log.Printf("cant issue token {%s} ", err)
 		return "", err
 	}
 	// Then unlock the account if there is no issue with the Token creation above
 	if err := api.ks.TimedUnlock(accAddr, passphrase, common.TokenTimeout); err != nil {
+		log.Printf("cant unlock account {%s} ", err)
 		return "", err
 	}
 	toMinutes := float64(common.TokenTimeout) / float64(time.Minute)

@@ -54,14 +54,14 @@ func DefaultConfig() *GlobalConfig {
 			HTTP: HTTPWsConfig{
 				Enabled:          false,
 				ListenPort:       8668,
-				ListenAddress:    "localhost",
-				CrossOriginValue: "localhost",
+				ListenAddress:    "0.0.0.0",
+				CrossOriginValue: "*",
 			},
 			Websocket: HTTPWsConfig{
 				Enabled:          false,
 				ListenPort:       8669,
-				ListenAddress:    "localhost",
-				CrossOriginValue: "localhost",
+				ListenAddress:    "0.0.0.0",
+				CrossOriginValue: "*",
 			},
 			Socket: DomainSocket{
 				Enabled: true,

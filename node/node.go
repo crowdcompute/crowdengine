@@ -32,6 +32,7 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/rs/cors"
 )
 
 // Node represents a node
@@ -164,7 +165,9 @@ func (n *Node) StartHTTP() {
 	port := n.cfg.RPC.HTTP.ListenPort
 	log.Println("RPC listening to the port: ", port)
 	httpAddr := fmt.Sprintf("%s:%d", n.cfg.RPC.HTTP.ListenAddress, port)
-	log.Fatal(http.ListenAndServe(httpAddr, serveMux))
+
+	handler := cors.AllowAll().Handler(serveMux)
+	log.Fatal(http.ListenAndServe(httpAddr, handler))
 }
 
 // StartWebSocket starts a websocket server
