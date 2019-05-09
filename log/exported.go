@@ -1,7 +1,24 @@
+// Copyright 2018 The crowdcompute:crowdengine Authors
+// This file is part of the crowdcompute:crowdengine library.
+//
+// The crowdcompute:crowdengine library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The crowdcompute:crowdengine library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
+
 package log
 
 import (
 	"io"
+	"log"
 	"net"
 	"os"
 	"time"
@@ -19,7 +36,10 @@ func init() {
 	conn, connErr = d.Dial("tcp", logstashIP+":5044")
 	if connErr == nil {
 		hostname, _ := os.Hostname()
-		hook := logrustash.New(conn, logrustash.DefaultFormatter(logrus.Fields{"application": "gocc", "@node": hostname}))
+		hook, err := logrustash.NewHookWithFieldsAndConn(conn, "gocc", logrus.Fields{"@node": hostname})
+		if err != nil {
+			log.Fatalf("Logrustash couldn't create new hook...")
+		}
 		AddHook(hook)
 	}
 }

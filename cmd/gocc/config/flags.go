@@ -17,6 +17,8 @@
 package config
 
 import (
+	"path/filepath"
+
 	"github.com/urfave/cli"
 )
 
@@ -30,9 +32,22 @@ var (
 	// DataDirFlag to store all the engine related data
 	DataDirFlag = cli.StringFlag{
 		Name:  "datadir",
+		Value: DefaultDataDir(),
 		Usage: "Data directory to store data/metadata",
 	}
 
+	// KeystoreDirFlag to store all the engine related data
+	KeystoreDirFlag = cli.StringFlag{
+		Name:  "keystoredir",
+		Value: filepath.Join(DefaultDataDir(), "keystore"),
+		Usage: "Keystore directory",
+	}
+	// UploadsDirFlag to store all the engine related data
+	UploadsDirFlag = cli.StringFlag{
+		Name:  "uploadsdir",
+		Value: filepath.Join(DefaultDataDir(), "uploads"),
+		Usage: "Uploads directory",
+	}
 	// DatabaseNameFlag used to store user data
 	DatabaseNameFlag = cli.StringFlag{
 		Name:  "dbname",
@@ -73,6 +88,18 @@ var (
 	StoragePerContainerFlag = cli.IntFlag{
 		Name:  "containerstorage",
 		Usage: "Amount of storage available to a container",
+	}
+
+	// DockerSwarmAddrFlag defines the docker swarm's listen address
+	DockerSwarmAddrFlag = cli.StringFlag{
+		Name:  "swarmaddr",
+		Usage: "Listen address for the docker swarm",
+	}
+
+	// DockerSwarmPortFlag defines the
+	DockerSwarmPortFlag = cli.IntFlag{
+		Name:  "swarmport",
+		Usage: "Listen port number for the docker swarm",
 	}
 
 	// RPCFlag allow rpc
@@ -204,6 +231,7 @@ var GOCCAppFlags = []cli.Flag{
 	},
 	LogLevelFlag,
 	DataDirFlag,
+	KeystoreDirFlag,
 	DatabaseNameFlag,
 	AvailabilityFlag,
 	MaxContainersFlag,

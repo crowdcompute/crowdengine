@@ -13,58 +13,111 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with the crowdcompute:crowdengine library. If not, see <http://www.gnu.org/licenses/>.
-
 package rpc
 
 import (
-	"flag"
+	"bytes"
+	"context"
+	"fmt"
+	"io/ioutil"
 	"net/http"
+	"strings"
 
+	"github.com/crowdcompute/crowdengine/accounts/keystore"
+	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/log"
 
-	"github.com/crowdcompute/crowdengine/fileserver"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
-var (
-	addrHttp = flag.String("addrHTTP", "localhost:8080", "http service address")
-	addrWS   = flag.String("addr", "localhost:8088", "websocket service address")
-)
-
-// StartHTTP build a jsonrpc HTTP server
-func StartHTTP() {
+func ServeHTTP(apis []API, ks *keystore.KeyStore) http.HandlerFunc {
 	server := rpc.NewServer()
-	conService := new(ContainerService)
-	imageService := new(ImageService)
-	swarmService := new(SwarmService)
-	if err := server.RegisterName("container", conService); err != nil {
-		log.Fatal(err)
+	for _, api := range apis {
+		err := server.RegisterName(api.Namespace, api.Service)
+		common.FatalIfErr(err, "Ethereum RPC could not register name.")
 	}
-
-	if err := server.RegisterName("image", imageService); err != nil {
-		log.Fatal(err)
-	}
-
-	if err := server.RegisterName("swarm", swarmService); err != nil {
-		log.Fatal(err)
-	}
-
-	serveMux := http.NewServeMux()
-	serveMux.HandleFunc("/", server.ServeHTTP)
-	serveMux.HandleFunc("/upload", fileserver.ServeHTTP)
-
-	log.Fatal(http.ListenAndServe(*addrHttp, serveMux))
+	return authRequired(apis, ks, server)
 }
 
-// StartWebSocket build a jsonrpc server
-func StartWebSocket() {
-	// server := rpc.NewServer()
-	// service := new(ImageService)
-	// if err := server.RegisterName("image", service); err != nil {
-	// 	log.Fatal(err)
-	// }
-	// serveMux := http.NewServeMux()
-	// serveMux.Handle("/", server.WebsocketHandler([]string{"*"}))
+// authRequired is a middleware for the HTTP server.
+// Authenticates a token and passes the request to the next handler
+func authRequired(apis []API, ks *keystore.KeyStore, next http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// if empty body
+		if r.ContentLength == 0 {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
 
-	// log.Fatal(http.ListenAndServe(*addrWS, serveMux))
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(r.Body)
+		protected, err := isMethodProtected(apis, buf.Bytes())
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+		// Restore the r.Body to its original state
+		r.Body = ioutil.NopCloser(buf)
+
+		// ns is protected, place the logic which verifies the header
+		if protected {
+			key, err := getKeyForAccount(ks, r.Header)
+			if err != nil {
+				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+				return
+			}
+			ctx := context.WithValue(r.Context(), common.ContextKeyPair, key)
+			log.Printf("Token valid and account {%s} unlocked. ", key.Address)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		}
+		next.ServeHTTP(w, r)
+	}
+}
+
+func isMethodProtected(apis []API, rawJSONBody []byte) (bool, error) {
+	namespace, method, err := FindNamespaceMethod(rawJSONBody)
+	if err != nil {
+		return false, err
+	}
+	// find which namespace
+	namespaceMethodProtected := false
+	for _, v := range apis {
+		if v.Namespace == namespace {
+			// if * then all methods are protected
+			if v.AuthRequired == "*" {
+				namespaceMethodProtected = true
+				break
+			}
+
+			// break them and inspect them
+			fncs := strings.Split(v.AuthRequired, ",")
+			for _, w := range fncs {
+				if common.LcFirst(strings.TrimSpace(w)) == method {
+					namespaceMethodProtected = true
+					break
+				}
+			}
+			break
+		}
+	}
+	return namespaceMethodProtected, nil
+}
+
+// Extracts the token from authorization header,
+// and checks if token valid and related acount unlocked.
+// And returns the key
+func getKeyForAccount(ks *keystore.KeyStore, header http.Header) (*keystore.Key, error) {
+	authHeader := header.Get("Authorization")
+	if authHeader == "" {
+		err := fmt.Errorf("No Authorization given on header")
+		log.Println(err.Error())
+		return nil, err
+	}
+	token := strings.Split(authHeader, " ")[1]
+	key, err := ks.GetKeyIfUnlockedAndValid(token)
+	if err != nil {
+		log.Println("Error while trying to get key for a token. Error: ", err)
+		return nil, err
+	}
+	return key, nil
 }

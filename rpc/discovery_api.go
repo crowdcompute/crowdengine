@@ -19,7 +19,6 @@ package rpc
 import (
 	"context"
 
-	"github.com/crowdcompute/crowdengine/log"
 	"github.com/crowdcompute/crowdengine/p2p"
 )
 
@@ -34,22 +33,15 @@ func NewDiscoveryAPI(h *p2p.Host) *DiscoveryAPI {
 }
 
 // Discover returns a slice of node IDs in the number of the given numberOfNodes
-func (api *DiscoveryAPI) Discover(ctx context.Context, numberOfNodes int) ([]string, error) {
-	log.Println("Lenght of host: ", len(api.host.P2PHost.Addrs()))
-	for index := 0; index < len(api.host.P2PHost.Addrs()); index++ {
-		log.Println("", api.host.P2PHost.Addrs()[index])
+func (api *DiscoveryAPI) Discover(ctx context.Context, numberOfNodes int) (string, error) {
+	initialRequest, err := api.host.GetInitialDiscoveryReq()
+	if err != nil {
+		return "Couldn't get initial discovery request", err
 	}
+	// TODO: InitHash is a temporary solution. Should be the public key instead.
+	api.host.InitializeDiscovery(initialRequest.DiscoveryMsgData.InitHash, numberOfNodes)
+	// No neighbour sent me this message, that's why the empty string as a second parameter
+	api.host.ForwardMsgToPeers(initialRequest, "")
 
-	pid2 := api.host.P2PHost.ID().Pretty()
-	initialRequest := api.host.InitNodeDiscoveryReq(numberOfNodes, pid2)
-	// This is the initial forward of this message. No neighbour sent me this message, that's why the empty receivedNeighbour
-	api.host.ForwardToNeighbours(initialRequest, "")
-	// TODO: this channel has to have a TIMEOUT.
-	// TODO: Count the number of nodes that replied
-	nodeIDs := make([]string, numberOfNodes)
-	for i := 0; i < numberOfNodes; i++ {
-		nodeIDs = append(nodeIDs, (<-api.host.NodeID).Pretty())
-	}
-
-	return nodeIDs, nil
+	return "Discovering nodes...", nil
 }

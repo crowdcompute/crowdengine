@@ -56,7 +56,16 @@ type DB struct {
 
 // ImageLvlDB represents the Image Model
 type ImageLvlDB struct {
-	Hash        string `json:"hash"`        // The hash of the image
+	Hash        string   `json:"hash"`        // The hash of the image
+	Signatures  []string `json:"signatures"`  // Signature Verifies the uploader of this image. Same image might have multiple uploaders
+	CreatedTime int64    `json:"createdtime"` // The time the image was created into the current node
+}
+
+// ImageAccount represents the Image Account Model
+// These are the images uploaded to the dev node by users
+// TODO: name to be changed
+type ImageAccount struct {
 	Signature   string `json:"signature"`   // The uploader of this image
+	Path        string `json:"path"`        // Physical path of the location of the image
 	CreatedTime int64  `json:"createdtime"` // The time the image was created into the current node
 }

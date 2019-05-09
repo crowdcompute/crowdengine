@@ -3,8 +3,6 @@ NODENAME := p2p-node
 BINARY_NAME		=	gocc
 VERSION         :=	$(shell cat ./VERSION)
 
-run: build execute
-
 test:
 	go test ./... -v
 
@@ -13,9 +11,6 @@ build:
 	cp "./cmd/gocc/config/config.development.toml" "./build/bin/"
 
 deploy: build provision_script
-
-execute:
-	./build/bin/${BINARY_NAME}
 
 run-logserver:
 	sudo sysctl -w vm.max_map_count=262144
@@ -31,6 +26,6 @@ build-logserver:
 
 provision_script:
 	./build/deploy/provisioner.sh $(NODENAME)1 $(DIR)/build/bin/$(BINARY_NAME)
-	./build/deploy/provisioner.sh $(NODENAME)2 $(DIR)/build/bin/$(BINARY_NAME)
+	# ./build/deploy/provisioner.sh $(NODENAME)2 $(DIR)/build/bin/$(BINARY_NAME)
 
-.PHONY: test build run provision_script deploy
+.PHONY: test build provision_script deploy

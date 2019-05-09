@@ -34,3 +34,24 @@ func SliceExists(slice interface{}, item interface{}) bool {
 	}
 	return false
 }
+
+// DeleteItemFromSlice takes a slice of interfaces and an item and
+// returns a new slice of interfaces without the item
+// TODO: Remove probably. Not being used by anyone
+func DeleteItemFromSlice(slice []interface{}, item interface{}) []interface{} {
+	var newSlice []interface{}
+	s := reflect.ValueOf(slice)
+	if s.Kind() != reflect.Slice {
+		panic("SliceExists: given a non-slice type")
+	}
+
+	for i := 0; i < s.Len(); i++ {
+		if s.Index(i).Interface() == item {
+			continue
+		} else {
+			newSlice = append(newSlice, s.Index(i).Interface())
+		}
+	}
+
+	return newSlice
+}

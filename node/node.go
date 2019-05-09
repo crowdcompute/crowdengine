@@ -17,15 +17,13 @@
 package node
 
 import (
-	"errors"
-	"flag"
+	"fmt"
 	"net/http"
 	"sync"
 
 	"github.com/crowdcompute/crowdengine/log"
 
-	"github.com/crowdcompute/crowdengine/fileserver"
-
+	"github.com/crowdcompute/crowdengine/accounts/keystore"
 	"github.com/crowdcompute/crowdengine/cmd/gocc/config"
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/database"
@@ -34,14 +32,7 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/ethereum/go-ethereum/rpc"
-)
-
-var (
-	errNodeStarted      = errors.New("node: already started")
-	errImageStoreExists = errors.New("Unable to create a new Image Store")
-	httpAddr            = flag.String("httpAddr", "localhost:8080", "http service address")
-	addrWS              = flag.String("addrWS", "localhost:8081", "web socket service address")
-	httpFileServerAddr  = flag.String("httpFileServerAddr", "localhost:8082", "http file server address")
+	"github.com/rs/cors"
 )
 
 // Node represents a node
@@ -52,6 +43,7 @@ type Node struct {
 	store, imgTable database.Database
 	host            *p2p.Host
 	cfg             *config.GlobalConfig
+	ks              *keystore.KeyStore
 }
 
 // NewNode returns new Node instance
@@ -59,25 +51,25 @@ func NewNode(cfg *config.GlobalConfig) (*Node, error) {
 	n := &Node{
 		cfg:  cfg,
 		quit: make(chan struct{}),
+		ks:   keystore.NewKeyStore(cfg.Global.KeystoreDir),
 	}
-	n.host = p2p.NewHost(cfg.P2P.ListenPort, cfg.P2P.ListenAddress, cfg.P2P.Bootstraper.Nodes)
-	return n, nil
+	database.SetLvlDBPath(cfg.Global.DataDir)
+	host, err := p2p.NewHost(cfg)
+	n.host = host
+	return n, err
 }
 
 // Start starts a node instance & listens to RPC calls if the flag is set
 func (n *Node) Start(ctx *cli.Context) error {
-	err := errNodeStarted
 	n.startOnce.Do(func() {
 		// TODO: Only if worker node run these two
 		go n.host.DeleteDiscoveryMsgs(n.quit)
 		go PruneImages(n.quit)
-		err = nil // clear error above, only once.
 	})
 
 	if n.cfg.RPC.Enabled {
 		if n.cfg.RPC.HTTP.Enabled {
 			go n.StartHTTP()
-			go n.StartFileServer()
 		}
 		if n.cfg.RPC.Websocket.Enabled {
 			n.StartWebSocket()
@@ -85,8 +77,6 @@ func (n *Node) Start(ctx *cli.Context) error {
 	}
 
 	select {}
-
-	return err
 }
 
 // Stop is closing down everything that the node started
@@ -98,47 +88,86 @@ func (n *Node) Stop() error {
 }
 
 // apis returns the collection of RPC descriptors this node offers.
-func (n *Node) apis() []rpc.API {
-	return []rpc.API{
+func (n *Node) apis() []ccrpc.API {
+	return []ccrpc.API{
 		{
-			Namespace: "discovery",
-			Version:   "1.0",
-			Service:   ccrpc.NewDiscoveryAPI(n.host),
-			Public:    true,
+			Namespace:    "discovery",
+			Version:      "1.0",
+			Service:      ccrpc.NewDiscoveryAPI(n.host),
+			Public:       true,
+			AuthRequired: "",
 		},
 		{
-			Namespace: "imagemanager",
-			Version:   "1.0",
-			Service:   ccrpc.NewImageManagerAPI(n.host),
-			Public:    true,
+			Namespace:    "imagemanager",
+			Version:      "1.0",
+			Service:      ccrpc.NewImageManagerAPI(n.host),
+			Public:       true,
+			AuthRequired: "ListImages,ListContainers",
 		},
 		{
-			Namespace: "service",
-			Version:   "1.0",
-			Service:   ccrpc.NewServiceAPI(n.host),
-			Public:    true,
+			Namespace:    "service",
+			Version:      "1.0",
+			Service:      ccrpc.NewSwarmServiceAPI(n.host),
+			Public:       true,
+			AuthRequired: "",
 		},
 		{
-			Namespace: "bootnodes",
-			Version:   "1.0",
-			Service:   ccrpc.NewBootnodesAPI(n.host),
-			Public:    true,
+			Namespace:    "bootnodes",
+			Version:      "1.0",
+			Service:      ccrpc.NewBootnodesAPI(n.host),
+			Public:       true,
+			AuthRequired: "",
+		},
+		{
+			Namespace:    "container",
+			Version:      "1.0",
+			Service:      ccrpc.NewContainerService(),
+			Public:       true,
+			AuthRequired: "",
+		},
+		{
+			Namespace:    "image",
+			Version:      "1.0",
+			Service:      ccrpc.NewImageService(),
+			Public:       true,
+			AuthRequired: "",
+		},
+		{
+			Namespace:    "swarm",
+			Version:      "1.0",
+			Service:      ccrpc.NewSwarmService(),
+			Public:       true,
+			AuthRequired: "",
+		},
+		{
+			Namespace:    "accounts",
+			Version:      "1.0",
+			Service:      ccrpc.NewAccountsAPI(n.host, n.ks),
+			Public:       true,
+			AuthRequired: "LockAccount",
+		},
+		{
+			Namespace:    "lvldb",
+			Version:      "1.0",
+			Service:      ccrpc.NewLvlDBManagerAPI(),
+			Public:       true,
+			AuthRequired: "",
 		},
 	}
 }
 
 // StartHTTP starts a http server
 func (n *Node) StartHTTP() {
-	server := rpc.NewServer()
-	for _, api := range n.apis() {
-		err := server.RegisterName(api.Namespace, api.Service)
-		common.CheckErr(err, "[StartHTTP] Ethereum RPC could not register name.")
-	}
-
 	serveMux := http.NewServeMux()
-	serveMux.HandleFunc("/", server.ServeHTTP)
+	serveMux.Handle("/", ccrpc.ServeHTTP(n.apis(), n.ks))
+	serveMux.HandleFunc("/upload", ccrpc.ServeFilesHTTP(n.ks, n.cfg.Global.UploadsDir))
 
-	log.Fatal(http.ListenAndServe(*httpAddr, serveMux))
+	port := n.cfg.RPC.HTTP.ListenPort
+	log.Println("RPC listening to the port: ", port)
+	httpAddr := fmt.Sprintf("%s:%d", n.cfg.RPC.HTTP.ListenAddress, port)
+
+	handler := cors.AllowAll().Handler(serveMux)
+	log.Fatal(http.ListenAndServe(httpAddr, handler))
 }
 
 // StartWebSocket starts a websocket server
@@ -146,18 +175,11 @@ func (n *Node) StartWebSocket() {
 	server := rpc.NewServer()
 	for _, api := range n.apis() {
 		err := server.RegisterName(api.Namespace, api.Service)
-		common.CheckErr(err, "[StartHTTP] Ethereum RPC could not register name.")
+		common.FatalIfErr(err, "Ethereum RPC could not register name.")
 	}
 	serveMux := http.NewServeMux()
-	serveMux.Handle("/", server.WebsocketHandler([]string{"*"}))
+	serveMux.Handle("/", server.WebsocketHandler([]string{n.cfg.RPC.Websocket.CrossOriginValue}))
 
-	log.Fatal(http.ListenAndServe(*addrWS, serveMux))
-}
-
-// StartFileServer starts a file server
-func (n *Node) StartFileServer() {
-	serveMux := http.NewServeMux()
-	log.Printf("Starting upload file server...\n")
-	serveMux.HandleFunc("/upload", fileserver.ServeHTTP)
-	log.Fatal(http.ListenAndServe(*httpFileServerAddr, serveMux))
+	addrWS := fmt.Sprintf("%s:%d", n.cfg.RPC.Websocket.ListenAddress, n.cfg.RPC.Websocket.ListenPort)
+	log.Fatal(http.ListenAndServe(addrWS, serveMux))
 }

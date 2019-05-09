@@ -23,6 +23,7 @@ import (
 	peer "github.com/libp2p/go-libp2p-peer"
 )
 
+// BootnodesAPI ...
 type BootnodesAPI struct {
 	host *p2p.Host
 }
@@ -33,8 +34,8 @@ func NewBootnodesAPI(h *p2p.Host) *BootnodesAPI {
 }
 
 // SetBootnodes connects the current node with the given nodes
-func (api *BootnodesAPI) SetBootnodes(ctx context.Context, nodes []string) {
-	api.host.ConnectWithNodes(nodes)
+func (api *BootnodesAPI) SetBootnodes(ctx context.Context, nodes []string) error {
+	return api.host.ConnectWithNodes(nodes)
 }
 
 // GetBootnodes gets the current nodes connected to the current node

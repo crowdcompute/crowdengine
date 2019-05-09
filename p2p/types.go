@@ -16,12 +16,13 @@
 
 package p2p
 
+// Observer pattern interfaces
 type (
-	// Observer
+	// Observer runs onNotify() when notified by a Notifier
 	Observer interface {
 		onNotify()
 	}
-	// Notifier
+	// Notifier registers observers and Notifies them
 	Notifier interface {
 		Register(Observer)
 		Deregister(Observer)

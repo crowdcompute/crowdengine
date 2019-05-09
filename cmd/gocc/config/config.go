@@ -18,6 +18,9 @@ package config
 
 import (
 	"os"
+	"os/user"
+	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/crowdcompute/crowdengine/log"
@@ -31,7 +34,9 @@ func DefaultConfig() *GlobalConfig {
 	return &GlobalConfig{
 		Global: Global{
 			LogLevel:     "TRACE",
-			DataDir:      "gocc_data",
+			DataDir:      DefaultDataDir(),
+			KeystoreDir:  filepath.Join(DefaultDataDir(), "keystore"),
+			UploadsDir:   filepath.Join(DefaultDataDir(), "uploads"),
 			DatabaseName: "gocc_db",
 			Availability: []string{},
 		},
@@ -41,6 +46,7 @@ func DefaultConfig() *GlobalConfig {
 			GPUPerContainer:     2,
 			MemoryPerContainer:  1024,
 			StoragePerContainer: 2048,
+			DockerSwarm:         DockerSwarm{"0.0.0.0", 2377},
 		},
 		RPC: RPC{
 			Enabled:         false,
@@ -48,15 +54,15 @@ func DefaultConfig() *GlobalConfig {
 			EnabledServices: []string{},
 			HTTP: HTTPWsConfig{
 				Enabled:          false,
-				ListenPort:       8080,
-				ListenAddress:    "localhost",
-				CrossOriginValue: "localhost",
+				ListenPort:       8668,
+				ListenAddress:    "0.0.0.0",
+				CrossOriginValue: "*",
 			},
 			Websocket: HTTPWsConfig{
 				Enabled:          false,
-				ListenPort:       8081,
-				ListenAddress:    "localhost",
-				CrossOriginValue: "localhost",
+				ListenPort:       8669,
+				ListenAddress:    "0.0.0.0",
+				CrossOriginValue: "*",
 			},
 			Socket: DomainSocket{
 				Enabled: true,
@@ -65,7 +71,7 @@ func DefaultConfig() *GlobalConfig {
 		},
 		P2P: P2P{
 			MaxPeers:           20,
-			ListenPort:         12000,
+			ListenPort:         10209,
 			ListenAddress:      "localhost",
 			ConnectionTimeout:  40,
 			MinPeersThreashold: 2,
@@ -101,6 +107,12 @@ func ApplyFlags(ctx *cli.Context, cfg *GlobalConfig) {
 	if ctx.GlobalIsSet(DataDirFlag.Name) {
 		cfg.Global.DataDir = ctx.GlobalString(DataDirFlag.Name)
 	}
+	if ctx.GlobalIsSet(KeystoreDirFlag.Name) {
+		cfg.Global.KeystoreDir = ctx.GlobalString(KeystoreDirFlag.Name)
+	}
+	if ctx.GlobalIsSet(UploadsDirFlag.Name) {
+		cfg.Global.UploadsDir = ctx.GlobalString(UploadsDirFlag.Name)
+	}
 	if ctx.GlobalIsSet(DatabaseNameFlag.Name) {
 		cfg.Global.DatabaseName = ctx.GlobalString(DatabaseNameFlag.Name)
 	}
@@ -125,6 +137,12 @@ func ApplyFlags(ctx *cli.Context, cfg *GlobalConfig) {
 
 	if ctx.GlobalIsSet(StoragePerContainerFlag.Name) {
 		cfg.Host.MemoryPerContainer = ctx.GlobalInt(StoragePerContainerFlag.Name)
+	}
+	if ctx.GlobalIsSet(DockerSwarmAddrFlag.Name) {
+		cfg.Host.DockerSwarm.ListenAddress = ctx.GlobalString(DockerSwarmAddrFlag.Name)
+	}
+	if ctx.GlobalIsSet(DockerSwarmPortFlag.Name) {
+		cfg.Host.DockerSwarm.ListenPort = ctx.GlobalInt(DockerSwarmPortFlag.Name)
 	}
 
 	// RPC
@@ -212,4 +230,47 @@ func ApplyFlags(ctx *cli.Context, cfg *GlobalConfig) {
 		cfg.P2P.Bootstraper.BootstrapPeriodic = ctx.GlobalInt(P2PPeriodicFlag.Name)
 	}
 
+}
+
+// GetConfig returns the config after applying the defaults, toml file and flags
+func GetConfig(ctx *cli.Context) *GlobalConfig {
+	// create default config
+	cfg := DefaultConfig()
+	// if config file is given, load it
+	confFile := ctx.String("config")
+	if confFile != "" {
+		LoadTomlConfig(ctx, cfg)
+	}
+	// apply flags to config
+	ApplyFlags(ctx, cfg)
+	return cfg
+}
+
+// DefaultDataDir is the default data directory to use for the databases and other
+// persistence requirements.
+func DefaultDataDir() string {
+	// Try to place the data folder in the user's home dir
+	home := homeDir()
+	if home != "" {
+		if runtime.GOOS == "darwin" {
+			return filepath.Join(home, "Library", "GoCC_data")
+		} else if runtime.GOOS == "windows" {
+			return filepath.Join(home, "AppData", "Roaming", "GoCC_data")
+		} else {
+			return filepath.Join(home, ".gocc_data")
+		}
+	}
+	// if a common location wasn't found, return empty and handle later
+	return ""
+}
+
+// Return the user's home dir
+func homeDir() string {
+	if home := os.Getenv("HOME"); home != "" {
+		return home
+	}
+	if usr, err := user.Current(); err == nil {
+		return usr.HomeDir
+	}
+	return ""
 }

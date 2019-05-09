@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/crowdcompute/crowdengine/common"
+	"github.com/crowdcompute/crowdengine/cmd/gocc/config"
 	"github.com/crowdcompute/crowdengine/log"
 
 	ds "github.com/ipfs/go-datastore"
@@ -35,39 +35,45 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
+// Host represents a libp2p host
 type Host struct {
 	P2PHost  host.Host
 	dht      *dht.IpfsDHT
-	IP       string
 	FullAddr string
+	Cfg      *config.GlobalConfig
 
-	*JoinSwarmProtocol
+	*SwarmProtocol
 	*TaskProtocol
 	*DiscoveryProtocol
 	*UploadImageProtocol
 	*InspectContainerProtocol
 	*ListImagesProtocol
+	*ListContainersProtocol
 }
 
 // NewHost creates a new Host
-func NewHost(port int, IP string, bootnodes []string) *Host {
-	host := &Host{IP: IP}
-	host.makeRandomHost(port, IP)
-
-	if len(bootnodes) > 0 {
-		host.ConnectWithNodes(bootnodes)
+func NewHost(cfg *config.GlobalConfig) (*Host, error) {
+	nodes := cfg.P2P.Bootstraper.Nodes
+	ip := cfg.P2P.ListenAddress
+	port := cfg.P2P.ListenPort
+	host := &Host{Cfg: cfg}
+	err := host.makeRandomHost(port, ip)
+	if err != nil {
+		return nil, err
+	}
+	if len(nodes) > 0 {
+		err = host.ConnectWithNodes(nodes)
 	}
 	log.Print("Here is my p2p ID: ")
-	host.FullAddr = fmt.Sprintf("/ip4/%s/tcp/%d/ipfs/%s", IP, port, host.P2PHost.ID().Pretty())
+	host.FullAddr = fmt.Sprintf("/ip4/%s/tcp/%d/ipfs/%s", ip, port, host.P2PHost.ID().Pretty())
 	log.Println(host.FullAddr)
 	host.registerProtocols()
-	return host
+	return host, err
 }
 
-// Registering all Protocols
+// registerProtocols registers all protocols for the node
 func (h *Host) registerProtocols() {
-	// TODO: PATH has to be in a config
-	h.JoinSwarmProtocol = NewJoinSwarmProtocol(h.P2PHost, h.IP)
+	h.SwarmProtocol = NewSwarmProtocol(h.P2PHost, h.Cfg.P2P.ListenAddress, &h.Cfg.Host.DockerSwarm)
 	h.DiscoveryProtocol = NewDiscoveryProtocol(h.P2PHost, h.dht)
 	h.TaskProtocol = NewTaskProtocol(h.P2PHost)
 	// Registering the Observer that wants to get notified when the task is done.
@@ -75,16 +81,18 @@ func (h *Host) registerProtocols() {
 	h.UploadImageProtocol = NewUploadImageProtocol(h.P2PHost)
 	h.InspectContainerProtocol = NewInspectContainerProtocol(h.P2PHost)
 	h.ListImagesProtocol = NewListImagesProtocol(h.P2PHost)
+	h.ListContainersProtocol = NewListContainersProtocol(h.P2PHost)
 }
 
 // makeRandomHost creates a libp2p host with a randomly generated identity.
-func (h *Host) makeRandomHost(port int, IP string) {
+func (h *Host) makeRandomHost(port int, IP string) error {
 	// Ignoring most errors for brevity
 	// priv, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, rand.Reader)
 	// priv, _, _ := crypto.GenerateKeyPair(crypto.Secp256k1, 256)
 	priv, _, err := crypto.GenerateKeyPair(crypto.Secp256k1, 256)
-	common.CheckErr(err, "[makeRandomHost] Can't GenerateKeyPair ")
-
+	if err != nil {
+		return err
+	}
 	// listen, _ := ma.NewMultiaddr(fmt.Sprintf("/ip4/%s/tcp/%d", IP, port))
 	listen, _ := ma.NewMultiaddr(fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", port))
 	host, _ := libp2p.New(
@@ -104,32 +112,40 @@ func (h *Host) makeRandomHost(port int, IP string) {
 	h.P2PHost = rhost.Wrap(host, h.dht)
 
 	// Bootstrap the host
-	err = h.dht.Bootstrap(ctx)
-	common.CheckErr(err, "[makeRandomHost] Couldn't bootstrap the host.")
+	return h.dht.Bootstrap(ctx)
 }
 
 // ConnectWithNodes establishes a libp2p connection with the nodes
-func (h *Host) ConnectWithNodes(nodes []string) {
+func (h *Host) ConnectWithNodes(nodes []string) error {
 	log.Println("Connecting to the nodes: ", nodes)
 	for _, nodeAddr := range nodes {
-		h.addAddrToPeerstore(nodeAddr)
+		if err := h.addAddrToPeerstore(nodeAddr); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // addAddrToPeerstore parses a peer multiaddress and adds
 // it to the given host's peerstore, so it knows how to
 // contact it. It returns the peer ID of the remote peer.
-func (h *Host) addAddrToPeerstore(addr string) peer.ID {
+func (h *Host) addAddrToPeerstore(addr string) error {
 	// The following code extracts target's the peer ID from the
 	// given multiaddress
 	ipfsaddr, err := ma.NewMultiaddr(addr)
-	common.CheckErr(err, "[addAddrToPeerstore] NewMultiaddr function failed.")
+	if err != nil {
+		return err
+	}
 
 	pid, err := ipfsaddr.ValueForProtocol(ma.P_IPFS)
-	common.CheckErr(err, "[addAddrToPeerstore] ValueForProtocol function failed.")
+	if err != nil {
+		return err
+	}
 
 	peerid, err := peer.IDB58Decode(pid)
-	common.CheckErr(err, "[addAddrToPeerstore] IDB58Decode function failed.")
+	if err != nil {
+		return err
+	}
 	// Decapsulate the /ipfs/<peerID> part from the target
 	// /ip4/<a.b.c.d>/ipfs/<peer> becomes /ip4/<a.b.c.d>
 	targetPeerAddr, _ := ma.NewMultiaddr(
@@ -140,9 +156,11 @@ func (h *Host) addAddrToPeerstore(addr string) peer.ID {
 	// it to the peerstore so LibP2P knows how to contact it
 	h.P2PHost.Peerstore().AddAddr(peerid, targetAddr, ps.PermanentAddrTTL)
 
-	return peerid
+	return nil
 }
 
+// PeerCount returns the number of peers in the node's peerstore
 func (h *Host) PeerCount() int {
-	return 0
+	// Peerstore has the current node's address as well, so we don't want to count it
+	return h.P2PHost.Peerstore().Peers().Len() - 1
 }

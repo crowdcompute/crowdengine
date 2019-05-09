@@ -20,6 +20,8 @@ package config
 type Global struct {
 	LogLevel     string
 	DataDir      string
+	KeystoreDir  string
+	UploadsDir   string
 	DatabaseName string
 	Availability []string
 }
@@ -31,10 +33,17 @@ type Host struct {
 	GPUPerContainer     int
 	MemoryPerContainer  int
 	StoragePerContainer int
+	DockerSwarm         DockerSwarm
 
 	Network struct {
 		IP string
 	}
+}
+
+// DockerSwarm configuration.
+type DockerSwarm struct {
+	ListenAddress string
+	ListenPort    int
 }
 
 // RPC related configuration

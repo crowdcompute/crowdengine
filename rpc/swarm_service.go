@@ -28,6 +28,11 @@ import (
 // over jsonrpc
 type SwarmService struct{}
 
+// NewSwarmService returns a new SwarmService
+func NewSwarmService() *SwarmService {
+	return &SwarmService{}
+}
+
 // Init initiates a swarm manager
 func (s *SwarmService) Init(ctx context.Context, advertise string, listen string) (string, error) {
 	res, err := manager.GetInstance().InitSwarm(advertise, listen)
@@ -64,7 +69,7 @@ func (s *SwarmService) Inspect(ctx context.Context) (swarm.Swarm, error) {
 	return swrm, nil
 }
 
-// Inspect the swarm
+// ServiceCreate creates a swarm service
 func (s *SwarmService) ServiceCreate(ctx context.Context, service swarm.ServiceSpec, options types.ServiceCreateOptions) (types.ServiceCreateResponse, error) {
 	resp, err := manager.GetInstance().ServiceCreate(service, options)
 	if err != nil {

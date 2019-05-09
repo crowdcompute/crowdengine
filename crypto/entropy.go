@@ -22,7 +22,7 @@ import (
 	"io"
 )
 
-// RandomEntropy returns a slice of n bytes fron rand.Reader
+// RandomEntropy returns a slice of n bytes from rand.Reader
 func RandomEntropy(length int) ([]byte, error) {
 	buf := make([]byte, length)
 	n, err := io.ReadFull(rand.Reader, buf)

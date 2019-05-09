@@ -19,7 +19,7 @@ set_defaults() {
     AUTOSTART=false                 # Automatically start VM at boot time
     CPUS=1                          # Number of virtual CPUs
     FEATURE=host                    # Use host cpu features to the guest
-    MEMORY=512                     # Amount of RAM in MB
+    MEMORY=1024                     # Amount of RAM in MB
     DISK_SIZE=""                    # Disk Size in GB
     DNSDOMAIN=example.local         # DNS domain
     GRAPHICS=none                  # Graphics type
@@ -228,7 +228,7 @@ runcmd:
   - sudo systemctl disable cloud-init.service
   - export HOSTIP=${HOSTIP}
   - echo "export HOSTIP=${HOSTIP}" >> /home/ubuntu/.profile
-  - cd /home/ubuntu/ && ./gocc
+  - cd /home/ubuntu/ && ./gocc --rpc --http --httpport 8085 --httpaddr 0.0.0.0
 _EOF_
     
     if [ ! -z "${SCRIPTNAME+x}" ]

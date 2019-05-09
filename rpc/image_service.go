@@ -27,6 +27,11 @@ import (
 // over jsonrpc
 type ImageService struct{}
 
+// NewImageService returns a new ImageService
+func NewImageService() *ImageService {
+	return &ImageService{}
+}
+
 // List list all the available images
 func (s *ImageService) List(ctx context.Context, options types.ImageListOptions) ([]types.ImageSummary, error) {
 	images, err := manager.GetInstance().ListImages(options)
@@ -43,6 +48,8 @@ func (s *ImageService) BuildFromDockerfile(ctx context.Context) Result {
 
 // Load loads a tar
 func (s *ImageService) Load(ctx context.Context, filename string) (string, error) {
+	// uploadPath, ok := r.Context().Value(common.ContextKeyUploadPath).(string)
+
 	result, err := manager.GetInstance().LoadImage(filename)
 	if err != nil {
 		return result, err

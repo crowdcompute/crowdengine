@@ -27,31 +27,15 @@ import (
 	"github.com/docker/docker/api/types"
 )
 
-func containerRunning(containerID string) bool {
-	cjson, err := manager.GetInstance().InspectContainer(containerID)
-	if err != nil {
-		log.Println("Error inspecting container. ID : \n", containerID)
-		return false
-	}
-	// If at least one is running then state that I am busy
-	if cjson.State.Running {
-		return true
-	}
-	return false
-}
-
 // PruneImages checks if there are any images to be removed based on a time interval
 // Running for ever, or until node dies
 func PruneImages(quit <-chan struct{}) {
-	log.Println("start prunning images")
-	// TODO: Time has to be a const somewhere
-	ticker := time.NewTicker(time.Second * 10)
+	ticker := time.NewTicker(common.RemoveImagesInterval)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			log.Println("Checking if there are images to be removed...")
 			RemoveImages()
 		case <-quit:
 			ticker.Stop()
@@ -60,26 +44,45 @@ func PruneImages(quit <-chan struct{}) {
 	}
 }
 
-// RemoveImages removes all images
+// RemoveImages removes all images that got expired
+// This is a goroutine
 func RemoveImages() {
 	summaries, err := manager.GetInstance().ListImages(types.ImageListOptions{All: true})
-	common.CheckErr(err, "[RemoveImages] Failed to List images")
-	now := time.Now().Unix()
-	for _, img := range summaries {
-		image := database.ImageLvlDB{}
-		imgID := strings.Replace(img.ID, "sha256:", "", -1)
-
-		i, err := database.GetDB().Model(image).Get([]byte(imgID))
-		image, ok := i.(database.ImageLvlDB)
-		if !ok {
-			continue
-		}
-		// If the image was found into the DB
-		if err == nil {
-			if time.Unix(image.CreatedTime, 0).Add(common.TenDays).Unix() <= now {
-				log.Println("Removing image: ", img.ID)
-				manager.GetInstance().RemoveImage(img.ID, types.ImageRemoveOptions{Force: true, PruneChildren: true})
+	if err != nil {
+		log.Println("There is an error listing images. Stopped checking for expired images... Error : ", err)
+		return
+	}
+	for _, imgSummary := range summaries {
+		imgID := extractImgID(imgSummary)
+		if image, err := database.GetImageFromDB(imgID); err == nil {
+			if imageExpired(image.CreatedTime) {
+				log.Println("Removing image with ID: ", imgID)
+				removeImageFromDocker(imgID)
+				removeImageFromDB(imgID)
 			}
 		}
 	}
+}
+
+func extractImgID(imgSummary types.ImageSummary) string {
+	return strings.Replace(imgSummary.ID, "sha256:", "", -1)
+}
+
+func imageExpired(createdTime int64) bool {
+	now := time.Now().Unix()
+	return time.Unix(createdTime, 0).Add(common.TenDays).Unix() <= now
+}
+
+func removeImageFromDocker(imgID string) {
+	_, err := manager.GetInstance().RemoveImage(imgID,
+		types.ImageRemoveOptions{
+			Force:         true,
+			PruneChildren: true,
+		})
+	common.FatalIfErr(err, "There was an error removing the image from docker")
+}
+
+func removeImageFromDB(imgID string) {
+	err := database.GetDB().Model(&database.ImageLvlDB{}).Delete([]byte(imgID))
+	common.FatalIfErr(err, "There was an error deleting the image from lvldb")
 }

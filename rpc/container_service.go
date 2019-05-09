@@ -27,6 +27,11 @@ import (
 // ContainerService used to register Docker container functionality
 type ContainerService struct{}
 
+// NewContainerService returns a new ContainerService
+func NewContainerService() *ContainerService {
+	return &ContainerService{}
+}
+
 // RawResult represents any result
 type RawResult struct {
 	data interface{}

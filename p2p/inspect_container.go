@@ -17,31 +17,28 @@
 package p2p
 
 import (
-	"bufio"
-
 	"github.com/crowdcompute/crowdengine/log"
 
-	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/manager"
 	api "github.com/crowdcompute/crowdengine/p2p/protomsgs"
 	host "github.com/libp2p/go-libp2p-host"
 	inet "github.com/libp2p/go-libp2p-net"
 	peer "github.com/libp2p/go-libp2p-peer"
 	protocol "github.com/libp2p/go-libp2p-protocol"
-	protobufCodec "github.com/multiformats/go-multicodec/protobuf"
 	uuid "github.com/satori/go.uuid"
 )
 
 const inspectContainerRequest = "/image/inspectreq/0.0.1"
 const inspectContainerResponse = "/image/inspectresp/0.0.1"
 
-// UploadImageProtocol type
+// InspectContainerProtocol type
 type InspectContainerProtocol struct {
 	p2pHost     host.Host // local host
 	stream      inet.Stream
 	InspectChan chan string
 }
 
+// NewInspectContainerProtocol sets the protocol's stream handlers and returns a new InspectContainerProtocol
 func NewInspectContainerProtocol(p2pHost host.Host) *InspectContainerProtocol {
 	p := &InspectContainerProtocol{p2pHost: p2pHost, InspectChan: make(chan string, 1)}
 	p2pHost.SetStreamHandler(inspectContainerRequest, p.onInspectRequest)
@@ -49,7 +46,8 @@ func NewInspectContainerProtocol(p2pHost host.Host) *InspectContainerProtocol {
 	return p
 }
 
-func (p *InspectContainerProtocol) CreateSendInspectRequest(toHostID peer.ID, containerID string) {
+// InitiateInspectRequest sends an inspect request to toHostID for the containerID
+func (p *InspectContainerProtocol) InitiateInspectRequest(toHostID peer.ID, containerID string) {
 	req := &api.InspectContRequest{InspectContMsgData: NewInspectContMsgData(uuid.Must(uuid.NewV4(), nil).String(), true, p.p2pHost),
 		ContainerID: containerID}
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
@@ -59,44 +57,48 @@ func (p *InspectContainerProtocol) CreateSendInspectRequest(toHostID peer.ID, co
 }
 
 func (p *InspectContainerProtocol) onInspectRequest(s inet.Stream) {
+	log.Println("Received inspect container request...")
 	data := &api.InspectContRequest{}
-	decoder := protobufCodec.Multicodec(nil).Decoder(bufio.NewReader(s))
-	err := decoder.Decode(data)
-	common.CheckErr(err, "[onInspectRequest] Could not decode data.")
+	decodeProtoMessage(data, s)
 	// Authenticate integrity and authenticity of the message
 	if valid := authenticateProtoMsg(data, data.InspectContMsgData.MessageData); !valid {
 		log.Println("Failed to authenticate message")
 		return
 	}
 	rawInspection, err := inspectContainerRaw(data.ContainerID)
-	common.CheckErr(err, "[onInspectRequest] Could not inspect container.")
+	if err != nil {
+		log.Println("Could not inspect container. Error : ", err)
+		return
+	}
 
+	p.createSendResponse(s.Conn().RemotePeer(), string(rawInspection))
+}
+
+func inspectContainerRaw(containerID string) ([]byte, error) {
+	log.Println("Inspecting this container: ", containerID)
+	getSize := true
+	inspection, rawData, err := manager.GetInstance().InspectContainerRaw(containerID, getSize)
+	log.Printf("Result inspection the container %t\n", inspection.State.Running)
+	return rawData, err
+}
+
+// Create and send a response to the toPeer node
+func (p *InspectContainerProtocol) createSendResponse(toPeer peer.ID, response string) bool {
 	// Sending the response back to the sender of the msg
-
 	resp := &api.InspectContResponse{InspectContMsgData: NewInspectContMsgData(uuid.Must(uuid.NewV4(), nil).String(), false, p.p2pHost),
-		Inspection: string(rawInspection)}
+		Inspection: response}
 
 	// sign the data
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
 	resp.InspectContMsgData.MessageData.Sign = signProtoMsg(resp, key)
 
 	// send the response
-	sendMsg(p.p2pHost, s.Conn().RemotePeer(), resp, protocol.ID(inspectContainerResponse))
-}
-
-func inspectContainerRaw(containerId string) ([]byte, error) {
-	log.Println("Inspecting this container: ", containerId)
-	getSize := true
-	inspection, rawData, err := manager.GetInstance().InspectContainerRaw(containerId, getSize)
-	log.Printf("Result inspection the container %t\n", inspection.State.Running)
-	return rawData, err
+	return sendMsg(p.p2pHost, toPeer, resp, protocol.ID(inspectContainerResponse))
 }
 
 func (p *InspectContainerProtocol) onInspectResponse(s inet.Stream) {
 	data := &api.InspectContResponse{}
-	decoder := protobufCodec.Multicodec(nil).Decoder(bufio.NewReader(s))
-	err := decoder.Decode(data)
-	common.CheckErr(err, "[onInspectResponse] Could not decode data.")
+	decodeProtoMessage(data, s)
 
 	// Authenticate integrity and authenticity of the message
 	if valid := authenticateProtoMsg(data, data.InspectContMsgData.MessageData); !valid {

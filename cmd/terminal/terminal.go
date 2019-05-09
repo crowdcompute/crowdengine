@@ -17,6 +17,8 @@
 package terminal
 
 import (
+	"fmt"
+
 	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/peterh/liner"
@@ -35,14 +37,17 @@ type Terminal struct {
 }
 
 // GetPassphrase gets the password from stdin
-func (t *Terminal) GetPassphrase(text string, confirmation bool) (passwd string, err error) {
-	pass, err := t.getPassword(text)
+func (t *Terminal) GetPassphrase(prompt string, confirmation bool) (passwd string, err error) {
+	if prompt != "" {
+		fmt.Println(prompt)
+	}
+	pass, err := t.getPassword("Passphrase:")
 	if err != nil {
 		log.Fatalf("Error while reading passphrase: %v", err)
 	}
 
 	if confirmation {
-		confirm, err := t.getPassword("Reapeat: ")
+		confirm, err := t.getPassword("Repeat passphrase: ")
 		if err != nil {
 			log.Fatalf("Error while reading passphrase confirmation: %v", err)
 		}
