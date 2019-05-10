@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/crowdcompute/crowdengine/accounts/keystore"
 	"github.com/crowdcompute/crowdengine/cmd/gocc/config"
@@ -17,7 +18,7 @@ var (
 		Usage:    "Manage accounts",
 		Category: "Accounts",
 		Description: `
-Manage accounts, create update and import new stuff`,
+					Manage accounts, create, lock, unlock and import existing ones`,
 		Subcommands: []cli.Command{
 			{
 				Name:   "new",
@@ -29,21 +30,25 @@ Manage accounts, create update and import new stuff`,
 				Usage:  "Print summary of existing accounts",
 				Action: ListAccounts,
 				Description: `
-Print a short summary of all accounts`,
+							Print a short summary of all accounts`,
 			},
 			{
 				Name:   "lock",
 				Usage:  "Locks an existing account",
 				Action: LockAccount,
 				Description: `
-Print a short summary of all accounts`,
+							Locks a specific account`,
 			},
 			{
 				Name:   "unlock",
 				Usage:  "Unlock an existing account",
 				Action: UnlockAccount,
 				Description: `
-Print a short summary of all accounts`,
+							Unlocks a specific account`,
+				Flags: []cli.Flag{
+					config.AccAddrFlag,
+					config.AccPassphraseFlag,
+				},
 			},
 			{
 				Name:  "import",
@@ -70,9 +75,10 @@ func NewAccount(ctx *cli.Context) error {
 	return nil
 }
 
-// ListAccounts creates a new account for the user
+// ListAccounts lists all accounts of the node
 func ListAccounts(ctx *cli.Context) error {
 	cfg := config.GetConfig(ctx)
+	// Need to pass the keystore path to
 	accounts, err := keystore.GetKeystoreFiles(cfg.Global.KeystoreDir)
 	common.FatalIfErr(err, "Unable to get keystore files")
 	for i, account := range accounts {
@@ -89,6 +95,27 @@ func LockAccount(ctx *cli.Context) error {
 
 // UnlockAccount unlocks an existing account
 func UnlockAccount(ctx *cli.Context) error {
-	// fmt.Printf("Here is your token. Use this for further calls: {%s}\n", acc.Token.Raw)
+	// help flag is there as well
+	if len(ctx.Command.VisibleFlags()) != 3 {
+		return fmt.Errorf("Please give account and passphrase flags")
+	}
+	accAddr := ctx.String(config.AccAddrFlag.Name)
+	passphrase := ctx.String(config.AccPassphraseFlag.Name)
+
+	cfg := config.GetConfig(ctx)
+	ks := keystore.NewKeyStore(cfg.Global.KeystoreDir)
+	// First issue a token
+	rawToken, err := ks.IssueTokenForAccount(accAddr, keystore.NewTokenClaims("", ""))
+	if err != nil {
+		fmt.Printf("cant issue token {%s} ", err)
+		return err
+	}
+	// Then unlock the account if there is no issue with the Token creation above
+	if err := ks.TimedUnlock(accAddr, passphrase, common.TokenTimeout); err != nil {
+		fmt.Printf("cant unlock account {%s} ", err)
+		return err
+	}
+	toMinutes := float64(common.TokenTimeout) / float64(time.Minute)
+	fmt.Printf("The account {%s} has been unlocked for %.2f minutes... This is your token: {%s} \n", accAddr, toMinutes, rawToken)
 	return nil
 }
