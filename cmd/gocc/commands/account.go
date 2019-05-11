@@ -36,6 +36,9 @@ var (
 				Name:   "lock",
 				Usage:  "Locks an existing account",
 				Action: LockAccount,
+				Flags: []cli.Flag{
+					config.AccAddrFlag,
+				},
 				Description: `
 							Locks a specific account`,
 			},
@@ -43,12 +46,12 @@ var (
 				Name:   "unlock",
 				Usage:  "Unlock an existing account",
 				Action: UnlockAccount,
-				Description: `
-							Unlocks a specific account`,
 				Flags: []cli.Flag{
 					config.AccAddrFlag,
 					config.AccPassphraseFlag,
 				},
+				Description: `
+							Unlocks a specific account`,
 			},
 			{
 				Name:  "import",
@@ -63,6 +66,8 @@ var (
 		},
 	}
 )
+
+// TODO: THERE HAS TO BE A GLOBAL KEYSTORE OBJECT
 
 // NewAccount creates a new account for the user
 func NewAccount(ctx *cli.Context) error {
@@ -94,28 +99,34 @@ func LockAccount(ctx *cli.Context) error {
 }
 
 // UnlockAccount unlocks an existing account
+// TODO: Keep the command running so that it returns when unlock period is over.
 func UnlockAccount(ctx *cli.Context) error {
-	// help flag is there as well
+	// Check for 3 because help flag is there by default
 	if len(ctx.Command.VisibleFlags()) != 3 {
 		return fmt.Errorf("Please give account and passphrase flags")
 	}
 	accAddr := ctx.String(config.AccAddrFlag.Name)
 	passphrase := ctx.String(config.AccPassphraseFlag.Name)
 
+	rawToken, err := IssueTokenAndUnlockAccount(ctx, accAddr, passphrase)
+	common.FatalIfErr(err, "Can't issue token or unlock account.")
+	toMinutes := float64(common.TokenTimeout) / float64(time.Minute)
+	fmt.Printf("The account {%s} has been unlocked for %.2f minutes... This is your token: {%s} \n", accAddr, toMinutes, rawToken)
+	return nil
+}
+
+// IssueTokenAndUnlockAccount creates a new keystore, issues token for the account and then unlocks it
+func IssueTokenAndUnlockAccount(ctx *cli.Context, accAddr, passphrase string) (string, error) {
 	cfg := config.GetConfig(ctx)
 	ks := keystore.NewKeyStore(cfg.Global.KeystoreDir)
 	// First issue a token
 	rawToken, err := ks.IssueTokenForAccount(accAddr, keystore.NewTokenClaims("", ""))
 	if err != nil {
-		fmt.Printf("cant issue token {%s} ", err)
-		return err
+		return "", err
 	}
 	// Then unlock the account if there is no issue with the Token creation above
 	if err := ks.TimedUnlock(accAddr, passphrase, common.TokenTimeout); err != nil {
-		fmt.Printf("cant unlock account {%s} ", err)
-		return err
+		return "", err
 	}
-	toMinutes := float64(common.TokenTimeout) / float64(time.Minute)
-	fmt.Printf("The account {%s} has been unlocked for %.2f minutes... This is your token: {%s} \n", accAddr, toMinutes, rawToken)
-	return nil
+	return rawToken, nil
 }
