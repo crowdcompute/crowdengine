@@ -63,7 +63,6 @@ func NewKeyStore(keyDir string) *KeyStore {
 	if err := os.MkdirAll(keyDir, dirPerm); err != nil {
 		return nil
 	}
-	// TODO: Do I bind the symmetric key with the creation of a new KeyStore??
 	symmKey, err := crypto.RandomEntropy(32)
 	common.FatalIfErr(err, "There was an error getting random entropy")
 
