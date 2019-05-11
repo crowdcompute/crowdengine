@@ -1,6 +1,7 @@
 module github.com/crowdcompute/crowdengine
 
 require (
+	github.com/allegro/bigcache v1.2.0 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20190502180301-283422fc1708 // indirect
 	github.com/bshuster-repo/logrus-logstash-hook v0.4.1
 	github.com/deckarep/golang-set v1.7.1 // indirect
