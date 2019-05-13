@@ -221,18 +221,6 @@ var (
 		Name:  "bootstrapfreq",
 		Usage: "Bootstraping frequency",
 	}
-
-	// AccAddrFlag is the account address to lock or unlock
-	AccAddrFlag = cli.StringFlag{
-		Name:  "account",
-		Usage: "Account address to lock or unlock",
-	}
-
-	// AccPassphraseFlag is the passphrase needed to unlock the account
-	AccPassphraseFlag = cli.StringFlag{
-		Name:  "passphrase",
-		Usage: "Passphrase to unlock an account",
-	}
 )
 
 // GOCCAppFlags represent the flags of the main app

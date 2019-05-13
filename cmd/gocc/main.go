@@ -24,7 +24,6 @@ import (
 	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/cmd"
-	"github.com/crowdcompute/crowdengine/cmd/gocc/commands"
 	"github.com/crowdcompute/crowdengine/cmd/gocc/config"
 	"github.com/crowdcompute/crowdengine/node"
 	"github.com/urfave/cli"
@@ -45,9 +44,6 @@ func init() {
 	// App.HideVersion = true
 	App.Action = gocc
 	App.Version = Version
-	App.Commands = []cli.Command{
-		commands.AccountCommand,
-	}
 	App.Flags = config.GOCCAppFlags
 	sort.Sort(cli.CommandsByName(App.Commands))
 	App.After = func(ctx *cli.Context) error {
