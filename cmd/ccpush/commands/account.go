@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	// AccountCommand adds accounting functionlaity
+	// AccountCommand is a commnad for managing accounts
 	AccountCommand = cli.Command{
 		Name:     "account",
 		Usage:    "Manage accounts",
@@ -71,7 +71,13 @@ func NewAccount(ctx *cli.Context) error {
 
 // ListAccounts lists all accounts of the node
 func ListAccounts(ctx *cli.Context) error {
-	fmt.Println("ListAccounts command to be implemented")
+	accounts, err := c.ListAccounts()
+	if err != nil {
+		fmt.Println("Unable to get accounts", err)
+	}
+	for i, account := range accounts {
+		fmt.Printf("Account #%d: %s\n", i, account)
+	}
 	return nil
 }
 
@@ -83,6 +89,17 @@ func LockAccount(ctx *cli.Context) error {
 
 // UnlockAccount unlocks an existing account
 func UnlockAccount(ctx *cli.Context) error {
-	fmt.Println("UnlockAccount command to be implemented")
+	// Check for 3 because help flag is there by default
+	if len(ctx.Command.VisibleFlags()) != 3 {
+		return fmt.Errorf("Please give account and passphrase flags")
+	}
+	accAddr := ctx.String(config.AccAddrFlag.Name)
+	passphrase := ctx.String(config.AccPassphraseFlag.Name)
+	// Unlock it
+	token, err := c.UnlockAccount(accAddr, passphrase)
+	if err != nil {
+		fmt.Println("Can't issue token or unlock account.", err)
+	}
+	fmt.Println("token: ", token)
 	return nil
 }
