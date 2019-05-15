@@ -131,7 +131,7 @@ func checkIfFileUploaded(f multipart.File) (bool, string) {
 
 func createFile(filename, path, hash string) (*os.File, string, error) {
 	randFilename := hash + filepath.Ext(filename)
-	fullpath := path + randFilename
+	fullpath := filepath.Join(path, randFilename)
 	// TODO: Why 0777 gets wrxr-xr-x
 	const dirPerm = 0777
 	if err := os.MkdirAll(filepath.Dir(fullpath), dirPerm); err != nil {
