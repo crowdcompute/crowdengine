@@ -33,28 +33,16 @@ var (
 		Usage: "Passphrase to unlock an account",
 	}
 
-	// FilePathFlag is the filepath to the image to be uploaded
-	FilePathFlag = cli.StringFlag{
-		Name:  "filepath",
-		Usage: "filepath to the image to be uploaded",
-	}
-
-	// TokenFlag is the token to unlock authorize actions for an account
-	TokenFlag = cli.StringFlag{
-		Name:  "token",
-		Usage: "token to unlock authorize actions for an account",
+	// ImgPathFlag is the filepath to the image to be uploaded
+	ImgPathFlag = cli.StringFlag{
+		Name:  "imgpath",
+		Usage: "imgpath to the image to be uploaded",
 	}
 
 	// Libp2pIDFlag is the libp2pid of the node
 	Libp2pIDFlag = cli.StringFlag{
 		Name:  "libp2pid",
 		Usage: "libp2pid of the node",
-	}
-
-	// ImgHashFlag is the hash of the image to be loaded
-	ImgHashFlag = cli.StringFlag{
-		Name:  "imghash",
-		Usage: "hash of the image to be loaded",
 	}
 
 	// ImgIDFlag is the docker image id to run on the node

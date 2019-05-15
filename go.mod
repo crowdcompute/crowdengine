@@ -31,6 +31,7 @@ require (
 	github.com/rs/cors v1.6.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.4.1
+	github.com/stretchr/testify v1.3.0
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/urfave/cli v1.20.0
 	golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f
