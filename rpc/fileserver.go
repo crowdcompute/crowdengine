@@ -77,11 +77,9 @@ func fileserve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
 	log.Printf("uploadPath is: %s", uploadPath)
-	log.Printf("hash is: %s, filename: %s ", hash,  filename )
+	log.Printf("hash is: %s, filename: %s ", hash, filename)
 
-	fileExt := filepath.Ext(filename)
 	fileHandler.Seek(0, 0)
 	localFile, fullpath, err := createFile(filename, uploadPath, hash)
 	if err != nil {
@@ -99,7 +97,7 @@ func fileserve(w http.ResponseWriter, r *http.Request) {
 	log.Println("The file has been successgully uploaded, full path is: ", fullpath)
 	hexHash := storeImageToDB(localFile, key.KeyPair.Private, fullpath)
 	log.Println("The hash is: ", hexHash)
-	fmt.Fprint(w, hexHash + fileExt)
+	fmt.Fprint(w, hexHash)
 }
 
 func getFileFromRequest(w http.ResponseWriter, r *http.Request) (string, multipart.File) {
@@ -133,7 +131,7 @@ func checkIfFileUploaded(f multipart.File) (bool, string) {
 
 func createFile(filename, path, hash string) (*os.File, string, error) {
 	randFilename := hash + filepath.Ext(filename)
-	fullpath := path + "/uploads/" + randFilename
+	fullpath := filepath.Join(path, randFilename)
 	// TODO: Why 0777 gets wrxr-xr-x
 	const dirPerm = 0777
 	if err := os.MkdirAll(filepath.Dir(fullpath), dirPerm); err != nil {

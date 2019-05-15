@@ -8,6 +8,7 @@ test:
 
 build:
 	go build -ldflags "-X main.Version=$(VERSION)" -o "./build/bin/$(BINARY_NAME)" "./cmd/gocc/"
+	go build -ldflags "-X main.Version=$(VERSION)" -o "./build/bin/ccpush" "./cmd/ccpush/"
 	cp "./cmd/gocc/config/config.development.toml" "./build/bin/"
 
 deploy: build provision_script
