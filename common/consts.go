@@ -38,7 +38,7 @@ const FillChar string = ":"
 const FileSizeLength int = 10
 
 // FileNameLength represents the total length of the buffer whenever sending the file name to a peer
-const FileNameLength int = 64
+const FileNameLength int = 100
 
 // SignatureLength represents the total length of the buffer whenever sending the signature to a peer
 // TODO: Not sure what number to give here. Need to see the range
