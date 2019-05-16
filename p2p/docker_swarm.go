@@ -50,17 +50,17 @@ type SwarmProtocol struct {
 	WorkerToken  string
 	ManagerToken string
 	managerIP    string
-	cfg          *config.DockerSwarm
+	swarmcfg     *config.DockerSwarm
 }
 
 // NewSwarmProtocol sets the protocol's stream handlers and returns a new SwarmProtocol
-func NewSwarmProtocol(p2pHost host.Host, managerIP string, cfg *config.DockerSwarm) *SwarmProtocol {
+func NewSwarmProtocol(p2pHost host.Host, cfg *config.DockerSwarm) *SwarmProtocol {
 	p := &SwarmProtocol{
 		p2pHost:    p2pHost,
-		managerIP:  managerIP,
+		managerIP:  cfg.AdvertiseAddress,
 		joinedNode: make(chan struct{}),
 		leaveNode:  make(chan struct{}),
-		cfg:        cfg,
+		swarmcfg:   cfg,
 	}
 	p2pHost.SetStreamHandler(joinReq, p.onJoinRequest)
 	p2pHost.SetStreamHandler(joinResOK, p.onJoinResponseOK)
@@ -164,7 +164,7 @@ func (p *SwarmProtocol) onJoinResponseOK(s net.Stream) {
 
 		// TODO: User might need some nodes to be Managers and some others Workers. Now all are Workers
 		req := &api.JoinRequest{MessageData: NewMessageData(uuid.Must(uuid.NewV4(), nil).String(), false, p.p2pHost),
-			Message: api.MessageType_JoinReqToken, JoinToken: p.WorkerToken, JoinMasterAddr: fmt.Sprintf("%s:%d", p.managerIP, p.cfg.ListenPort)}
+			Message: api.MessageType_JoinReqToken, JoinToken: p.WorkerToken, JoinMasterAddr: fmt.Sprintf("%s:%d", p.managerIP, p.swarmcfg.ListenPort)}
 
 		key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
 		req.MessageData.Sign = signProtoMsg(req, key)
@@ -195,7 +195,7 @@ func (p *SwarmProtocol) onJoinReqToken(s net.Stream) {
 
 	// Join the swarm
 	remoteAddrs := []string{data.JoinMasterAddr}
-	listenAddr := fmt.Sprintf("0.0.0.0:%d", p.cfg.ListenPort)
+	listenAddr := fmt.Sprintf("0.0.0.0:%d", p.swarmcfg.ListenPort)
 	joinSwarmResult, err := manager.GetInstance().SwarmJoin(p.managerIP, "", remoteAddrs, data.JoinToken, listenAddr)
 	if err != nil {
 		log.Println("Couldn't join swarm. Error : ", err)
