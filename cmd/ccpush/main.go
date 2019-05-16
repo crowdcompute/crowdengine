@@ -43,6 +43,7 @@ func init() {
 	// App.Flags = config.CCPushFlags
 	App.Commands = []cli.Command{
 		commands.ImageCommand,
+		commands.SwarmCommand,
 	}
 	sort.Sort(cli.CommandsByName(App.Commands))
 	App.After = func(ctx *cli.Context) error {

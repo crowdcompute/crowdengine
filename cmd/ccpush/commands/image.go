@@ -14,7 +14,7 @@ var (
 	ImageCommand = cli.Command{
 		Name:     "image",
 		Usage:    "Manage running images",
-		Category: "Images",
+		Category: "Image",
 		Description: `
 					Manage images. Send images to nodes on the network to run`,
 		Subcommands: []cli.Command{
@@ -43,7 +43,12 @@ func RunImageOnNode(ctx *cli.Context) error {
 	if len(ctx.Command.VisibleFlags()) != 7 {
 		return fmt.Errorf("Please give account and passphrase flags")
 	}
-	c, uploadClient := getClients(ctx)
+	// Get the clients to communicate with the node
+	rpcaddr := ctx.String(config.RPCAddrFlag.Name)
+	c := ccsdk.NewCCClient(rpcaddr)
+	fileserveraddr := ctx.String(config.FileserverFlag.Name)
+	uploadClient := ccsdk.NewUploadClient(fileserveraddr)
+	// Get the rest of the flags
 	accAddr := ctx.String(config.AccAddrFlag.Name)
 	passphrase := ctx.String(config.AccPassphraseFlag.Name)
 	imagePath := ctx.String(config.ImgPathFlag.Name)
@@ -68,12 +73,4 @@ func RunImageOnNode(ctx *cli.Context) error {
 	common.FatalIfErr(err, "Couldn't run image to node.")
 	fmt.Println("Result of ExecuteImage is this: ", result)
 	return nil
-}
-
-func getClients(ctx *cli.Context) (*ccsdk.CCClient, *ccsdk.UploadClient) {
-	rpcaddr := ctx.String(config.RPCAddrFlag.Name)
-	fileserveraddr := ctx.String(config.FileserverFlag.Name)
-	c := ccsdk.NewCCClient(rpcaddr)
-	uploadClient := ccsdk.NewUploadClient(fileserveraddr)
-	return c, uploadClient
 }
