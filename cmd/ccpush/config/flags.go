@@ -21,6 +21,18 @@ import (
 )
 
 var (
+	// RPCAddrFlag rpc host and port to connect to
+	RPCAddrFlag = cli.StringFlag{
+		Name:  "rpcaddr",
+		Usage: "HTTP-RPC host and port to connect to",
+	}
+
+	// FileserverFlag host and port to connect to
+	FileserverFlag = cli.StringFlag{
+		Name:  "fileserver",
+		Usage: "Fileserver host and port to connect to",
+	}
+
 	// AccAddrFlag is the account address to lock or unlock
 	AccAddrFlag = cli.StringFlag{
 		Name:  "account",

@@ -10,11 +10,6 @@ import (
 )
 
 var (
-	c            = ccsdk.NewCCClient("http://localhost:8085")
-	uploadClient = ccsdk.NewUploadClient("http://localhost:8085/upload")
-)
-
-var (
 	// ImageCommand is a command for managing images
 	ImageCommand = cli.Command{
 		Name:     "image",
@@ -28,6 +23,8 @@ var (
 				Usage:  "deploy <account> <passphrase> <imgpath> <libp2pID>",
 				Action: RunImageOnNode,
 				Flags: []cli.Flag{
+					config.RPCAddrFlag,
+					config.FileserverFlag,
 					config.AccAddrFlag,
 					config.AccPassphraseFlag,
 					config.ImgPathFlag,
@@ -36,17 +33,6 @@ var (
 				Description: `
 				Executes an image to a specified node`,
 			},
-			// {
-			// 	Name:   "list",
-			// 	Usage:  "list <libp2pID> <token>",
-			// 	Action: ListNodeContainers,
-			// 	Flags: []cli.Flag{
-			// 		config.Libp2pIDFlag,
-			// 		config.TokenFlag,
-			// 	},
-			// 	Description: `
-			// 	Lists containers of a specified node`,
-			// },
 		},
 	}
 )
@@ -54,9 +40,10 @@ var (
 // RunImageOnNode run image on a node
 func RunImageOnNode(ctx *cli.Context) error {
 	// Check for 3 because help flag is there by default
-	if len(ctx.Command.VisibleFlags()) != 5 {
+	if len(ctx.Command.VisibleFlags()) != 7 {
 		return fmt.Errorf("Please give account and passphrase flags")
 	}
+	c, uploadClient := getClients(ctx)
 	accAddr := ctx.String(config.AccAddrFlag.Name)
 	passphrase := ctx.String(config.AccPassphraseFlag.Name)
 	imagePath := ctx.String(config.ImgPathFlag.Name)
@@ -83,20 +70,10 @@ func RunImageOnNode(ctx *cli.Context) error {
 	return nil
 }
 
-// ListNodeContainers lists containers of a specified node
-// func ListNodeContainers(ctx *cli.Context) error {
-// 	// Check for 3 because help flag is there by default
-// 	if len(ctx.Command.VisibleFlags()) != 3 {
-// 		return fmt.Errorf("Please give account and passphrase flags")
-// 	}
-// 	libp2pID := ctx.String(config.Libp2pIDFlag.Name)
-// 	token := ctx.String(config.TokenFlag.Name)
-
-// 	// List containers
-// 	contList, err := c.ListNodeContainers(libp2pID, token)
-// 	if err != nil {
-// 		fmt.Println("Couldn't list image containers.", err)
-// 	}
-// 	fmt.Println("Result of ListNodeContainers is this: ", contList)
-// 	return nil
-// }
+func getClients(ctx *cli.Context) (*ccsdk.CCClient, *ccsdk.UploadClient) {
+	rpcaddr := ctx.String(config.RPCAddrFlag.Name)
+	fileserveraddr := ctx.String(config.FileserverFlag.Name)
+	c := ccsdk.NewCCClient(rpcaddr)
+	uploadClient := ccsdk.NewUploadClient(fileserveraddr)
+	return c, uploadClient
+}
