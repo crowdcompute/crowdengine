@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"time"
 	"unicode"
+	"strings"
 )
 
 var r *rand.Rand // Rand for this package.
@@ -108,4 +109,9 @@ func LoadDataFromFile(filename string) ([]byte, error) {
 		return nil, err
 	}
 	return data, nil
+}
+
+// CommaStringToSlice converts comma separated string to a slice of strings
+func CommaStringToSlice(s string) []string{
+	return strings.Fields(strings.Replace(s, ",", " ", -1))
 }

@@ -6,6 +6,7 @@ import (
 
 	ccsdk "github.com/crowdcompute/cc-go-sdk"
 	"github.com/crowdcompute/crowdengine/cmd/ccpush/config"
+	"github.com/crowdcompute/crowdengine/common"
 	"github.com/urfave/cli"
 )
 
@@ -20,13 +21,10 @@ var (
 		Subcommands: []cli.Command{
 			{
 				Name:   "deploy",
-				Usage:  "deploy <account> <passphrase> <imgpath> <libp2pID>",
+				Usage:  "create a docker service and run it on the specified nodes",
 				Action: createAndRunSwarm,
 				Flags: []cli.Flag{
 					config.RPCAddrFlag,
-					// config.AccAddrFlag,
-					// config.AccPassphraseFlag,
-					// config.ImgPathFlag,
 					config.Libp2pIDFlag,
 				},
 				Description: `
@@ -35,17 +33,13 @@ var (
 			{
 				Name:   "stop",
 				Usage:  "stop <account> <passphrase> <imgpath> <libp2pID>",
-				Action: createAndRunSwarm,
+				Action: LeaveSwarm,
 				Flags: []cli.Flag{
 					config.RPCAddrFlag,
-					config.FileserverFlag,
-					// config.AccAddrFlag,
-					// config.AccPassphraseFlag,
-					// config.ImgPathFlag,
 					config.Libp2pIDFlag,
 				},
 				Description: `
-				Executes images as part of a docker swarm`,
+				Forces all swarm nodes to leave docker swarm`,
 			},
 		},
 	}
@@ -61,27 +55,35 @@ func createAndRunSwarm(ctx *cli.Context) error {
 	rpcaddr := ctx.String(config.RPCAddrFlag.Name)
 	c := ccsdk.NewCCClient(rpcaddr)
 
-	// accAddr := ctx.String(config.AccAddrFlag.Name)
-	// passphrase := ctx.String(config.AccPassphraseFlag.Name)
-	// imagePath := ctx.String(config.ImgPathFlag.Name)
 	libp2pID := ctx.String(config.Libp2pIDFlag.Name)
+	ids := common.CommaStringToSlice(libp2pID)
 
-	// Unlock it
-	// token, err := c.UnlockAccount(accAddr, passphrase)
-	// common.FatalIfErr(err, "Couldn't unlock account.")
-	// Create and run swarm service
-	type swarmTask struct {
+	type swarmService struct {
 		Name  string `json:"name"`
 		Image string `json:"image"`
 	}
-	task := swarmTask{"JustATag", "animage"}
-	taskBytes, err := json.Marshal(task)
+	service := swarmService{"JustATag", "animage"}
+	taskBytes, err := json.Marshal(service)
 	if err != nil {
-		fmt.Println("Error: ", err)
+		fmt.Println("Error marshaling service: ", err)
 	}
-	err = c.RunSwarmService(string(taskBytes), []string{libp2pID})
-	if err != nil {
-		fmt.Println("There was an error running the docker swarm: ", err)
+	err = c.RunSwarmService(string(taskBytes), ids)
+	return err
+}
+
+// LeaveSwarm makes all connected swarm nodes leaving the swarm
+func LeaveSwarm(ctx *cli.Context) error {
+	// Check for 3 because help flag is there by default
+	if len(ctx.Command.VisibleFlags()) != 3 {
+		return fmt.Errorf("Please give account and passphrase flags")
 	}
-	return nil
+	// Get the client to communicate with the node
+	rpcaddr := ctx.String(config.RPCAddrFlag.Name)
+	c := ccsdk.NewCCClient(rpcaddr)
+
+	libp2pID := ctx.String(config.Libp2pIDFlag.Name)
+	ids := common.CommaStringToSlice(libp2pID)
+
+	err := c.StopSwarmService(ids)
+	return err
 }
