@@ -62,4 +62,16 @@ var (
 		Name:  "imgid",
 		Usage: "docker image id to run on the node",
 	}
+
+	// ServiceNameFlag is the docker swarm name to give to the service 
+	ServiceNameFlag = cli.StringFlag{
+		Name:  "servicename",
+		Usage: "docker swarm name to give to the service ",
+	}
+
+	// ServiceImgFlag is the docker swarm image to run as a service
+	ServiceImgFlag = cli.StringFlag{
+		Name:  "serviceimg",
+		Usage: "docker swarm image to run as a service",
+	}
 )

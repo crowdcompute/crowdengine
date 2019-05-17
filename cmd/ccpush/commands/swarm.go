@@ -26,6 +26,8 @@ var (
 				Flags: []cli.Flag{
 					config.RPCAddrFlag,
 					config.Libp2pIDFlag,
+					config.ServiceNameFlag,
+					config.ServiceImgFlag,
 				},
 				Description: `
 				Executes images as part of a docker swarm`,
@@ -47,22 +49,24 @@ var (
 
 // RunImageOnNode run image on a node
 func createAndRunSwarm(ctx *cli.Context) error {
-	// Check for 3 because help flag is there by default
-	if len(ctx.Command.VisibleFlags()) != 3 {
-		return fmt.Errorf("Please give account and passphrase flags")
+	// Check for 5 because help flag is there by default
+	if len(ctx.Command.VisibleFlags()) != 5 {
+		return fmt.Errorf("Please give all necessary flags")
 	}
 	// Get the client to communicate with the node
 	rpcaddr := ctx.String(config.RPCAddrFlag.Name)
 	c := ccsdk.NewCCClient(rpcaddr)
 
 	libp2pID := ctx.String(config.Libp2pIDFlag.Name)
+	serviceName := ctx.String(config.ServiceNameFlag.Name)
+	serviceImg := ctx.String(config.ServiceImgFlag.Name)
 	ids := common.CommaStringToSlice(libp2pID)
 
 	type swarmService struct {
 		Name  string `json:"name"`
 		Image string `json:"image"`
 	}
-	service := swarmService{"JustATag", "animage"}
+	service := swarmService{serviceName, serviceImg}
 	taskBytes, err := json.Marshal(service)
 	if err != nil {
 		fmt.Println("Error marshaling service: ", err)
@@ -75,7 +79,7 @@ func createAndRunSwarm(ctx *cli.Context) error {
 func LeaveSwarm(ctx *cli.Context) error {
 	// Check for 3 because help flag is there by default
 	if len(ctx.Command.VisibleFlags()) != 3 {
-		return fmt.Errorf("Please give account and passphrase flags")
+		return fmt.Errorf("Please give all necessary flags")
 	}
 	// Get the client to communicate with the node
 	rpcaddr := ctx.String(config.RPCAddrFlag.Name)
