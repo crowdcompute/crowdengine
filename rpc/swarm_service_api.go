@@ -112,11 +112,19 @@ func createService(task *swarmTask) (string, error) {
 	return serviceCreateRes.ID, nil
 }
 
-// Stop makes all nodes involved to leave the swarm
-func (api *SwarmServiceAPI) Stop(ctx context.Context, nodes []string) error {
+// Leave makes all nodes involved to leave the swarm
+func (api *SwarmServiceAPI) Leave(ctx context.Context, nodes []string) error {
 	if _, err := manager.GetInstance().LeaveSwarm(); err != nil {
 		return err
 	}
 	api.host.SendLeaveToPeersAndWait(nodes)
+	return nil
+}
+
+// RemoveService removes the swarm service 
+func (api *SwarmServiceAPI) RemoveService(ctx context.Context, serviceName string) error {
+	if err := manager.GetInstance().ServiceRemove(serviceName); err != nil {
+		return err
+	}
 	return nil
 }

@@ -33,8 +33,8 @@ var (
 				Executes images as part of a docker swarm`,
 			},
 			{
-				Name:   "stop",
-				Usage:  "stop <account> <passphrase> <imgpath> <libp2pID>",
+				Name:   "leave",
+				Usage:  "leave forces all swarm nodes to leave docker swarm",
 				Action: LeaveSwarm,
 				Flags: []cli.Flag{
 					config.RPCAddrFlag,
@@ -42,6 +42,17 @@ var (
 				},
 				Description: `
 				Forces all swarm nodes to leave docker swarm`,
+			},
+			{
+				Name:   "removeservice",
+				Usage:  "removeservice removes a service from the docker swarm",
+				Action: RemoveSwarmService,
+				Flags: []cli.Flag{
+					config.RPCAddrFlag,
+					config.ServiceNameFlag,
+				},
+				Description: `
+				Removes a service from the docker swarm`,
 			},
 		},
 	}
@@ -88,6 +99,22 @@ func LeaveSwarm(ctx *cli.Context) error {
 	libp2pID := ctx.String(config.Libp2pIDFlag.Name)
 	ids := common.CommaStringToSlice(libp2pID)
 
-	err := c.StopSwarmService(ids)
+	err := c.LeaveSwarm(ids)
+	return err
+}
+
+// RemoveSwarmService removes docker service from the swarm 
+func RemoveSwarmService(ctx *cli.Context) error {
+	// Check for 3 because help flag is there by default
+	if len(ctx.Command.VisibleFlags()) != 3 {
+		return fmt.Errorf("Please give all necessary flags")
+	}
+	// Get the client to communicate with the node
+	rpcaddr := ctx.String(config.RPCAddrFlag.Name)
+	c := ccsdk.NewCCClient(rpcaddr)
+
+	serviceName := ctx.String(config.ServiceNameFlag.Name)
+
+	err := c.RemoveSwarmService(serviceName)
 	return err
 }
