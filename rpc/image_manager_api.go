@@ -25,8 +25,10 @@ import (
 	"strconv"
 
 	"github.com/crowdcompute/crowdengine/accounts/keystore"
+	"github.com/crowdcompute/crowdengine/common/dockerutil"
 	"github.com/crowdcompute/crowdengine/database"
 	"github.com/crowdcompute/crowdengine/log"
+	"github.com/crowdcompute/crowdengine/manager"
 
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/p2p"
@@ -49,7 +51,7 @@ func NewImageManagerAPI(h *p2p.Host) *ImageManagerAPI {
 func (api *ImageManagerAPI) PushImage(ctx context.Context, peerID string, imageHash string) string {
 	log.Println("Pushing an image to the peer : ", peerID)
 
-	file, filepath, fileSize, fileName, signature, hash, err := api.getFileData(imageHash)
+	file, filepath, fileSize, fileName, signature, err := api.getFileData(imageHash)
 	defer removeImage(filepath, imageHash)
 	if err != nil {
 		msg := fmt.Sprintf("Error getting file data. Error: %s", err)
@@ -58,12 +60,28 @@ func (api *ImageManagerAPI) PushImage(ctx context.Context, peerID string, imageH
 	}
 
 	pID, err := peer.IDB58Decode(peerID)
+
+	if api.isCurrentNode(pID) {
+		// Loading the image to the current node
+		log.Println("The Peer ID given is me, I will load the image locally!")
+		log.Println(filepath)
+		imgID, err := dockerutil.LoadImgToDockerAndStoreDB(filepath, imageHash, signature)
+		common.FatalIfErr(err, "Error loading this image to the current node.")
+		return imgID
+	}
+
+	// Sending the image to a remote node
 	common.FatalIfErr(err, "Error decoding the peerID")
 	common.FatalIfErr(api.host.SetConsistentStream(pID), "Error setting a consistent steam with the remote peer")
-	api.sendFileMetadata(fileSize, fileName, signature, hash)
+	api.sendFileMetadata(fillMetadata(fileSize, fileName, signature, imageHash))
 	common.FatalIfErr(api.sendFile(file), "Error sending the file to the remote peer")
 
 	return <-api.host.ImageIDchan
+}
+
+// isCurrentNode checks if the given peer ID is the current node
+func (api *ImageManagerAPI) isCurrentNode(pID peer.ID) bool {
+	return api.host.P2PHost.ID() == pID
 }
 
 // Removed the image specified from the disk and the level DB
@@ -78,35 +96,32 @@ func removeImage(filepath, hash string) error {
 }
 
 // getFileData gets the file's handler, size, name, hash and signature
-func (api *ImageManagerAPI) getFileData(imageHash string) (*os.File, string, string, string, string, string, error) {
+func (api *ImageManagerAPI) getFileData(imageHash string) (*os.File, string, string, string, string, error) {
 	img, err := database.GetImageAccountFromDB(imageHash)
 	if err != nil {
-		return nil, "", "", "", "", "", fmt.Errorf("Couldn't find the image on the database")
+		return nil, "", "", "", "", fmt.Errorf("Couldn't find the image on the database")
 	}
 	file, err := os.Open(img.Path)
 	if err != nil {
-		return nil, "", "", "", "", "", err
+		return nil, "", "", "", "", err
 	}
 	fileInfo, err := file.Stat()
 	if err != nil {
-		return nil, "", "", "", "", "", err
+		return nil, "", "", "", "", err
 	}
-	fileSizeFilled := common.FillString(strconv.FormatInt(fileInfo.Size(), 10), common.FileSizeLength)
-	fileNameFilled := common.FillString(fileInfo.Name(), common.FileNameLength)
-	log.Println("fileSize: ", fileSizeFilled)
-	log.Println("fileName: ", fileNameFilled)
+	return file, img.Path, strconv.FormatInt(fileInfo.Size(), 10), fileInfo.Name(), img.Signature, nil
+}
 
-	signatureFilled := common.FillString(img.Signature, common.SignatureLength)
+func fillMetadata(fileSize, fileName, signature, imageHash string) (string, string, string, string){
+	fileSizeFilled := common.FillString(fileSize, common.FileSizeLength)
+	fileNameFilled := common.FillString(fileName, common.FileNameLength)
+	signatureFilled := common.FillString(signature, common.SignatureLength)
 	hashFilled := common.FillString(imageHash, common.HashLength)
-	log.Println("filledSignature: ", signatureFilled)
-	log.Println("filledHash: ", hashFilled)
-
-	return file, img.Path, fileSizeFilled, fileNameFilled, signatureFilled, hashFilled, err
+	return fileSizeFilled, fileNameFilled, signatureFilled, hashFilled
 }
 
 // sendFileMetadata sends the size, name, hash and signature to the peer through the opened stream
 func (api *ImageManagerAPI) sendFileMetadata(fileSize, fileName, signature, hash string) error {
-	// Start sending the metadata first
 	api.host.WriteChunk([]byte(fileSize))
 	api.host.WriteChunk([]byte(fileName))
 	api.host.WriteChunk([]byte(signature))
@@ -132,55 +147,86 @@ func (api *ImageManagerAPI) sendFile(file *os.File) error {
 }
 
 // RunImage is the API call to run an imageID to the peerID node
-func (api *ImageManagerAPI) RunImage(ctx context.Context, peerID, imageID string) string {
-	toNodeID, _ := peer.IDB58Decode(peerID)
-	api.host.RunImage(toNodeID, imageID)
-
-	// Check if there are any pending requests to run
-	containerID := <-api.host.ContainerID
-	log.Println("Result running the job: ", containerID)
-	return containerID
+func (api *ImageManagerAPI) RunImage(ctx context.Context, peerID, imageID string) (string, error) {
+	pID, _ := peer.IDB58Decode(peerID)
+	var containerID string
+	var err error
+	if api.isCurrentNode(pID) {
+		containerID, err = manager.GetInstance().CreateRunContainer(imageID)
+	} else {
+		api.host.RunImage(pID, imageID)
+		// Check if there are any pending requests to run
+		containerID = <-api.host.ContainerID
+	}
+	log.Println("Image is running. Container ID: ", containerID)
+	return containerID, err
 }
 
 // InspectContainer inspects a container containerID from the peer peerID
 func (api *ImageManagerAPI) InspectContainer(ctx context.Context, peerID, containerID string) (string, error) {
-	toNodeID, _ := peer.IDB58Decode(peerID)
+	pID, _ := peer.IDB58Decode(peerID)
+	var rawInspection string
+	var err error
 	log.Println("About to inspect a container...")
-	api.host.InitiateInspectRequest(toNodeID, containerID)
-	log.Println("Result running the job: ")
-	return <-api.host.InspectChan, nil
+	if api.isCurrentNode(pID) {
+		var rawInspectionBytes []byte
+		rawInspectionBytes, err = dockerutil.InspectContainerRaw(containerID)
+		rawInspection = string(rawInspectionBytes)
+	} else {
+		api.host.InitiateInspectRequest(pID, containerID)
+		rawInspection = <-api.host.InspectChan
+	}
+	log.Println("Result of inspecting container: ", rawInspection)
+	return rawInspection, err
 }
 
-// ListImages gets a list of images from the peer peerID using the user's publicKey
+// ListImages gets a list of images from the given <peerID> using the caller's publicKey
 func (api *ImageManagerAPI) ListImages(ctx context.Context, peerID string) (string, error) {
-	key, ok := ctx.Value(common.ContextKeyPair).(*keystore.Key)
-	if !ok {
-		return "", fmt.Errorf("There was an error getting the key from the context")
-	}
-	toNodeID, _ := peer.IDB58Decode(peerID)
-	pubBytes, err := key.KeyPair.Private.GetPublic().Bytes()
+	pubBytes, err := getKeyFromContext(ctx)
 	if err != nil {
 		return "", err
 	}
-	// Drop first 4 bytes of pub key
-	pubBytes = pubBytes[4:]
-	api.host.InitiateListRequest(toNodeID, hex.EncodeToString(pubBytes))
-	return <-api.host.ListChan, nil
+	pID, _ := peer.IDB58Decode(peerID)
+	var listImages string
+	log.Println("About to list images...")
+	if api.isCurrentNode(pID) {
+		listImages, err = dockerutil.GetRawImagesForUser(hex.EncodeToString(pubBytes))
+	} else {
+		api.host.InitiateListImgRequest(pID, hex.EncodeToString(pubBytes))
+		listImages = <-api.host.ListImgChan
+	}
+	return listImages, nil
 }
 
-// ListContainers gets a list of containers for a specific user from a specific peer peerID
+// ListContainers gets a list of containers from a given <peerID> using the caller's publickey
 func (api *ImageManagerAPI) ListContainers(ctx context.Context, peerID string) (string, error) {
-	key, ok := ctx.Value(common.ContextKeyPair).(*keystore.Key)
-	if !ok {
-		return "", fmt.Errorf("There was an error getting the key from the context")
-	}
-	toNodeID, _ := peer.IDB58Decode(peerID)
-	pubBytes, err := key.KeyPair.Private.GetPublic().Bytes()
+	pubBytes, err := getKeyFromContext(ctx)
 	if err != nil {
 		return "", err
 	}
+	pID, _ := peer.IDB58Decode(peerID)
+
+	var listCont string
+	log.Println("About to list containers...")
+	if api.isCurrentNode(pID) {
+		listCont, err = dockerutil.GetRawContainersForUser(hex.EncodeToString(pubBytes))
+	} else {
+		api.host.InitiateListContRequest(pID, hex.EncodeToString(pubBytes))
+		listCont = <-api.host.ListContChan
+	}
+	return listCont, err
+}
+
+func getKeyFromContext(ctx context.Context) ([]byte, error) {
+	key, ok := ctx.Value(common.ContextKeyPair).(*keystore.Key)
+	if !ok {
+		return nil, fmt.Errorf("There was an error getting the key from the context")
+	}
+	pubBytes, err := key.KeyPair.Private.GetPublic().Bytes()
+	if err != nil {
+		return nil, err
+	}
 	// Drop first 4 bytes of pub key
 	pubBytes = pubBytes[4:]
-	api.host.InitiateListContRequest(toNodeID, hex.EncodeToString(pubBytes))
-	return <-api.host.ListContChan, nil
+	return pubBytes, nil
 }

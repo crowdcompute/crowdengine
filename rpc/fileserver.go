@@ -35,13 +35,14 @@ import (
 	libcrypto "github.com/libp2p/go-libp2p-crypto"
 )
 
-func ServeFilesHTTP(ks *keystore.KeyStore, uploadPath string) http.HandlerFunc {
-	return uploadAuthorization(ks, uploadPath, fileserve)
+// ServeFilesHTTP serves http requests authorizing the user (with their token)
+func ServeFilesHTTP(ks *keystore.KeyStore, uploadDir string) http.HandlerFunc {
+	return uploadAuthorization(ks, uploadDir, fileserve)
 }
 
 // UploadAuth authenticates a token and enriches the requests
 // Authenticates a token and passes the request to the next handler
-func uploadAuthorization(ks *keystore.KeyStore, uploadPath string, next http.HandlerFunc) http.HandlerFunc {
+func uploadAuthorization(ks *keystore.KeyStore, uploadDir string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		key, err := getKeyForAccount(ks, r.Header)
 		if err != nil {
@@ -49,7 +50,7 @@ func uploadAuthorization(ks *keystore.KeyStore, uploadPath string, next http.Han
 			return
 		}
 		ctx := context.WithValue(r.Context(), common.ContextKeyPair, key)
-		ctx = context.WithValue(ctx, common.ContextKeyUploadPath, uploadPath)
+		ctx = context.WithValue(ctx, common.ContextKeyUploadDir, uploadDir)
 		log.Printf("Token valid and account {%s} unlocked. ", key.Address)
 		next(w, r.WithContext(ctx))
 	}
@@ -63,7 +64,7 @@ func fileserve(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		fmt.Fprintln(w, "There was an error getting the key from the context")
 	}
-	uploadPath, ok := r.Context().Value(common.ContextKeyUploadPath).(string)
+	uploadDir, ok := r.Context().Value(common.ContextKeyUploadDir).(string)
 	if !ok {
 		fmt.Fprintln(w, "There was an error getting the upload path from the context")
 	}
@@ -77,11 +78,11 @@ func fileserve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("uploadPath is: %s", uploadPath)
+	log.Printf("uploadDir is: %s", uploadDir)
 	log.Printf("hash is: %s, filename: %s ", hash, filename)
 
 	fileHandler.Seek(0, 0)
-	localFile, fullpath, err := createFile(filename, uploadPath, hash)
+	localFile, fullpath, err := createFile(filename, uploadDir, hash)
 	if err != nil {
 		fmt.Fprint(w, err)
 		return
@@ -94,7 +95,7 @@ func fileserve(w http.ResponseWriter, r *http.Request) {
 	}
 	// Rewind the file pointer to the beginning
 	localFile.Seek(0, 0)
-	log.Println("The file has been successgully uploaded, full path is: ", fullpath)
+	log.Println("The file has been successfully uploaded, full path is: ", fullpath)
 	hexHash := storeImageToDB(localFile, key.KeyPair.Private, fullpath)
 	log.Println("The hash is: ", hexHash)
 	fmt.Fprint(w, hexHash)
@@ -129,9 +130,9 @@ func checkIfFileUploaded(f multipart.File) (bool, string) {
 	return true, hexHash
 }
 
-func createFile(filename, path, hash string) (*os.File, string, error) {
+func createFile(filename, uploadDir, hash string) (*os.File, string, error) {
 	randFilename := hash + filepath.Ext(filename)
-	fullpath := filepath.Join(path, randFilename)
+	fullpath := filepath.Join(uploadDir, randFilename)
 	// TODO: Why 0777 gets wrxr-xr-x
 	const dirPerm = 0777
 	if err := os.MkdirAll(filepath.Dir(fullpath), dirPerm); err != nil {
@@ -151,6 +152,8 @@ func storeImageToDB(f *os.File, priv libcrypto.PrivKey, path string) string {
 	common.FatalIfErr(err, "Couldn't sign with key")
 	hexHash := hex.EncodeToString(hash)
 	hexSignature := hex.EncodeToString(sign)
+	// the only reason we store the path to the DB is because of the extention of the file. 
+	// upload directory + filename (=hash) might be known but the extention is only known by the fileserer
 	image := &database.ImageAccount{Signature: hexSignature, Path: path, CreatedTime: time.Now().Unix()}
 	database.GetDB().Model(image).Put([]byte(hexHash))
 	return hexHash

@@ -17,7 +17,6 @@
 package p2p
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/crowdcompute/crowdengine/common"
@@ -104,7 +103,7 @@ func (p *TaskProtocol) onRunRequest(s inet.Stream) {
 		log.Println("Failed to authenticate message")
 		return
 	}
-	containerID, err := createRunContainer(data.ImageID)
+	containerID, err := manager.GetInstance().CreateRunContainer(data.ImageID)
 	if err != nil {
 		log.Errorf("Error crating a container. Error: %s", err)
 		return
@@ -114,15 +113,6 @@ func (p *TaskProtocol) onRunRequest(s inet.Stream) {
 	log.Println("Start tracking job's status...")
 
 	go p.waitForJobToFinish(containerID)
-}
-
-func createRunContainer(imageID string) (string, error) {
-	container, err := manager.GetInstance().CreateContainer(imageID)
-	if err != nil {
-		return "", fmt.Errorf("Error creating container form this image ID: %s. Image ID could be wrong. Error: %s", imageID, err)
-	}
-	_, err = manager.GetInstance().RunContainer(container.ID)
-	return container.ID, err
 }
 
 // Create and send a response to the toPeer note

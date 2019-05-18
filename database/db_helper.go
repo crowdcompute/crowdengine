@@ -16,6 +16,8 @@
 
 package database
 
+import "time"
+
 // GetImageAccountFromDB returns an ImageAccount if exists in the database
 func GetImageAccountFromDB(hash string) (*ImageAccount, error) {
 	image := &ImageAccount{}
@@ -37,4 +39,20 @@ func GetImageFromDB(imgHash string) (*ImageLvlDB, error) {
 	}
 	image = i.(*ImageLvlDB)
 	return image, nil
+}
+
+// StoreImageToDB stores the new image's data to our level DB
+// If image exists it will keep the old signature
+func StoreImageToDB(imageID string, hash string, signature string) error {
+	signatures := make([]string, 0)
+	// In the case the imageID already exists in the database we keep the old signatures and append the new one.
+	if image, err := GetImageFromDB(imageID); err == nil {
+		// TODO: Need to check if hash of the same image ID is going to always be the same
+		// hashes = append(hashes, image.Hash)
+		signatures = image.Signatures
+	}
+	signatures = append(signatures, signature)
+	image := &ImageLvlDB{Hash: hash, Signatures: signatures, CreatedTime: time.Now().Unix()}
+	// And because the image ID is the same all the values in DB will be updated with the new ones
+	return GetDB().Model(image).Put([]byte(imageID))
 }
