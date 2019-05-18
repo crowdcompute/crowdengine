@@ -65,11 +65,8 @@ func (api *ImageManagerAPI) PushImage(ctx context.Context, peerID string, imageH
 		// Loading the image to the current node
 		log.Println("The Peer ID given is me, I will load the image locally!")
 		log.Println(filepath)
-		imgID, err := dockerutil.LoadImageToDocker(filepath)
+		imgID, err := dockerutil.LoadImgToDockerAndStoreDB(filepath, imageHash, signature)
 		common.FatalIfErr(err, "Error loading this image to the current node.")
-		if err = database.StoreImageToDB(imgID, hash, signature); err != nil {
-			log.Error("There was an error storing this image to DB: ", imgID)
-		}
 		return imgID
 	}
 
@@ -121,7 +118,6 @@ func (api *ImageManagerAPI) getFileData(imageHash string) (*os.File, string, str
 	hashFilled := common.FillString(imageHash, common.HashLength)
 	log.Println("filledSignature: ", signatureFilled)
 	log.Println("filledHash: ", hashFilled)
-
 	return file, img.Path, fileSizeFilled, fileNameFilled, signatureFilled, hashFilled, err
 }
 

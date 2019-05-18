@@ -107,7 +107,7 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 	err := createFileFromStream(s, filePath, fileSize)
 	common.FatalIfErr(err, "Couldn't read from stream when uploading a file")
 
-	imageID, err := dockerutil.LoadImageToDocker(filePath)
+	imageID, err := dockerutil.LoadImgToDockerAndStoreDB(filePath, hash, signature)
 	if errRemove := common.RemoveFile(filePath); errRemove != nil {
 		p.ImageIDchan <- errRemove.Error()
 		return
@@ -119,11 +119,6 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 		p.ImageIDchan <- errmsg
 		return
 	}
-
-	if err = database.StoreImageToDB(imageID, hash, signature); err != nil {
-		log.Error("There was an error storing this image to DB: ", imageID)
-	}
-	log.Printf("This image %s with this hash {%s} and signature {%s} was stored into the DB \n", imageID, hash, signature)
 	p.createSendResponse(s.Conn().RemotePeer(), imageID)
 }
 

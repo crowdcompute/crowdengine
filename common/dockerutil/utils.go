@@ -32,8 +32,19 @@ import(
 	"github.com/crowdcompute/crowdengine/crypto"
 )
 
-// LoadImageToDocker takes a path to an image file and loads it to the docker daemon
-func LoadImageToDocker(filePath string) (string, error) {
+// LoadImgToDockerAndStoreDB load an image to docker and stores it to Lvl DB
+func LoadImgToDockerAndStoreDB(filePath string, hash string, signature string) (string, error){
+	imgID, err := loadImageToDocker(filePath)
+	if err = database.StoreImageToDB(imgID, hash, signature); err != nil {
+		log.Error("There was an error storing this image to DB: ", imgID)
+		return "", err
+	}
+	log.Printf("This image %s with this hash {%s} and signature {%s} was stored into the DB \n", imgID, hash, signature)
+	return imgID, err
+}
+
+// loadImageToDocker takes a path to an image file and loads it to the docker daemon
+func loadImageToDocker(filePath string) (string, error) {
 	log.Println("Loading this image: ", filePath)
 	loadImageResp, err := manager.GetInstance().LoadImage(filePath)
 	if err != nil {
@@ -140,7 +151,7 @@ func ListContainersForUser(publicKey string) ([]types.Container, error) {
 func GetRawImagesForUser(publicKey string) (string, error){
 	images, err := ListImagesForUser(publicKey)
 	if err != nil {
-		log.Println(err, "Error listing containers for user.")
+		log.Println(err, "Error listing images for user.")
 		return "", err
 	}
 	imagesBytes, err := json.Marshal(images)
