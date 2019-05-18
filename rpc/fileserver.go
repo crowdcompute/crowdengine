@@ -94,7 +94,7 @@ func fileserve(w http.ResponseWriter, r *http.Request) {
 	}
 	// Rewind the file pointer to the beginning
 	localFile.Seek(0, 0)
-	log.Println("The file has been successgully uploaded, full path is: ", fullpath)
+	log.Println("The file has been successfully uploaded, full path is: ", fullpath)
 	hexHash := storeImageToDB(localFile, key.KeyPair.Private, fullpath)
 	log.Println("The hash is: ", hexHash)
 	fmt.Fprint(w, hexHash)
