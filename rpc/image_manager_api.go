@@ -182,36 +182,38 @@ func (api *ImageManagerAPI) InspectContainer(ctx context.Context, peerID, contai
 	return rawInspection, err
 }
 
-// ListImages gets a list of images from the peer peerID using the user's publicKey
+// ListImages gets a list of images from the given <peerID> using the caller's publicKey
 func (api *ImageManagerAPI) ListImages(ctx context.Context, peerID string) (string, error) {
-	key, ok := ctx.Value(common.ContextKeyPair).(*keystore.Key)
-	if !ok {
-		return "", fmt.Errorf("There was an error getting the key from the context")
-	}
-	toNodeID, _ := peer.IDB58Decode(peerID)
-	pubBytes, err := key.KeyPair.Private.GetPublic().Bytes()
-	if err != nil {
+	pubBytes, err := getKeyFromContext(ctx)
+	if err != nil{
 		return "", err
 	}
-	// Drop first 4 bytes of pub key
-	pubBytes = pubBytes[4:]
+	toNodeID, _ := peer.IDB58Decode(peerID)
 	api.host.InitiateListRequest(toNodeID, hex.EncodeToString(pubBytes))
 	return <-api.host.ListChan, nil
 }
 
-// ListContainers gets a list of containers for a specific user from a specific peer peerID
+// ListContainers gets a list of containers from a given <peerID> using the caller's publickey
 func (api *ImageManagerAPI) ListContainers(ctx context.Context, peerID string) (string, error) {
+	pubBytes, err := getKeyFromContext(ctx)
+	if err != nil{
+		return "", err
+	}
+	pID, _ := peer.IDB58Decode(peerID)
+	api.host.InitiateListContRequest(pID, hex.EncodeToString(pubBytes))
+	return <-api.host.ListContChan, err
+}
+
+func getKeyFromContext(ctx context.Context) ([]byte, error){
 	key, ok := ctx.Value(common.ContextKeyPair).(*keystore.Key)
 	if !ok {
-		return "", fmt.Errorf("There was an error getting the key from the context")
+		return nil, fmt.Errorf("There was an error getting the key from the context")
 	}
-	toNodeID, _ := peer.IDB58Decode(peerID)
 	pubBytes, err := key.KeyPair.Private.GetPublic().Bytes()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	// Drop first 4 bytes of pub key
 	pubBytes = pubBytes[4:]
-	api.host.InitiateListContRequest(toNodeID, hex.EncodeToString(pubBytes))
-	return <-api.host.ListContChan, nil
+	return pubBytes, nil
 }
