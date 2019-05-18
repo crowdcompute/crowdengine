@@ -69,7 +69,7 @@ func (p *ListContainersProtocol) onListRequest(s inet.Stream) {
 
 	containersRaw, err := dockerutil.GetRawContainersForUser(data.PubKey)
 	if err != nil {
-		log.Println("Could not List images. Error : ", err)
+		log.Println("Could not List containers. Error : ", err)
 		return
 	}
 	p.createSendResponse(s.Conn().RemotePeer(), containersRaw)

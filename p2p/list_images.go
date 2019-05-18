@@ -17,8 +17,6 @@
 package p2p
 
 import (
-	"encoding/json"
-
 	"github.com/crowdcompute/crowdengine/log"
 	api "github.com/crowdcompute/crowdengine/p2p/protomsgs"
 	"github.com/crowdcompute/crowdengine/common/dockerutil"
@@ -37,22 +35,22 @@ const imageListResponse = "/image/ListImgResp/0.0.1"
 type ListImagesProtocol struct {
 	p2pHost  host.Host // local host
 	stream   inet.Stream
-	ListChan chan string
+	ListImgChan chan string
 }
 
 // NewListImagesProtocol sets the protocol's stream handlers and returns a new ListImagesProtocol
 func NewListImagesProtocol(p2pHost host.Host) *ListImagesProtocol {
 	p := &ListImagesProtocol{
 		p2pHost:  p2pHost,
-		ListChan: make(chan string, 1),
+		ListImgChan: make(chan string, 1),
 	}
 	p2pHost.SetStreamHandler(imageListRequest, p.onListRequest)
 	p2pHost.SetStreamHandler(imageListResponse, p.onListResponse)
 	return p
 }
 
-// InitiateListRequest sends a list images request to toHostID using the pubKey of the user who initiated it
-func (p *ListImagesProtocol) InitiateListRequest(toHostID peer.ID, pubKey string) {
+// InitiateListImgRequest sends a list images request to toHostID using the pubKey of the user who initiated it
+func (p *ListImagesProtocol) InitiateListImgRequest(toHostID peer.ID, pubKey string) {
 	req := &api.ListImagesRequest{ListImagesMsgData: NewListImagesMsgData(uuid.Must(uuid.NewV4(), nil).String(), true, p.p2pHost),
 		PubKey: pubKey}
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
@@ -69,18 +67,12 @@ func (p *ListImagesProtocol) onListRequest(s inet.Stream) {
 		return
 	}
 
-	imgSummaries, err := dockerutil.ListImagesForUser(data.PubKey)
+	imgSummariesRaw, err := dockerutil.GetRawImagesForUser(data.PubKey)
 	if err != nil {
 		log.Println("Could not List images. Error : ", err)
 		return
 	}
-	imgSummariesBytes, err := json.Marshal(imgSummaries)
-	if err != nil {
-		log.Println(err, "Error marshaling image summaries")
-		return
-	}
-	log.Println("Image summaries:", string(imgSummariesBytes))
-	p.createSendResponse(s.Conn().RemotePeer(), string(imgSummariesBytes))
+	p.createSendResponse(s.Conn().RemotePeer(), imgSummariesRaw)
 }
 
 // Create and send a response to the toPeer note
@@ -107,5 +99,5 @@ func (p *ListImagesProtocol) onListResponse(s inet.Stream) {
 		return
 	}
 	log.Printf("%s: Received List response from %s. Message id:%s.", s.Conn().LocalPeer(), s.Conn().RemotePeer(), data.ListImagesMsgData.MessageData.Id)
-	p.ListChan <- data.ListResult
+	p.ListImgChan <- data.ListResult
 }

@@ -88,19 +88,19 @@ func InspectContainerRaw(containerID string) ([]byte, error) {
 	return rawData, err
 }
 
-// GetRawContainersForUser list images for the user with the specific publicKey
+// GetRawContainersForUser returns a raw list of containers for the user with the specific publicKey
 func GetRawContainersForUser(publicKey string) (string, error){
 	containers, err := ListContainersForUser(publicKey)
-	containersBytes, err := json.Marshal(containers)
 	if err != nil {
-		log.Println(err, "Error marshaling image summaries")
+		log.Println(err, "Error listing containers for user.")
 		return "", err
 	}
+	containersBytes, err := json.Marshal(containers)
 	log.Println("Container summaries:", string(containersBytes))
-	return string(containersBytes), nil
+	return string(containersBytes), err
 }
 
-// ListContainersForUser list images for the user with the specific publicKey
+// ListContainersForUser returns a list of containers for the user with the specific publicKey
 func ListContainersForUser(publicKey string) ([]types.Container, error) {
 	containers := make([]types.Container, 0)
 	allContainers, err := manager.GetInstance().ListContainers()
@@ -134,6 +134,18 @@ func ListContainersForUser(publicKey string) ([]types.Container, error) {
 		}
 	}
 	return containers, nil
+}
+
+// GetRawImagesForUser a raw list of images for the user with the specific publicKey
+func GetRawImagesForUser(publicKey string) (string, error){
+	images, err := ListImagesForUser(publicKey)
+	if err != nil {
+		log.Println(err, "Error listing containers for user.")
+		return "", err
+	}
+	imagesBytes, err := json.Marshal(images)
+	log.Println("Images summaries:", string(imagesBytes))
+	return string(imagesBytes), err
 }
 
 // ListImagesForUser list images for the user with the specific publicKey

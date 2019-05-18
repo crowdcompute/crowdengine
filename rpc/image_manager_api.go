@@ -188,9 +188,16 @@ func (api *ImageManagerAPI) ListImages(ctx context.Context, peerID string) (stri
 	if err != nil{
 		return "", err
 	}
-	toNodeID, _ := peer.IDB58Decode(peerID)
-	api.host.InitiateListRequest(toNodeID, hex.EncodeToString(pubBytes))
-	return <-api.host.ListChan, nil
+	pID, _ := peer.IDB58Decode(peerID)
+	var listImages string 
+	log.Println("About to list images...")
+	if api.isCurrentNode(pID) {
+		listImages, err = dockerutil.GetRawImagesForUser(hex.EncodeToString(pubBytes))
+	}else{
+		api.host.InitiateListImgRequest(pID, hex.EncodeToString(pubBytes))
+		listImages = <-api.host.ListImgChan
+	}
+	return listImages, nil
 }
 
 // ListContainers gets a list of containers from a given <peerID> using the caller's publickey
@@ -202,7 +209,7 @@ func (api *ImageManagerAPI) ListContainers(ctx context.Context, peerID string) (
 	pID, _ := peer.IDB58Decode(peerID)
 
 	var listCont string 
-	log.Println("About to inspect a container...")
+	log.Println("About to list containers...")
 	if api.isCurrentNode(pID) {
 		listCont, err = dockerutil.GetRawContainersForUser(hex.EncodeToString(pubBytes))
 	}else{
