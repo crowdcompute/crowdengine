@@ -25,8 +25,10 @@ import (
 	"strconv"
 
 	"github.com/crowdcompute/crowdengine/accounts/keystore"
+	"github.com/crowdcompute/crowdengine/common/dockerutil"
 	"github.com/crowdcompute/crowdengine/database"
 	"github.com/crowdcompute/crowdengine/log"
+	"github.com/crowdcompute/crowdengine/manager"
 
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/p2p"
@@ -44,7 +46,6 @@ func NewImageManagerAPI(h *p2p.Host) *ImageManagerAPI {
 		host: h,
 	}
 }
-
 // PushImage is the API call to push an image to the peer peerID
 func (api *ImageManagerAPI) PushImage(ctx context.Context, peerID string, imageHash string) string {
 	log.Println("Pushing an image to the peer : ", peerID)
@@ -58,12 +59,28 @@ func (api *ImageManagerAPI) PushImage(ctx context.Context, peerID string, imageH
 	}
 
 	pID, err := peer.IDB58Decode(peerID)
+
+	if api.isCurrentNode(pID) {
+		// Loading the image to the current node
+		log.Println("The Peer ID given is me, I will load the image locally!")
+		log.Println(filepath)
+		imgID, err := dockerutil.LoadImageToDocker(filepath)
+		common.FatalIfErr(err, "Error loading this image to the current node.")
+		return imgID
+	}
+
+	// Sending the image to a remote node
 	common.FatalIfErr(err, "Error decoding the peerID")
 	common.FatalIfErr(api.host.SetConsistentStream(pID), "Error setting a consistent steam with the remote peer")
 	api.sendFileMetadata(fileSize, fileName, signature, hash)
 	common.FatalIfErr(api.sendFile(file), "Error sending the file to the remote peer")
 
 	return <-api.host.ImageIDchan
+}
+
+// isCurrentNode checks if the given peer ID is the current node
+func (api *ImageManagerAPI) isCurrentNode(pID peer.ID) bool {
+	return api.host.P2PHost.ID() == pID
 }
 
 // Removed the image specified from the disk and the level DB
@@ -132,14 +149,19 @@ func (api *ImageManagerAPI) sendFile(file *os.File) error {
 }
 
 // RunImage is the API call to run an imageID to the peerID node
-func (api *ImageManagerAPI) RunImage(ctx context.Context, peerID, imageID string) string {
-	toNodeID, _ := peer.IDB58Decode(peerID)
-	api.host.RunImage(toNodeID, imageID)
-
-	// Check if there are any pending requests to run
-	containerID := <-api.host.ContainerID
-	log.Println("Result running the job: ", containerID)
-	return containerID
+func (api *ImageManagerAPI) RunImage(ctx context.Context, peerID, imageID string) (string, error) {
+	pID, _ := peer.IDB58Decode(peerID)
+	var containerID string 
+	var err error 
+	if api.isCurrentNode(pID) {
+		containerID, err = manager.GetInstance().CreateRunContainer(imageID)
+	}else{
+		api.host.RunImage(pID, imageID)
+		// Check if there are any pending requests to run
+		containerID = <-api.host.ContainerID
+	}
+	log.Println("Image is running. Container ID: ", containerID)
+	return containerID, err
 }
 
 // InspectContainer inspects a container containerID from the peer peerID
