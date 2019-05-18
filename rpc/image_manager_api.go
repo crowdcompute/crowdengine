@@ -166,11 +166,20 @@ func (api *ImageManagerAPI) RunImage(ctx context.Context, peerID, imageID string
 
 // InspectContainer inspects a container containerID from the peer peerID
 func (api *ImageManagerAPI) InspectContainer(ctx context.Context, peerID, containerID string) (string, error) {
-	toNodeID, _ := peer.IDB58Decode(peerID)
+	pID, _ := peer.IDB58Decode(peerID)
+	var rawInspection string 
+	var err error 
 	log.Println("About to inspect a container...")
-	api.host.InitiateInspectRequest(toNodeID, containerID)
-	log.Println("Result running the job: ")
-	return <-api.host.InspectChan, nil
+	if api.isCurrentNode(pID) {
+		var rawInspectionBytes []byte
+		rawInspectionBytes, err = dockerutil.InspectContainerRaw(containerID)
+		rawInspection = string(rawInspectionBytes)
+	}else{
+		api.host.InitiateInspectRequest(pID, containerID)
+		rawInspection = <-api.host.InspectChan
+	}
+	log.Println("Result of inspecting container: ", rawInspection)
+	return rawInspection, err
 }
 
 // ListImages gets a list of images from the peer peerID using the user's publicKey

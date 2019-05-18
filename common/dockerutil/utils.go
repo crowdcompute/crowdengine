@@ -72,3 +72,12 @@ func getImageSummaryFromTag(tag string) types.ImageSummary {
 	}
 	return res[0] // we know that docker tag is unique thus returning only one summary
 }
+
+// InspectContainerRaw inspects a container returning raw results
+func InspectContainerRaw(containerID string) ([]byte, error) {
+	log.Println("Inspecting this container: ", containerID)
+	getSize := true
+	inspection, rawData, err := manager.GetInstance().InspectContainerRaw(containerID, getSize)
+	log.Printf("Result inspection the container %t\n", inspection.State.Running)
+	return rawData, err
+}
