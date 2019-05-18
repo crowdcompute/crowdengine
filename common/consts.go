@@ -65,8 +65,8 @@ type ContextKey string
 // ContextKeyPair represents the context key name for a private key
 const ContextKeyPair ContextKey = "keypair"
 
-// ContextKeyUploadPath represents the context key name for an upload path
-const ContextKeyUploadPath ContextKey = "uploadpath"
+// ContextKeyUploadDir represents the context key name for an upload path
+const ContextKeyUploadDir ContextKey = "uploadDir"
 
 // DockerMountDest is the destination of the mount of all docker containers
 const DockerMountDest string = "/home/data"
