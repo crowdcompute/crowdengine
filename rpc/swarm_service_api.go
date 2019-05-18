@@ -33,8 +33,7 @@ import (
 // SwarmServiceAPI ...
 type SwarmServiceAPI struct {
 	host           *p2p.Host
-	addvertiseAddr string
-	cfg            *config.DockerSwarm
+	swarmcfg       *config.DockerSwarm
 }
 
 type swarmTask struct {
@@ -46,8 +45,7 @@ type swarmTask struct {
 func NewSwarmServiceAPI(h *p2p.Host) *SwarmServiceAPI {
 	return &SwarmServiceAPI{
 		host:           h,
-		addvertiseAddr: h.Cfg.P2P.ListenAddress,
-		cfg:            &h.Cfg.Host.DockerSwarm,
+		swarmcfg:       &h.Cfg.Host.DockerSwarm,
 	}
 }
 
@@ -74,8 +72,8 @@ func (api *SwarmServiceAPI) Run(ctx context.Context, task string, nodes []string
 // initSwarm initializes a docker Swarm and stores the swarm's worker & manager
 // tokens in memory
 func (api *SwarmServiceAPI) initSwarm() error {
-	swarmListen := fmt.Sprintf("%s:%d", api.cfg.ListenAddress, api.cfg.ListenPort)
-	_, err := manager.GetInstance().InitSwarm(api.addvertiseAddr, swarmListen)
+	swarmListen := fmt.Sprintf("%s:%d", api.swarmcfg.ListenAddress, api.swarmcfg.ListenPort)
+	_, err := manager.GetInstance().InitSwarm(api.swarmcfg.AdvertiseAddress, swarmListen)
 	if err != nil {
 		return err
 	}
@@ -114,11 +112,19 @@ func createService(task *swarmTask) (string, error) {
 	return serviceCreateRes.ID, nil
 }
 
-// Stop makes all nodes involved to leave the swarm
-func (api *SwarmServiceAPI) Stop(ctx context.Context, nodes []string) error {
+// Leave makes all nodes involved to leave the swarm
+func (api *SwarmServiceAPI) Leave(ctx context.Context, nodes []string) error {
 	if _, err := manager.GetInstance().LeaveSwarm(); err != nil {
 		return err
 	}
 	api.host.SendLeaveToPeersAndWait(nodes)
+	return nil
+}
+
+// RemoveService removes the swarm service 
+func (api *SwarmServiceAPI) RemoveService(ctx context.Context, serviceName string) error {
+	if err := manager.GetInstance().ServiceRemove(serviceName); err != nil {
+		return err
+	}
 	return nil
 }

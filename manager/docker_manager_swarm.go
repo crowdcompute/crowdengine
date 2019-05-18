@@ -78,3 +78,12 @@ func (m *DockerManager) ServiceCreate(service swarm.ServiceSpec, options types.S
 	}
 	return resp, nil
 }
+
+// ServiceRemove removes a swarm service
+func (m *DockerManager) ServiceRemove(serviceName string)  error {
+	err := m.client.ServiceRemove(context.Background(), serviceName)
+	if err != nil {
+		return err
+	}
+	return  nil
+}

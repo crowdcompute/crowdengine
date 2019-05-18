@@ -27,8 +27,8 @@ github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDk
 github.com/coreos/go-semver v0.2.0/go.mod h1:nnelYz7RCh+5ahJtPPxZlU+153eP4D4r3EedlOD2RNk=
 github.com/coreos/go-semver v0.2.1-0.20180108230905-e214231b295a h1:U0BbGfKnviqVBJQB4etvm+mKx53KfkumNLBt6YeF/0Q=
 github.com/coreos/go-semver v0.2.1-0.20180108230905-e214231b295a/go.mod h1:nnelYz7RCh+5ahJtPPxZlU+153eP4D4r3EedlOD2RNk=
-github.com/crowdcompute/cc-go-sdk v1.0.1 h1:CiL9pbK9yhWbNs49dEglgAwMeho8hCa0QcLSXGAyfp4=
-github.com/crowdcompute/cc-go-sdk v1.0.1/go.mod h1:SCJfDvTlpA8m+CHlqyPB/sserD/Tkh7NxPFrBD5rVEM=
+github.com/crowdcompute/cc-go-sdk v1.0.2 h1:I1eI4EqjdbpaBw8+kPrxMrw90cC7y8YbsySt02fGRyc=
+github.com/crowdcompute/cc-go-sdk v1.0.2/go.mod h1:SCJfDvTlpA8m+CHlqyPB/sserD/Tkh7NxPFrBD5rVEM=
 github.com/davecgh/go-spew v0.0.0-20171005155431-ecdeabc65495/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=

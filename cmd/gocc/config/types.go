@@ -42,8 +42,9 @@ type Host struct {
 
 // DockerSwarm configuration.
 type DockerSwarm struct {
-	ListenAddress string
-	ListenPort    int
+	AdvertiseAddress string
+	ListenAddress    string
+	ListenPort       int
 }
 
 // RPC related configuration

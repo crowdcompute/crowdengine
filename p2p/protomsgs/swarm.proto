@@ -29,6 +29,10 @@ message LeaveResponse {
     MessageData messageData = 1;
 }
 
+message CantLeaveResponse {
+    MessageData messageData = 1;
+}
+
 enum MessageType {
 	JoinReq                 = 0;
 	JoinResOK               = 1;
