@@ -53,10 +53,6 @@ func GetInstance() *DockerManager {
 
 // boot the manager
 func (m *DockerManager) boot() bool {
-	// Resolving the below error:
-	// Error response from daemon: client version 1.39 is too new. Maximum supported API version is 1.37
-	//cli, err := client.NewClientWithOpts(client.WithVersion("1.37"))
-
 	cli, err := client.NewEnvClient()
 
 	if err != nil {
