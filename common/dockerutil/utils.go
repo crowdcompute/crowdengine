@@ -17,13 +17,19 @@
 package dockerutil
 
 import(
+	"encoding/json"
+	"encoding/hex"
 	"strings"
 	"regexp"
+	"fmt"
 	
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/crowdcompute/crowdengine/log"
 	"github.com/crowdcompute/crowdengine/manager"
+	"github.com/crowdcompute/crowdengine/database"
+	libp2pcrypto "github.com/libp2p/go-libp2p-crypto"
+	"github.com/crowdcompute/crowdengine/crypto"
 )
 
 // LoadImageToDocker takes a path to an image file and loads it to the docker daemon
@@ -80,4 +86,121 @@ func InspectContainerRaw(containerID string) ([]byte, error) {
 	inspection, rawData, err := manager.GetInstance().InspectContainerRaw(containerID, getSize)
 	log.Printf("Result inspection the container %t\n", inspection.State.Running)
 	return rawData, err
+}
+
+// GetRawContainersForUser list images for the user with the specific publicKey
+func GetRawContainersForUser(publicKey string) (string, error){
+	containers, err := ListContainersForUser(publicKey)
+	containersBytes, err := json.Marshal(containers)
+	if err != nil {
+		log.Println(err, "Error marshaling image summaries")
+		return "", err
+	}
+	log.Println("Container summaries:", string(containersBytes))
+	return string(containersBytes), nil
+}
+
+// ListContainersForUser list images for the user with the specific publicKey
+func ListContainersForUser(publicKey string) ([]types.Container, error) {
+	containers := make([]types.Container, 0)
+	allContainers, err := manager.GetInstance().ListContainers()
+	if err != nil {
+		return nil, fmt.Errorf("Error listing images. Error: %v", err)
+	}
+
+	for _, container := range allContainers {
+		hash, signatures, err := getImgDataFromDB(container.ImageID)
+		if err != nil {
+			if err == database.ErrNotFound {
+				log.Println("Continuing... ")
+				continue
+			}
+			return nil, err
+		}
+		// Verify all signatures for the same image
+		for _, signature := range signatures {
+			signedBytes, err := hex.DecodeString(signature)
+			if err != nil {
+				return nil, err
+			}
+			if ok, err := verifyUser(publicKey, hash, signedBytes); ok && err == nil {
+				containers = append(containers, container)
+				// TODO: Delete those comments. Only for debugging mode
+				// } else if !ok {
+				// 	log.Println("Could not verify this user. Signature could not be verified by the Public key...")
+			} else if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return containers, nil
+}
+
+// ListImagesForUser list images for the user with the specific publicKey
+func ListImagesForUser(publicKey string) ([]types.ImageSummary, error) {
+	imgSummaries := make([]types.ImageSummary, 0)
+	allSummaries, err := manager.GetInstance().ListImages(types.ImageListOptions{All: true})
+	if err != nil {
+		return nil, fmt.Errorf("Error listing images. Error: %v", err)
+	}
+
+	for _, imgSummary := range allSummaries {
+		hash, signatures, err := getImgDataFromDB(imgSummary.ID)
+		if err != nil {
+			if err == database.ErrNotFound {
+				log.Println("Continuing... ")
+				continue
+			}
+			return nil, err
+		}
+		// Verify all signatures for the same image
+		for _, signature := range signatures {
+			signedBytes, err := hex.DecodeString(signature)
+			if err != nil {
+				return nil, err
+			}
+			if ok, err := verifyUser(publicKey, hash, signedBytes); ok && err == nil {
+				imgSummaries = append(imgSummaries, imgSummary)
+				// TODO: Delete those comments. Only for debugging mode
+				// } else if !ok {
+				// 	log.Println("Could not verify this user. Signature could not be verified by the Public key...")
+			} else if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return imgSummaries, nil
+}
+
+func getImgDataFromDB(imgID string) ([]byte, []string, error) {
+	imgID = strings.Replace(imgID, "sha256:", "", -1)
+	if image, err := database.GetImageFromDB(imgID); err == nil {
+		hashBytes, err := hex.DecodeString(image.Hash)
+		if err != nil {
+			return nil, nil, err
+		}
+		return hashBytes, image.Signatures, err
+	} else {
+		return nil, nil, err
+	}
+}
+
+func verifyUser(publicKey string, hash []byte, signature []byte) (bool, error) {
+	pub, err := getPubKey(publicKey)
+	if err != nil {
+		return false, err
+	}
+	verification, err := pub.Verify(hash, signature)
+	if err != nil {
+		return verification, err
+	}
+	return verification, nil
+}
+
+func getPubKey(publicKey string) (libp2pcrypto.PubKey, error) {
+	pubKey, err := hex.DecodeString(publicKey)
+	if err != nil {
+		return nil, err
+	}
+	return crypto.RestorePubKey(pubKey)
 }

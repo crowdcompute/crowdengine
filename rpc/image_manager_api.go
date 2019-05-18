@@ -200,8 +200,16 @@ func (api *ImageManagerAPI) ListContainers(ctx context.Context, peerID string) (
 		return "", err
 	}
 	pID, _ := peer.IDB58Decode(peerID)
-	api.host.InitiateListContRequest(pID, hex.EncodeToString(pubBytes))
-	return <-api.host.ListContChan, err
+
+	var listCont string 
+	log.Println("About to inspect a container...")
+	if api.isCurrentNode(pID) {
+		listCont, err = dockerutil.GetRawContainersForUser(hex.EncodeToString(pubBytes))
+	}else{
+		api.host.InitiateListContRequest(pID, hex.EncodeToString(pubBytes))
+		listCont = <-api.host.ListContChan
+	}
+	return listCont, err
 }
 
 func getKeyFromContext(ctx context.Context) ([]byte, error){
