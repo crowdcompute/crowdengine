@@ -120,7 +120,7 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 		return
 	}
 
-	if err = p.storeImageToDB(imageID, hash, signature); err != nil {
+	if err = database.StoreImageToDB(imageID, hash, signature); err != nil {
 		log.Error("There was an error storing this image to DB: ", imageID)
 	}
 	log.Printf("This image %s with this hash {%s} and signature {%s} was stored into the DB \n", imageID, hash, signature)
