@@ -30,14 +30,14 @@ func GetImageAccountFromDB(hash string) (*ImageAccount, error) {
 	return image, nil
 }
 
-// GetImageFromDB returns an ImageLvlDB if exists in the database
-func GetImageFromDB(imgHash string) (*ImageLvlDB, error) {
-	image := &ImageLvlDB{}
+// GetImageFromDB returns an ImageLoadDocker if exists in the database
+func GetImageFromDB(imgHash string) (*ImageLoadDocker, error) {
+	image := &ImageLoadDocker{}
 	i, err := GetDB().Model(image).Get([]byte(imgHash))
 	if err != nil {
 		return nil, err
 	}
-	image = i.(*ImageLvlDB)
+	image = i.(*ImageLoadDocker)
 	return image, nil
 }
 
@@ -52,7 +52,7 @@ func StoreImageToDB(imageID string, hash string, signature string) error {
 		signatures = image.Signatures
 	}
 	signatures = append(signatures, signature)
-	image := &ImageLvlDB{Hash: hash, Signatures: signatures, CreatedTime: time.Now().Unix()}
+	image := &ImageLoadDocker{Hash: hash, Signatures: signatures, CreatedTime: time.Now().Unix()}
 	// And because the image ID is the same all the values in DB will be updated with the new ones
 	return GetDB().Model(image).Put([]byte(imageID))
 }

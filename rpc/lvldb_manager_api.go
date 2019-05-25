@@ -43,7 +43,7 @@ func (api *LvlDBManagerAPI) GetDBStats(ctx context.Context) string {
 func getInstance(objectName string) (interface{}, bool) {
 	typeRegistry := make(map[string]interface{})
 	typeRegistry["ImageAccount"] = &database.ImageAccount{}
-	typeRegistry["Image"] = &database.ImageLvlDB{}
+	typeRegistry["Image"] = &database.ImageLoadDocker{}
 	i, ok := typeRegistry[objectName]
 	return i, ok
 }
@@ -80,7 +80,7 @@ func (api *LvlDBManagerAPI) SelectAll(ctx context.Context) (string, error) {
 	return string(dataBytes), err
 }
 
-// SelectImage returns an ImageLvlDB if exists in the database
+// SelectImage returns an ImageLoadDocker if exists in the database
 func (api *LvlDBManagerAPI) SelectImage(ctx context.Context, imgID string) (string, error) {
 	image, err := database.GetImageFromDB(imgID)
 	if err != nil {

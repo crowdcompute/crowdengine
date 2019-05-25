@@ -178,7 +178,7 @@ func (p *UploadImageProtocol) storeImageToDB(imageID string, hash string, signat
 		signatures = image.Signatures
 	}
 	signatures = append(signatures, signature)
-	image := &database.ImageLvlDB{Hash: hash, Signatures: signatures, CreatedTime: time.Now().Unix()}
+	image := &database.ImageLoadDocker{Hash: hash, Signatures: signatures, CreatedTime: time.Now().Unix()}
 	// And because the image ID is the same all the values in DB will be updated with the new ones
 	return database.GetDB().Model(image).Put([]byte(imageID))
 }

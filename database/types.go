@@ -54,18 +54,18 @@ type DB struct {
 	CurrentModel interface{} // The model to store into the db
 }
 
-// ImageLvlDB represents the Image Model
+// ImageLoadDocker represents the Image Model. Keeps track of the images loaded into docker
 // Usage: Whenever we load an image to docker we store it in our DB as well
 //    	  We remove all images that are in the node for a long period of time
-//		  We keep track who loaded the image to the node's docker engine and use 
+//		  We keep track who loaded the image to the node's docker engine and use
 //		  their signature (of the Hash) to identify them as the owners of their images
-type ImageLvlDB struct {
+type ImageLoadDocker struct {
 	Hash        string   `json:"hash"`        // The hash of the image
 	Signatures  []string `json:"signatures"`  // Signature Verifies the uploader of this image. Same image might have multiple uploaders
 	CreatedTime int64    `json:"createdtime"` // The time the image was loaded into the current node's docker engine
 }
 
-// ImageAccount represents the Image Account Model
+// ImageAccount represents the Image Account Model. Keeps track of the files uploaded via the Fileserver
 // Usage: Dev nodes store this information about the user who uploaded the image
 // TODO: name to be changed
 type ImageAccount struct {

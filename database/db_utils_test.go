@@ -24,15 +24,15 @@ import (
 )
 
 func init() {
-	imagePut := ImageLvlDB{Hash: "test", Signature: "test", CreatedTime: time.Now().Unix()}
+	imagePut := ImageLoadDocker{Hash: "test", Signature: "test", CreatedTime: time.Now().Unix()}
 	GetDB().Model(&imagePut).Put([]byte("testKey"))
 }
 
 func TestPutGet(t *testing.T) {
-	imageGet := ImageLvlDB{}
+	imageGet := ImageLoadDocker{}
 	i, err := GetDB().Model(&imageGet).Get([]byte("testKey"))
 	if err == nil {
-		imageGet, ok := i.(*ImageLvlDB)
+		imageGet, ok := i.(*ImageLoadDocker)
 		if !ok {
 			t.Errorf("Type assertion error")
 		}
@@ -44,7 +44,7 @@ func TestPutGet(t *testing.T) {
 }
 
 func TestHas(t *testing.T) {
-	has, err := GetDB().Model(&ImageLvlDB{}).Has([]byte("testKey"))
+	has, err := GetDB().Model(&ImageLoadDocker{}).Has([]byte("testKey"))
 	if err != nil {
 		t.Errorf("Error getting image")
 	}
@@ -52,8 +52,8 @@ func TestHas(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	err := GetDB().Model(&ImageLvlDB{}).Delete([]byte("testKey"))
-	imageGet := ImageLvlDB{}
+	err := GetDB().Model(&ImageLoadDocker{}).Delete([]byte("testKey"))
+	imageGet := ImageLoadDocker{}
 	_, err = GetDB().Model(&imageGet).Get([]byte("testKey"))
 	if err == nil {
 		t.Errorf("Got a deleted image")
