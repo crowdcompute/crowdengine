@@ -24,7 +24,7 @@ import (
 )
 
 func init() {
-	imagePut := ImageLoadDocker{Hash: "test", Signature: "test", CreatedTime: time.Now().Unix()}
+	imagePut := ImageLoadDocker{Hash: "test", Signatures: []string{"test"}, CreatedTime: time.Now().Unix()}
 	GetDB().Model(&imagePut).Put([]byte("testKey"))
 }
 
@@ -37,7 +37,7 @@ func TestPutGet(t *testing.T) {
 			t.Errorf("Type assertion error")
 		}
 		assert.Equal(t, imageGet.Hash, "test")
-		assert.Equal(t, imageGet.Signature, "test")
+		assert.Equal(t, imageGet.Signatures, []string{"test"})
 	} else {
 		t.Errorf("Couldn't get the image")
 	}
