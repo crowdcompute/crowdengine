@@ -21,11 +21,8 @@ import (
 	"os"
 	"sort"
 
-	"github.com/crowdcompute/crowdengine/log"
-
 	"github.com/crowdcompute/crowdengine/cmd"
-	"github.com/crowdcompute/crowdengine/cmd/gocc/config"
-	"github.com/crowdcompute/crowdengine/node"
+	"github.com/crowdcompute/crowdengine/cmd/ccpush/commands"
 	"github.com/urfave/cli"
 )
 
@@ -41,27 +38,20 @@ var (
 )
 
 func init() {
-	// App.HideVersion = true
-	App.Action = gocc
+	App.Action = ccpush
 	App.Version = Version
-	App.Flags = config.GOCCAppFlags
+	// App.Flags = config.CCPushFlags
+	App.Commands = []cli.Command{
+		commands.ImageCommand,
+		commands.SwarmCommand,
+	}
 	sort.Sort(cli.CommandsByName(App.Commands))
 	App.After = func(ctx *cli.Context) error {
-		// debug.Exit()
-		// console.Stdin.Close() // Resets terminal mode.
 		return nil
 	}
 }
 
-func gocc(ctx *cli.Context) error {
-	// create default config
-	cfg := config.GetConfig(ctx)
-	// create and start node
-	if node, err := node.NewNode(cfg); err != nil {
-		log.Fatal(err)
-	} else {
-		node.Start(ctx)
-	}
+func ccpush(ctx *cli.Context) error {
 
 	return nil
 }

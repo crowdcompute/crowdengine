@@ -90,6 +90,12 @@ var (
 		Usage: "Amount of storage available to a container",
 	}
 
+	// DockerSwarmAdvertiseAddrFlag defines the docker swarm's advertise address
+	DockerSwarmAdvertiseAddrFlag = cli.StringFlag{
+		Name:  "swarmadvertiseaddr",
+		Usage: "Advertise address for the docker swarm",
+	}
+
 	// DockerSwarmAddrFlag defines the docker swarm's listen address
 	DockerSwarmAddrFlag = cli.StringFlag{
 		Name:  "swarmaddr",
@@ -223,7 +229,7 @@ var (
 	}
 )
 
-// GOCCAppFlags wraps all the above together and passes to the main app
+// GOCCAppFlags represent the flags of the main app
 var GOCCAppFlags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "config, c",
@@ -259,4 +265,7 @@ var GOCCAppFlags = []cli.Flag{
 	P2PMinPeerThreasholdFlag,
 	P2PBootstraperFlag,
 	P2PPeriodicFlag,
+	DockerSwarmAdvertiseAddrFlag,
+	DockerSwarmAddrFlag,
+	DockerSwarmPortFlag,
 }

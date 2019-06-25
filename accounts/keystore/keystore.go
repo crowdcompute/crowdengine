@@ -39,7 +39,7 @@ var (
 type Account struct {
 	Token   *jwt.Token
 	Address string `json:"address"` // Crowd Compute account address derived from the key
-	Path    string `json:"path"`    // Optional resource locator within a backend
+	Path    string `json:"path"`    // Path to the file account
 }
 
 type KeyStore struct {
@@ -55,7 +55,8 @@ type unlocked struct {
 	abort chan struct{}
 }
 
-// NewKeyStore creates and returns a new keystore
+// NewKeyStore creates and returns a new keystore.
+// keyDir is the path where the accounts will be saved
 func NewKeyStore(keyDir string) *KeyStore {
 	// TODO: give the appropriate permissions here
 	const dirPerm = 0777
@@ -64,8 +65,9 @@ func NewKeyStore(keyDir string) *KeyStore {
 	}
 	symmKey, err := crypto.RandomEntropy(32)
 	common.FatalIfErr(err, "There was an error getting random entropy")
+
 	return &KeyStore{
-		accounts:    make(map[string]Account),
+		accounts:    getAccountsFromPath(keyDir),
 		unlockedAcc: make(map[string]*unlocked),
 		symmKey:     symmKey,
 		keyDir:      keyDir,

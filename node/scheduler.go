@@ -83,6 +83,6 @@ func removeImageFromDocker(imgID string) {
 }
 
 func removeImageFromDB(imgID string) {
-	err := database.GetDB().Model(&database.ImageLvlDB{}).Delete([]byte(imgID))
+	err := database.GetDB().Model(&database.ImageLoadDocker{}).Delete([]byte(imgID))
 	common.FatalIfErr(err, "There was an error deleting the image from lvldb")
 }

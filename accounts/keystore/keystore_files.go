@@ -17,14 +17,18 @@
 package keystore
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/crowdcompute/crowdengine/common"
 )
 
-// GetKeystoreFiles returns all path files existend in the keyDir
+// GetKeystoreFiles returns all path files existent in the keyDir
 func GetKeystoreFiles(keyDir string) ([]string, error) {
 	var mu sync.RWMutex
 	var keyFiles []string
@@ -60,4 +64,22 @@ func nonKeyFile(fi os.FileInfo) bool {
 		return true
 	}
 	return false
+}
+
+// getAccountsFromPath gets the keystorePath and returns an accounts map if keystore files exist in the path
+func getAccountsFromPath(keystorePath string) map[string]Account {
+	accounts := make(map[string]Account)
+	accountPaths, err := GetKeystoreFiles(keystorePath)
+	common.FatalIfErr(err, fmt.Sprintf("There was an error getting keystore files from path: '%s'", keystorePath))
+	for _, accountPath := range accountPaths {
+		// TODO: Need to decouple. This depends on the accounts filename representation
+		accountAddr := strings.Split(accountPath, "--")[2]
+		accountAddr = strings.TrimSuffix(accountAddr, path.Ext(accountAddr))
+		a := Account{
+			Address: accountAddr,
+			Path:    accountPath,
+		}
+		accounts[a.Address] = a
+	}
+	return accounts
 }

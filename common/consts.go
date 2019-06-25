@@ -38,7 +38,7 @@ const FillChar string = ":"
 const FileSizeLength int = 10
 
 // FileNameLength represents the total length of the buffer whenever sending the file name to a peer
-const FileNameLength int = 64
+const FileNameLength int = 100
 
 // SignatureLength represents the total length of the buffer whenever sending the signature to a peer
 // TODO: Not sure what number to give here. Need to see the range
@@ -58,15 +58,15 @@ const ContainerCheckInterval time.Duration = time.Second * 3
 const DiscoveryTimeout time.Duration = time.Second * 10
 
 // TokenTimeout represents the time to wait for the JWT account token to expire
-const TokenTimeout time.Duration = time.Second * 60
+const TokenTimeout time.Duration = time.Minute * 5
 
 type ContextKey string
 
 // ContextKeyPair represents the context key name for a private key
 const ContextKeyPair ContextKey = "keypair"
 
-// ContextKeyUploadPath represents the context key name for an upload path
-const ContextKeyUploadPath ContextKey = "uploadpath"
+// ContextKeyUploadDir represents the context key name for an upload path
+const ContextKeyUploadDir ContextKey = "uploadDir"
 
 // DockerMountDest is the destination of the mount of all docker containers
 const DockerMountDest string = "/home/data"

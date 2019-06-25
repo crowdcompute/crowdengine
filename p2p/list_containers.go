@@ -17,16 +17,10 @@
 package p2p
 
 import (
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
-
-	"github.com/crowdcompute/crowdengine/database"
 	"github.com/crowdcompute/crowdengine/log"
-	"github.com/crowdcompute/crowdengine/manager"
 	api "github.com/crowdcompute/crowdengine/p2p/protomsgs"
+	"github.com/crowdcompute/crowdengine/common/dockerutil"
 
-	"github.com/docker/docker/api/types"
 	host "github.com/libp2p/go-libp2p-host"
 	inet "github.com/libp2p/go-libp2p-net"
 	peer "github.com/libp2p/go-libp2p-peer"
@@ -73,54 +67,12 @@ func (p *ListContainersProtocol) onListRequest(s inet.Stream) {
 		return
 	}
 
-	containers, err := p.ListContainersForUser(data.PubKey)
+	containersRaw, err := dockerutil.GetRawContainersForUser(data.PubKey)
 	if err != nil {
-		log.Println("Could not List images. Error : ", err)
+		log.Println("Could not List containers. Error : ", err)
 		return
 	}
-	containersBytes, err := json.Marshal(containers)
-	if err != nil {
-		log.Println(err, "Error marshaling image summaries")
-		return
-	}
-	log.Println("Container summaries:", string(containersBytes))
-	p.createSendResponse(s.Conn().RemotePeer(), string(containersBytes))
-}
-
-// ListContainersForUser list images for the user with the specific publicKey
-func (p *ListContainersProtocol) ListContainersForUser(publicKey string) ([]types.Container, error) {
-	containers := make([]types.Container, 0)
-	allContainers, err := manager.GetInstance().ListContainers()
-	if err != nil {
-		return nil, fmt.Errorf("Error listing images. Error: %v", err)
-	}
-
-	for _, container := range allContainers {
-		hash, signatures, err := getImgDataFromDB(container.ImageID)
-		if err != nil {
-			if err == database.ErrNotFound {
-				log.Println("Continuing... ")
-				continue
-			}
-			return nil, err
-		}
-		// Verify all signatures for the same image
-		for _, signature := range signatures {
-			signedBytes, err := hex.DecodeString(signature)
-			if err != nil {
-				return nil, err
-			}
-			if ok, err := verifyUser(publicKey, hash, signedBytes); ok && err == nil {
-				containers = append(containers, container)
-				// TODO: Delete those comments. Only for debugging mode
-				// } else if !ok {
-				// 	log.Println("Could not verify this user. Signature could not be verified by the Public key...")
-			} else if err != nil {
-				return nil, err
-			}
-		}
-	}
-	return containers, nil
+	p.createSendResponse(s.Conn().RemotePeer(), containersRaw)
 }
 
 // Create and send a response to the toPeer note

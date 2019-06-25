@@ -19,7 +19,7 @@ package p2p
 import (
 	"github.com/crowdcompute/crowdengine/log"
 
-	"github.com/crowdcompute/crowdengine/manager"
+	"github.com/crowdcompute/crowdengine/common/dockerutil"
 	api "github.com/crowdcompute/crowdengine/p2p/protomsgs"
 	host "github.com/libp2p/go-libp2p-host"
 	inet "github.com/libp2p/go-libp2p-net"
@@ -65,21 +65,13 @@ func (p *InspectContainerProtocol) onInspectRequest(s inet.Stream) {
 		log.Println("Failed to authenticate message")
 		return
 	}
-	rawInspection, err := inspectContainerRaw(data.ContainerID)
+	rawInspection, err := dockerutil.InspectContainerRaw(data.ContainerID)
 	if err != nil {
 		log.Println("Could not inspect container. Error : ", err)
 		return
 	}
 
 	p.createSendResponse(s.Conn().RemotePeer(), string(rawInspection))
-}
-
-func inspectContainerRaw(containerID string) ([]byte, error) {
-	log.Println("Inspecting this container: ", containerID)
-	getSize := true
-	inspection, rawData, err := manager.GetInstance().InspectContainerRaw(containerID, getSize)
-	log.Printf("Result inspection the container %t\n", inspection.State.Running)
-	return rawData, err
 }
 
 // Create and send a response to the toPeer node

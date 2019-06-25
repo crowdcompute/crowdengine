@@ -48,8 +48,6 @@ func (s *ImageService) BuildFromDockerfile(ctx context.Context) Result {
 
 // Load loads a tar
 func (s *ImageService) Load(ctx context.Context, filename string) (string, error) {
-	// uploadPath, ok := r.Context().Value(common.ContextKeyUploadPath).(string)
-
 	result, err := manager.GetInstance().LoadImage(filename)
 	if err != nil {
 		return result, err

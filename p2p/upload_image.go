@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -29,13 +28,11 @@ import (
 	"github.com/crowdcompute/crowdengine/log"
 
 	"github.com/crowdcompute/crowdengine/common"
+	"github.com/crowdcompute/crowdengine/common/dockerutil"
 	"github.com/crowdcompute/crowdengine/database"
-	"github.com/crowdcompute/crowdengine/manager"
 	api "github.com/crowdcompute/crowdengine/p2p/protomsgs"
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
 	host "github.com/libp2p/go-libp2p-host"
 	inet "github.com/libp2p/go-libp2p-net"
 	peer "github.com/libp2p/go-libp2p-peer"
@@ -110,7 +107,7 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 	err := createFileFromStream(s, filePath, fileSize)
 	common.FatalIfErr(err, "Couldn't read from stream when uploading a file")
 
-	imageID, err := loadImageToDocker(filePath)
+	imageID, err := dockerutil.LoadImgToDockerAndStoreDB(filePath, hash, signature)
 	if errRemove := common.RemoveFile(filePath); errRemove != nil {
 		p.ImageIDchan <- errRemove.Error()
 		return
@@ -122,11 +119,6 @@ func (p *UploadImageProtocol) onUploadRequest(s inet.Stream) {
 		p.ImageIDchan <- errmsg
 		return
 	}
-
-	if err = p.storeImageToDB(imageID, hash, signature); err != nil {
-		log.Error("There was an error storing this image to DB: ", imageID)
-	}
-	log.Printf("This image %s with this hash {%s} and signature {%s} was stored into the DB \n", imageID, hash, signature)
 	p.createSendResponse(s.Conn().RemotePeer(), imageID)
 }
 
@@ -175,53 +167,6 @@ func createFileFromStream(s inet.Stream, toFilePath string, fileSize int64) erro
 	return nil
 }
 
-// loadImageToDocker takes a path to an image file and loads it to the docker daemon
-func loadImageToDocker(filePath string) (string, error) {
-	log.Println("Loading this image: ", filePath)
-	loadImageResp, err := manager.GetInstance().LoadImage(filePath)
-	if err != nil {
-		return "", err
-	}
-	log.Println(loadImageResp)
-	if imgID, exists := getImageID(loadImageResp); exists {
-		// Docker image ID is 64 characters
-		return imgID[:64], err
-	}
-	// If no image ID exists, we extract the image ID
-	// from listing the specific image using its tag
-	imageTag := loadImageResp[2 : len(loadImageResp)-5]
-	res := getImageSummaryFromTag(imageTag)
-	imgID := strings.Replace(res.ID, "sha256:", "", -1)
-	log.Println("Loaded image. Image ID: ", imgID)
-	return imgID, err
-}
-
-// imageIDExists checks if a docker image ID exists in the loadImageResp.
-// Docker image is just after the 'sha256:' prefix
-func getImageID(loadImageResp string) (string, bool) {
-	r, _ := regexp.Compile("sha256:(.*)")
-	matches := r.FindAllStringSubmatch(loadImageResp, -1)
-	if len(matches) != 0 {
-		return matches[0][1], true
-	}
-	return "", false
-}
-
-// getImageSummaryFromTag returns ImageSummaries from images using a tag
-func getImageSummaryFromTag(tag string) types.ImageSummary {
-	log.Println(tag)
-	fargs := filters.NewArgs()
-	fargs.Add("reference", tag)
-	res, err := manager.GetInstance().ListImages(
-		types.ImageListOptions{
-			Filters: fargs,
-		})
-	if err != nil {
-		log.Println("error: ", err)
-	}
-	return res[0] // we know that docker tag is unique thus returning only one summary
-}
-
 // storeImageToDB stores the new image's data to our level DB
 // If image exists it will keep the old signature
 func (p *UploadImageProtocol) storeImageToDB(imageID string, hash string, signature string) error {
@@ -233,7 +178,7 @@ func (p *UploadImageProtocol) storeImageToDB(imageID string, hash string, signat
 		signatures = image.Signatures
 	}
 	signatures = append(signatures, signature)
-	image := &database.ImageLvlDB{Hash: hash, Signatures: signatures, CreatedTime: time.Now().Unix()}
+	image := &database.ImageLoadDocker{Hash: hash, Signatures: signatures, CreatedTime: time.Now().Unix()}
 	// And because the image ID is the same all the values in DB will be updated with the new ones
 	return database.GetDB().Model(image).Put([]byte(imageID))
 }

@@ -29,27 +29,27 @@ import (
 
 var (
 	commonTestHost1, _ = NewHost(&config.GlobalConfig{
-		P2P: config.P2P{ListenPort: 10209, ListenAddress: "127.0.0.1"},
+		P2P: config.P2P{ListenPort: 10309, ListenAddress: "127.0.0.1"},
 	})
 	// commonTestHost3 has commonTestHost2 as a peer, but not the other way around
 	commonTestHost2, _ = NewHost(&config.GlobalConfig{
-		P2P: config.P2P{ListenPort: 10210, ListenAddress: "127.0.0.1"},
+		P2P: config.P2P{ListenPort: 10310, ListenAddress: "127.0.0.1"},
 	})
 	commonTestHost3, _ = NewHost(&config.GlobalConfig{
-		P2P: config.P2P{ListenPort: 10211, ListenAddress: "127.0.0.1",
+		P2P: config.P2P{ListenPort: 10311, ListenAddress: "127.0.0.1",
 			Bootstraper: config.Bootstraper{
 				Nodes: []string{commonTestHost2.FullAddr},
 			},
 		},
 	})
 	commonTestHost4, _ = NewHost(&config.GlobalConfig{
-		P2P: config.P2P{ListenPort: 10212, ListenAddress: "127.0.0.1"},
+		P2P: config.P2P{ListenPort: 10312, ListenAddress: "127.0.0.1"},
 	})
 )
 
 func listImagesRequestMsg(host host.Host) *api.ListImagesRequest {
 	return &api.ListImagesRequest{ListImagesMsgData: NewListImagesMsgData("1", true, host),
-		PubKey: "fakePubKey"}
+		PubKey: "dummyPubKey"}
 }
 
 func TestSignAuthenticate(t *testing.T) {
@@ -60,8 +60,8 @@ func TestSignAuthenticate(t *testing.T) {
 	assert.True(t, valid)
 }
 
-// TestHost2 sends a message to testHost1
-// TestHost2 has testHost1 as a peer
+// TestHost3 sends a message to testHost2
+// TestHost3 has testHost2 as a peer
 func TestSendMsgFromConnectedPeers(t *testing.T) {
 	req := listImagesRequestMsg(commonTestHost3.P2PHost)
 	ok := sendMsg(commonTestHost3.P2PHost, commonTestHost2.P2PHost.ID(), req, protocol.ID(imageListRequest))

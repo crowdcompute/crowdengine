@@ -17,19 +17,10 @@
 package p2p
 
 import (
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
-	"strings"
-
-	"github.com/crowdcompute/crowdengine/crypto"
-	"github.com/crowdcompute/crowdengine/database"
 	"github.com/crowdcompute/crowdengine/log"
-	"github.com/crowdcompute/crowdengine/manager"
 	api "github.com/crowdcompute/crowdengine/p2p/protomsgs"
+	"github.com/crowdcompute/crowdengine/common/dockerutil"
 
-	"github.com/docker/docker/api/types"
-	libp2pcrypto "github.com/libp2p/go-libp2p-crypto"
 	host "github.com/libp2p/go-libp2p-host"
 	inet "github.com/libp2p/go-libp2p-net"
 	peer "github.com/libp2p/go-libp2p-peer"
@@ -44,22 +35,22 @@ const imageListResponse = "/image/ListImgResp/0.0.1"
 type ListImagesProtocol struct {
 	p2pHost  host.Host // local host
 	stream   inet.Stream
-	ListChan chan string
+	ListImgChan chan string
 }
 
 // NewListImagesProtocol sets the protocol's stream handlers and returns a new ListImagesProtocol
 func NewListImagesProtocol(p2pHost host.Host) *ListImagesProtocol {
 	p := &ListImagesProtocol{
 		p2pHost:  p2pHost,
-		ListChan: make(chan string, 1),
+		ListImgChan: make(chan string, 1),
 	}
 	p2pHost.SetStreamHandler(imageListRequest, p.onListRequest)
 	p2pHost.SetStreamHandler(imageListResponse, p.onListResponse)
 	return p
 }
 
-// InitiateListRequest sends a list images request to toHostID using the pubKey of the user who initiated it
-func (p *ListImagesProtocol) InitiateListRequest(toHostID peer.ID, pubKey string) {
+// InitiateListImgRequest sends a list images request to toHostID using the pubKey of the user who initiated it
+func (p *ListImagesProtocol) InitiateListImgRequest(toHostID peer.ID, pubKey string) {
 	req := &api.ListImagesRequest{ListImagesMsgData: NewListImagesMsgData(uuid.Must(uuid.NewV4(), nil).String(), true, p.p2pHost),
 		PubKey: pubKey}
 	key := p.p2pHost.Peerstore().PrivKey(p.p2pHost.ID())
@@ -76,87 +67,12 @@ func (p *ListImagesProtocol) onListRequest(s inet.Stream) {
 		return
 	}
 
-	imgSummaries, err := p.listImagesForUser(data.PubKey)
+	imgSummariesRaw, err := dockerutil.GetRawImagesForUser(data.PubKey)
 	if err != nil {
 		log.Println("Could not List images. Error : ", err)
 		return
 	}
-	imgSummariesBytes, err := json.Marshal(imgSummaries)
-	if err != nil {
-		log.Println(err, "Error marshaling image summaries")
-		return
-	}
-	log.Println("Image summaries:", string(imgSummariesBytes))
-	p.createSendResponse(s.Conn().RemotePeer(), string(imgSummariesBytes))
-}
-
-// listImagesForUser list images for the user with the specific publicKey
-func (p *ListImagesProtocol) listImagesForUser(publicKey string) ([]types.ImageSummary, error) {
-	imgSummaries := make([]types.ImageSummary, 0)
-	allSummaries, err := manager.GetInstance().ListImages(types.ImageListOptions{All: true})
-	if err != nil {
-		return nil, fmt.Errorf("Error listing images. Error: %v", err)
-	}
-
-	for _, imgSummary := range allSummaries {
-		hash, signatures, err := getImgDataFromDB(imgSummary.ID)
-		if err != nil {
-			if err == database.ErrNotFound {
-				log.Println("Continuing... ")
-				continue
-			}
-			return nil, err
-		}
-		// Verify all signatures for the same image
-		for _, signature := range signatures {
-			signedBytes, err := hex.DecodeString(signature)
-			if err != nil {
-				return nil, err
-			}
-			if ok, err := verifyUser(publicKey, hash, signedBytes); ok && err == nil {
-				imgSummaries = append(imgSummaries, imgSummary)
-				// TODO: Delete those comments. Only for debugging mode
-				// } else if !ok {
-				// 	log.Println("Could not verify this user. Signature could not be verified by the Public key...")
-			} else if err != nil {
-				return nil, err
-			}
-		}
-	}
-	return imgSummaries, nil
-}
-
-func getImgDataFromDB(imgID string) ([]byte, []string, error) {
-	imgID = strings.Replace(imgID, "sha256:", "", -1)
-	if image, err := database.GetImageFromDB(imgID); err == nil {
-		hashBytes, err := hex.DecodeString(image.Hash)
-		if err != nil {
-			return nil, nil, err
-		}
-		return hashBytes, image.Signatures, err
-	} else {
-		return nil, nil, err
-	}
-}
-
-func verifyUser(publicKey string, hash []byte, signature []byte) (bool, error) {
-	pub, err := getPubKey(publicKey)
-	if err != nil {
-		return false, err
-	}
-	verification, err := pub.Verify(hash, signature)
-	if err != nil {
-		return verification, err
-	}
-	return verification, nil
-}
-
-func getPubKey(publicKey string) (libp2pcrypto.PubKey, error) {
-	pubKey, err := hex.DecodeString(publicKey)
-	if err != nil {
-		return nil, err
-	}
-	return crypto.RestorePubKey(pubKey)
+	p.createSendResponse(s.Conn().RemotePeer(), imgSummariesRaw)
 }
 
 // Create and send a response to the toPeer note
@@ -183,5 +99,5 @@ func (p *ListImagesProtocol) onListResponse(s inet.Stream) {
 		return
 	}
 	log.Printf("%s: Received List response from %s. Message id:%s.", s.Conn().LocalPeer(), s.Conn().RemotePeer(), data.ListImagesMsgData.MessageData.Id)
-	p.ListChan <- data.ListResult
+	p.ListImgChan <- data.ListResult
 }

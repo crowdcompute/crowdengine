@@ -73,7 +73,7 @@ func NewHost(cfg *config.GlobalConfig) (*Host, error) {
 
 // registerProtocols registers all protocols for the node
 func (h *Host) registerProtocols() {
-	h.SwarmProtocol = NewSwarmProtocol(h.P2PHost, h.Cfg.P2P.ListenAddress, &h.Cfg.Host.DockerSwarm)
+	h.SwarmProtocol = NewSwarmProtocol(h.P2PHost, &h.Cfg.Host.DockerSwarm)
 	h.DiscoveryProtocol = NewDiscoveryProtocol(h.P2PHost, h.dht)
 	h.TaskProtocol = NewTaskProtocol(h.P2PHost)
 	// Registering the Observer that wants to get notified when the task is done.

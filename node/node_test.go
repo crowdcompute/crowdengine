@@ -31,7 +31,6 @@ import (
 	"github.com/crowdcompute/crowdengine/cmd/gocc/config"
 	"github.com/crowdcompute/crowdengine/common"
 	ccrpc "github.com/crowdcompute/crowdengine/rpc"
-	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -68,12 +67,7 @@ func createPOSTreq(jsonStr []byte) *http.Request {
 // Serves an http request
 // It registers RPC methods and it authorizes every http request
 func serveRequest(ks *keystore.KeyStore, req *http.Request) *httptest.ResponseRecorder {
-	server := rpc.NewServer()
-	for _, api := range testApis() {
-		err := server.RegisterName(api.Namespace, api.Service)
-		common.FatalIfErr(err, "Ethereum RPC could not register name.")
-	}
-	handler := authRequired(testApis(), ks, server)
+	handler := ccrpc.ServeHTTP(testApis(), ks)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 	return rr
@@ -125,7 +119,7 @@ func (api *TestService) MethodThatNotRequiresAuth(ctx context.Context) error {
 }
 
 // EtherRPCResponse stores the result of the response
-type EtherRPCResponse struct {
+type RPCResponse struct {
 	Result string `json:"result"`
 }
 
@@ -150,7 +144,7 @@ func TestMethodRequiresAuthAndAuthGiven(t *testing.T) {
 	fmt.Println(resp.Body.String())
 	defer os.RemoveAll(tempDir)
 
-	respjson := EtherRPCResponse{}
+	respjson := RPCResponse{}
 	err := json.Unmarshal(resp.Body.Bytes(), &respjson)
 	if err != nil {
 		t.Errorf("There was an error unmarshaling Ethereum RPC response. Their response might have changed!")
@@ -164,7 +158,7 @@ func TestMethodRequiresAuthAndAuthGiven(t *testing.T) {
 	respUnlockAcc := serveRequest(testNode.ks, reqUnlockAcc)
 	fmt.Println("respUnlockAcc.Body.String()")
 	fmt.Println(respUnlockAcc.Body.String())
-	respUnlockJSON := EtherRPCResponse{}
+	respUnlockJSON := RPCResponse{}
 	err = json.Unmarshal(respUnlockAcc.Body.Bytes(), &respUnlockJSON)
 	if err != nil {
 		t.Errorf("There was an error unmarshaling Ethereum RPC response. Their response might have changed!")

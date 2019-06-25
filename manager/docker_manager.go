@@ -23,6 +23,7 @@ import (
 	"os"
 	"regexp"
 	"sync"
+	"fmt"
 
 	"github.com/crowdcompute/crowdengine/common"
 	"github.com/crowdcompute/crowdengine/log"
@@ -53,10 +54,6 @@ func GetInstance() *DockerManager {
 
 // boot the manager
 func (m *DockerManager) boot() bool {
-	// Resolving the below error:
-	// Error response from daemon: client version 1.39 is too new. Maximum supported API version is 1.37
-	//cli, err := client.NewClientWithOpts(client.WithVersion("1.37"))
-
 	cli, err := client.NewEnvClient()
 
 	if err != nil {
@@ -214,6 +211,17 @@ func (m *DockerManager) RunContainer(containerid string) (bool, error) {
 	}
 	return true, nil
 }
+
+// CreateRunContainer creates and runs a container from an image ID
+func (m *DockerManager) CreateRunContainer(imageID string) (string, error) {
+	container, err := m.CreateContainer(imageID)
+	if err != nil {
+		return "", fmt.Errorf("Error creating container form this image ID: %s. Image ID could be wrong. Error: %s", imageID, err)
+	}
+	_, err = m.RunContainer(container.ID)
+	return container.ID, err
+}
+
 
 // InspectContainer inspects a running container
 func (m *DockerManager) InspectContainer(containerid string) (types.ContainerJSON, error) {
